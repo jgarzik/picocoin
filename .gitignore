@@ -1,0 +1,25 @@
+
+# directories
+.deps
+autom4te.cache
+
+*.o
+
+aclocal.m4
+Makefile
+Makefile.in
+INSTALL
+config.log
+config.status
+configure
+depcomp
+install-sh
+missing
+push
+stamp-h1
+
+# app-specific
+picocoin
+picocoin*.tar.gz
+picocoin-config.h*
+
