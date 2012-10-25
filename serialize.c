@@ -29,31 +29,35 @@ void ser_u64(GString *s, uint64_t v_)
 	g_string_append_len(s, (gchar *) &v, sizeof(v));
 }
 
-void ser_str(GString *s, const char *s_in, size_t maxlen)
+void ser_varlen(GString *s, uint32_t vlen)
 {
-	size_t slen = strnlen(s_in, maxlen);
-
 	unsigned char c;
 
-	if (slen < 253) {
-		c = slen;
+	if (vlen < 253) {
+		c = vlen;
 		ser_bytes(s, &c, 1);
 	}
 
-	else if (slen < 0x10000) {
+	else if (vlen < 0x10000) {
 		c = 253;
 		ser_bytes(s, &c, 1);
-		ser_u16(s, (uint16_t) slen);
+		ser_u16(s, (uint16_t) vlen);
 	}
 
 	else {
 		c = 254;
 		ser_bytes(s, &c, 1);
-		ser_u32(s, (uint32_t) slen);
+		ser_u32(s, vlen);
 	}
 
 	/* u64 case intentionally not implemented */
+}
 
+void ser_str(GString *s, const char *s_in, size_t maxlen)
+{
+	size_t slen = strnlen(s_in, maxlen);
+
+	ser_varlen(s, slen);
 	ser_bytes(s, s_in, slen);
 }
 
@@ -113,10 +117,11 @@ bool deser_u64(uint64_t *vo, struct buffer *buf)
 	return true;
 }
 
-bool deser_str(char *so, struct buffer *buf, size_t maxlen)
+bool deser_varlen(uint32_t *lo, struct buffer *buf)
 {
+	uint32_t len;
+
 	unsigned char c;
-	uint32_t len, skip_len = 0;
 	if (!deser_bytes(&c, buf, 1)) return false;
 
 	if (c == 253) {
@@ -137,7 +142,17 @@ bool deser_str(char *so, struct buffer *buf, size_t maxlen)
 	else
 		len = c;
 
+	*lo = len;
+	return true;
+}
+
+bool deser_str(char *so, struct buffer *buf, size_t maxlen)
+{
+	uint32_t len;
+	if (!deser_varlen(&len, buf)) return false;
+
 	/* if input larger than buffer, truncate copy, skip remainder */
+	uint32_t skip_len = 0;
 	if (len > maxlen) {
 		skip_len = len - maxlen;
 		len = maxlen;
@@ -146,9 +161,11 @@ bool deser_str(char *so, struct buffer *buf, size_t maxlen)
 	if (!deser_bytes(so, buf, len)) return false;
 	if (!deser_skip(buf, skip_len)) return false;
 
-	/* add C string null, if possible */
+	/* add C string null */
 	if (len < maxlen)
 		so[len] = 0;
+	else
+		so[maxlen - 1] = 0;
 
 	return true;
 }

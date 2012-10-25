@@ -112,3 +112,64 @@ GString *ser_version(const struct msg_version *mv)
 	return s;
 }
 
+bool deser_msg_addr(unsigned int protover, struct msg_addr *ma,
+		    struct buffer *buf)
+{
+	memset(ma, 0, sizeof(*ma));
+
+	ma->addrs = g_ptr_array_new_full(512, g_free);
+
+	uint32_t vlen;
+	if (!deser_varlen(&vlen, buf)) goto err_out;
+
+	unsigned int i;
+	for (i = 0; i < vlen; i++) {
+		struct bp_address *addr;
+
+		addr = calloc(1, sizeof(*addr));
+		if (!deser_addr(protover, addr, buf)) goto err_out;
+
+		g_ptr_array_add(ma->addrs, addr);
+	}
+
+	return true;
+
+err_out:
+	msg_addr_free(ma);
+	return false;
+}
+
+GString *ser_msg_addr(unsigned int protover, const struct msg_addr *ma)
+{
+	GString *s = g_string_new(NULL);
+
+	if (!ma) {
+		ser_varlen(s, 0);
+		return s;
+	}
+
+	ser_varlen(s, ma->addrs->len);
+
+	unsigned int i;
+	for (i = 0; i < ma->addrs->len; i++) {
+		GString *sa;
+		struct bp_address *addr;
+
+		addr = g_ptr_array_index(ma->addrs, i);
+
+		sa = ser_addr(protover, addr);
+		g_string_append_len(s, sa->str, sa->len);
+		g_string_free(sa, TRUE);
+	}
+
+	return s;
+}
+
+void msg_addr_free(struct msg_addr *ma)
+{
+	if (ma->addrs) {
+		g_ptr_array_free(ma->addrs, TRUE);
+		ma->addrs = NULL;
+	}
+}
+

@@ -30,6 +30,16 @@ struct msg_version {
 	uint32_t	nStartingHeight;
 };
 
-extern bool deser_version(struct msg_version *mv, struct buffer *buf);
+extern bool deser_msg_version(struct msg_version *mv, struct buffer *buf);
+extern GString *ser_msg_version(const struct msg_version *mv);
+static inline void msg_version_free(struct msg_version *mv) {}
+
+struct msg_addr {
+	GPtrArray	*addrs;
+};
+
+extern bool deser_msg_addr(unsigned int protover, struct msg_addr *ma, struct buffer *buf);
+extern GString *ser_msg_addr(unsigned int protover, const struct msg_addr *ma);
+extern void msg_addr_free(struct msg_addr *ma);
 
 #endif /* __PICOCOIN_MESSAGE_H__ */
