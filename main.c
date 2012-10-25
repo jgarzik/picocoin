@@ -43,52 +43,18 @@ static bool parse_kvstr(const char *s, char **key, char **value)
 	return true;
 }
 
-static void const_setting(const char *key_, const char *value_)
+static bool read_config_file(const char *cfg_fn)
 {
-	char *key = strdup(key_);
-	char *value = strdup(value_);
-	g_hash_table_replace(settings, key, value);
-}
-
-static const struct {
-	const char	*k;
-	const char	*v;
-} const_settings[] = {
-	{ "wallet", "picocoin.wallet" },
-};
-
-static void parse_settings(int argc, char **argv)
-{
-	unsigned int i;
-	char *key, *value;
-
-	/* preload static settings */
-	for (i = 0; i < ARRAY_SIZE(const_settings); i++)
-		const_setting(const_settings[i].k, const_settings[i].v);
-
-	/* read settings from command line */
-	for (i = 1; i < argc; i++) {
-
-		if (!parse_kvstr(argv[i], &key, &value))
-			continue;
-
-		g_hash_table_replace(settings, key, value);
-	}
-
-	/* read settings from configuration file */
-	char *cfg_fn = setting("config");
-	if (!cfg_fn) {
-		cfg_fn = setting("c");
-		if (!cfg_fn)
-			return;
-	}
-
 	FILE *cfg = fopen(cfg_fn, "r");
 	if (!cfg)
-		return;
+		return false;
+
+	bool rc = false;
 	
 	char line[1024];
 	while (fgets(line, sizeof(line), cfg) != NULL) {
+		char *key, *value;
+
 		if (line[0] == '#')
 			continue;
 		while (line[0] && (isspace(line[strlen(line) - 1])))
@@ -100,7 +66,41 @@ static void parse_settings(int argc, char **argv)
 		g_hash_table_replace(settings, key, value);
 	}
 
+	rc = ferror(cfg) == 0;
+
 	fclose(cfg);
+	return rc;
+}
+
+static bool do_setting(const char *arg)
+{
+	char *key, *value;
+
+	if (!parse_kvstr(arg, &key, &value))
+		return false;
+
+	g_hash_table_replace(settings, key, value);
+
+	if (!strcmp(key, "config") || !strcmp(key, "c"))
+		return read_config_file(value);
+
+	return true;
+}
+
+static const char *const_settings[] = {
+	"wallet=picocoin.wallet",
+};
+
+static bool preload_settings(void)
+{
+	unsigned int i;
+
+	/* preload static settings */
+	for (i = 0; i < ARRAY_SIZE(const_settings); i++)
+		if (!do_setting(const_settings[i]))
+			return false;
+	
+	return true;
 }
 
 static void list_setting_iter(gpointer key_, gpointer value_, gpointer dummy)
@@ -163,18 +163,42 @@ static void list_dns_seeds(void)
 	printf("=END_DNS_SEEDS\n");
 }
 
+static bool is_command(const char *s)
+{
+	return	!strcmp(s, "list-settings") ||
+		!strcmp(s, "dns-seeds");
+}
+
+static bool do_command(const char *s)
+{
+	if (!strcmp(s, "list-settings"))
+		list_settings();
+
+	else if (!strcmp(s, "dns-seeds"))
+		list_dns_seeds();
+
+	return true;
+}
+
 int main (int argc, char *argv[])
 {
 	prog_name = argv[0];
 	settings = g_hash_table_new_full(g_str_hash, g_str_equal,
 					 g_free, g_free);
+	if (!preload_settings())
+		return 1;
 
-	parse_settings(argc, argv);
-
-	if (setting("list-settings"))
-		list_settings();
-	if (setting("dns-seeds"))
-		list_dns_seeds();
+	unsigned int arg;
+	for (arg = 1; arg < argc; arg++) {
+		const char *argstr = argv[arg];
+		if (is_command(argstr)) {
+			if (!do_command(argstr))
+				return 1;
+		} else {
+			if (!do_setting(argstr))
+				return 1;
+		}
+	}
 
 	return 0;
 }

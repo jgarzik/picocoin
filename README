@@ -5,7 +5,7 @@ Tiny bitcoin utility and lightweight client
 
 Dependencies:
 	GLib 2.x (from the GTK project)
-	libevent (TODO: unused for now)
+	OpenSSL
 
 
 
@@ -15,10 +15,12 @@ Command line and configuration file usage
 In general, the program stores settings in a key/value map.  These key=value
 parameters may be specified on the command line, or in a configuration file.
 
-The command line is processed first, then the configuration file is read.  The
-entries are processed in order, overwriting any existing duplicates.
+The command line is processed in-order.  For example
 
-Once configuration has been read, execution begins.
+	$ ./picocoin value=1 list-settings value=2 list-settings
+
+will execute the "list-settings" command twice, each with "value" setting
+initialized to a different parameter.
 
 
 Recognized parameters
@@ -27,6 +29,15 @@ Recognized parameters
 config (alias "c")
 ------------------
 Specify a pathname to the configuration file.
+
+wallet (alias "w")
+------------------
+Specify a pathname to the wallet data file.  Default "picocoin.wallet"
+
+
+
+Recognized commands
+===================
 
 list-settings
 -------------
