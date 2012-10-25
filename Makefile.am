@@ -11,6 +11,7 @@ picocoin_SOURCES=	\
 	coredefs.h	\
 	core.c core.h	\
 	dns.c		\
+	key.c key.h	\
 	main.c		\
 	message.c	\
 	message.h	\
