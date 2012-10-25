@@ -309,6 +309,33 @@ void bp_tx_free(struct bp_tx *tx)
 	}
 }
 
+bool bp_tx_valid(const struct bp_tx *tx)
+{
+	unsigned int i;
+
+	if (!bp_tx_coinbase(tx) && tx->vin) {
+		for (i = 0; i < tx->vin->len; i++) {
+			struct bp_txin *txin;
+
+			txin = g_ptr_array_index(tx->vin, i);
+			if (!bp_txin_valid(txin))
+				return false;
+		}
+	}
+
+	if (tx->vout) {
+		for (i = 0; i < tx->vout->len; i++) {
+			struct bp_txout *txout;
+
+			txout = g_ptr_array_index(tx->vout, i);
+			if (!bp_txout_valid(txout))
+				return false;
+		}
+	}
+
+	return true;
+}
+
 void bp_block_init(struct bp_block *block)
 {
 	memset(block, 0, sizeof(*block));

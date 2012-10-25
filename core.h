@@ -46,6 +46,11 @@ extern bool deser_bp_outpt(struct bp_outpt *outpt, struct buffer *buf);
 extern void ser_bp_outpt(GString *s, const struct bp_outpt *outpt);
 extern void bp_outpt_free(struct bp_outpt *outpt);
 
+static inline bool bp_outpt_null(const struct bp_outpt *outpt)
+{
+	return BN_is_zero(&outpt->hash) && outpt->n == 0xffffffff;
+}
+
 struct bp_txin {
 	struct bp_outpt	prevout;
 	GString		*scriptSig;
@@ -56,6 +61,7 @@ extern void bp_txin_init(struct bp_txin *txin);
 extern bool deser_bp_txin(struct bp_txin *txin, struct buffer *buf);
 extern void ser_bp_txin(GString *s, const struct bp_txin *txin);
 extern void bp_txin_free(struct bp_txin *txin);
+static inline bool bp_txin_valid(const struct bp_txin *txin) { return true; }
 
 struct bp_txout {
 	int64_t		nValue;
@@ -66,6 +72,12 @@ extern void bp_txout_init(struct bp_txout *txout);
 extern bool deser_bp_txout(struct bp_txout *txout, struct buffer *buf);
 extern void ser_bp_txout(GString *s, const struct bp_txout *txout);
 extern void bp_txout_free(struct bp_txout *txout);
+static inline bool bp_txout_valid(const struct bp_txout *txout)
+{
+	if (txout->nValue < 0 || txout->nValue > 21000000ULL * 100000000ULL)
+		return false;
+	return true;
+}
 
 struct bp_tx {
 	uint32_t	nVersion;
@@ -78,6 +90,19 @@ extern void bp_tx_init(struct bp_tx *tx);
 extern bool deser_bp_tx(struct bp_tx *tx, struct buffer *buf);
 extern void ser_bp_tx(GString *s, const struct bp_tx *tx);
 extern void bp_tx_free(struct bp_tx *tx);
+extern bool bp_tx_valid(const struct bp_tx *tx);
+
+static inline bool bp_tx_coinbase(const struct bp_tx *tx)
+{
+	if (!tx->vin || tx->vin->len != 1)
+		return false;
+
+	struct bp_txin *txin = g_ptr_array_index(tx->vin, 0);
+	if (!bp_outpt_null(&txin->prevout))
+		return false;
+	
+	return true;
+}
 
 struct bp_block {
 	uint32_t	nVersion;
