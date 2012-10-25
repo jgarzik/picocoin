@@ -43,11 +43,30 @@ static bool parse_kvstr(const char *s, char **key, char **value)
 	return true;
 }
 
+static void const_setting(const char *key_, const char *value_)
+{
+	char *key = strdup(key_);
+	char *value = strdup(value_);
+	g_hash_table_replace(settings, key, value);
+}
+
+static const struct {
+	const char	*k;
+	const char	*v;
+} const_settings[] = {
+	{ "wallet", "picocoin.wallet" },
+};
+
 static void parse_settings(int argc, char **argv)
 {
 	unsigned int i;
 	char *key, *value;
 
+	/* preload static settings */
+	for (i = 0; i < ARRAY_SIZE(const_settings); i++)
+		const_setting(const_settings[i].k, const_settings[i].v);
+
+	/* read settings from command line */
 	for (i = 1; i < argc; i++) {
 
 		if (!parse_kvstr(argv[i], &key, &value))
@@ -56,6 +75,7 @@ static void parse_settings(int argc, char **argv)
 		g_hash_table_replace(settings, key, value);
 	}
 
+	/* read settings from configuration file */
 	char *cfg_fn = setting("config");
 	if (!cfg_fn) {
 		cfg_fn = setting("c");
