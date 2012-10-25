@@ -75,10 +75,10 @@ bool deser_version(struct msg_version *mv, struct buffer *buf)
 		mv->nVersion = 300;
 	if (!deser_u64(&mv->nServices, buf)) return false;
 	if (!deser_s64(&mv->nTime, buf)) return false;
-	if (!deser_addr(mv->nVersion, &mv->addrTo, buf)) return false;
+	if (!deser_bp_addr(mv->nVersion, &mv->addrTo, buf)) return false;
 
 	if (mv->nVersion >= 106) {
-		if (!deser_addr(mv->nVersion, &mv->addrFrom, buf)) return false;
+		if (!deser_bp_addr(mv->nVersion, &mv->addrFrom, buf)) return false;
 		if (!deser_u64(&mv->nonce, buf)) return false;
 		if (!deser_str(mv->strSubVer, buf, sizeof(mv->strSubVer)))
 			return false;
@@ -96,14 +96,9 @@ GString *ser_version(const struct msg_version *mv)
 	ser_u32(s, mv->nVersion);
 	ser_u64(s, mv->nServices);
 	ser_s64(s, mv->nTime);
-	
-	GString *at = ser_addr(mv->nVersion, &mv->addrTo);
-	g_string_append_len(s, at->str, at->len);
-	g_string_free(at, TRUE);
 
-	GString *af = ser_addr(mv->nVersion, &mv->addrFrom);
-	g_string_append_len(s, af->str, af->len);
-	g_string_free(af, TRUE);
+	ser_bp_addr(s, mv->nVersion, &mv->addrTo);
+	ser_bp_addr(s, mv->nVersion, &mv->addrFrom);
 
 	ser_u64(s, mv->nonce);
 	ser_str(s, mv->strSubVer, sizeof(mv->strSubVer));
@@ -127,7 +122,7 @@ bool deser_msg_addr(unsigned int protover, struct msg_addr *ma,
 		struct bp_address *addr;
 
 		addr = calloc(1, sizeof(*addr));
-		if (!deser_addr(protover, addr, buf)) goto err_out;
+		if (!deser_bp_addr(protover, addr, buf)) goto err_out;
 
 		g_ptr_array_add(ma->addrs, addr);
 	}
@@ -152,14 +147,11 @@ GString *ser_msg_addr(unsigned int protover, const struct msg_addr *ma)
 
 	unsigned int i;
 	for (i = 0; i < ma->addrs->len; i++) {
-		GString *sa;
 		struct bp_address *addr;
 
 		addr = g_ptr_array_index(ma->addrs, i);
 
-		sa = ser_addr(protover, addr);
-		g_string_append_len(s, sa->str, sa->len);
-		g_string_free(sa, TRUE);
+		ser_bp_addr(s, protover, addr);
 	}
 
 	return s;

@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <glib.h>
+#include <openssl/bn.h>
 #include "picocoin.h"
 #include "serialize.h"
 
@@ -27,6 +28,39 @@ void ser_u64(GString *s, uint64_t v_)
 {
 	uint64_t v = GUINT64_TO_LE(v_);
 	g_string_append_len(s, (gchar *) &v, sizeof(v));
+}
+
+void ser_u256(GString *s, const BIGNUM *v_)
+{
+	BIGNUM tmp;
+
+	BN_init(&tmp);
+	BN_copy(&tmp, v_);
+
+	unsigned int i;
+	for (i = 0; i < 8; i++) {
+		BIGNUM tmp2;
+
+		/* tmp2 = tmp & 0xffffffff */
+		BN_init(&tmp2);
+		BN_copy(&tmp2, &tmp);
+		if (BN_num_bits(&tmp2) > 32)
+			BN_mask_bits(&tmp2, 32);
+
+		/* serialize tmp2 */
+		uint32_t v32 = BN_get_word(&tmp2);
+		ser_u32(s, v32);
+
+		/* tmp >>= 32 */
+		if (BN_num_bits(&tmp) <= 32)
+			BN_zero(&tmp);
+		else
+			BN_rshift(&tmp, &tmp, 32);
+
+		BN_clear_free(&tmp2);
+	}
+
+	BN_clear_free(&tmp);
 }
 
 void ser_varlen(GString *s, uint32_t vlen)
@@ -115,6 +149,36 @@ bool deser_u64(uint64_t *vo, struct buffer *buf)
 
 	*vo = GUINT64_FROM_LE(v);
 	return true;
+}
+
+bool deser_u256(BIGNUM *vo, struct buffer *buf)
+{
+	BN_init(vo);
+
+	unsigned int i;
+	for (i = 0; i < 8; i++) {
+		BIGNUM btmp;
+		uint32_t v32;
+
+		if (!deser_u32(&v32, buf)) goto err_out;
+
+		BN_init(&btmp);
+
+		/* tmp = value << (i * 32) */
+		BN_set_word(&btmp, v32);
+		BN_lshift(&btmp, &btmp, i * 32);
+
+		/* total = total + tmp */
+		BN_add(vo, vo, &btmp);
+
+		BN_clear_free(&btmp);
+	}
+
+	return true;
+
+err_out:
+	BN_clear_free(vo);
+	return false;
 }
 
 bool deser_varlen(uint32_t *lo, struct buffer *buf)
