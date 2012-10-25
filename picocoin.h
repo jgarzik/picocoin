@@ -27,6 +27,7 @@ extern GList *get_dns_seed_addrs(void);
 /* main.c */
 extern GHashTable *settings;
 extern const char ipv4_mapped_pfx[12];
+extern const unsigned char netmagic_main[4];
 
 /* aes.c */
 extern GString *read_aes_file(const char *filename, void *key, size_t key_len,

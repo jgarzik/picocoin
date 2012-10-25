@@ -17,7 +17,8 @@ picocoin_SOURCES=	\
 	message.h	\
 	picocoin.h	\
 	serialize.c	\
-	serialize.h
+	serialize.h	\
+	wallet.c wallet.h
 
 picocoin_LDADD	= @GLIB_LIBS@ @CRYPTO_LIBS@
 

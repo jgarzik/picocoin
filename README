@@ -34,6 +34,9 @@ wallet (alias "w")
 ------------------
 Specify a pathname to the wallet data file.  Default "picocoin.wallet"
 
+AES encryption is applied to the wallet.  Passphrase is specified via
+environment variable PICOCOIN_PASSPHRASE.
+
 
 
 Recognized commands

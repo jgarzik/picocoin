@@ -12,10 +12,12 @@
 #include <ctype.h>
 #include <glib.h>
 #include "picocoin.h"
+#include "coredefs.h"
 
 const char *prog_name = "picocoin";
 GHashTable *settings;
 const char ipv4_mapped_pfx[12] = "\0\0\0\0\0\0\0\0\0\0\xff\xff";
+const unsigned char netmagic_main[4] = NETMAGIC_MAINNET;
 
 static bool parse_kvstr(const char *s, char **key, char **value)
 {

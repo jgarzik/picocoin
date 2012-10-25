@@ -19,6 +19,12 @@ struct p2p_message {
 	void			*data;
 };
 
+extern void parse_message_hdr(struct p2p_message_hdr *hdr, const unsigned char *data);
+extern bool message_valid(struct p2p_message *msg);
+extern GString *message_str(const unsigned char netmagic[4],
+		     const char *command_,
+		     const void *data, uint32_t data_len);
+
 struct msg_version {
 	uint32_t	nVersion;
 	uint64_t	nServices;
