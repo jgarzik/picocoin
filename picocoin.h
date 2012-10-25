@@ -28,6 +28,12 @@ extern GList *get_dns_seed_addrs(void);
 extern GHashTable *settings;
 extern const char ipv4_mapped_pfx[12];
 
+/* aes.c */
+extern GString *read_aes_file(const char *filename, void *key, size_t key_len,
+			      size_t max_file_len);
+extern bool write_aes_file(const char *filename, void *key, size_t key_len,
+		    const void *plaintext, size_t pt_len);
+
 static inline bool is_ipv4_mapped(const unsigned char *ipaddr)
 {
 	return memcmp(ipaddr, ipv4_mapped_pfx, 12) == 0;

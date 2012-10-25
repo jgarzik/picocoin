@@ -7,6 +7,7 @@ INCLUDES	= @GLIB_CFLAGS@
 bin_PROGRAMS	= picocoin
 
 picocoin_SOURCES=	\
+	aes.c		\
 	coredefs.h	\
 	core.c core.h	\
 	dns.c		\
