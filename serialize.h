@@ -12,6 +12,7 @@ extern void ser_u64(GString *s, uint64_t v_);
 extern void ser_u256(GString *s, const BIGNUM *v_);
 extern void ser_varlen(GString *s, uint32_t vlen);
 extern void ser_str(GString *s, const char *s_in, size_t maxlen);
+extern void ser_varstr(GString *s, GString *s_in);
 
 static inline void ser_s64(GString *s, int64_t v_)
 {
@@ -26,6 +27,7 @@ extern bool deser_u64(uint64_t *vo, struct buffer *buf);
 extern bool deser_u256(BIGNUM *vo, struct buffer *buf);
 extern bool deser_varlen(uint32_t *lo, struct buffer *buf);
 extern bool deser_str(char *so, struct buffer *buf, size_t maxlen);
+extern bool deser_varstr(GString **so, struct buffer *buf);
 
 static inline bool deser_s64(int64_t *vo, struct buffer *buf)
 {

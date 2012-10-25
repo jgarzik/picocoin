@@ -50,3 +50,60 @@ void bp_outpt_free(struct bp_outpt *outpt)
 	BN_clear_free(&outpt->hash);
 }
 
+void bp_txin_init(struct bp_txin *txin)
+{
+	memset(txin, 0, sizeof(*txin));
+	bp_outpt_init(&txin->prevout);
+}
+
+bool deser_bp_txin(struct bp_txin *txin, struct buffer *buf)
+{
+	if (!deser_bp_outpt(&txin->prevout, buf)) return false;
+	if (!deser_varstr(&txin->scriptSig, buf)) return false;
+	if (!deser_u32(&txin->nSequence, buf)) return false;
+	return true;
+}
+
+void ser_bp_txin(GString *s, const struct bp_txin *txin)
+{
+	ser_bp_outpt(s, &txin->prevout);
+	ser_varstr(s, txin->scriptSig);
+	ser_u32(s, txin->nSequence);
+}
+
+void bp_txin_free(struct bp_txin *txin)
+{
+	bp_outpt_free(&txin->prevout);
+
+	if (txin->scriptSig) {
+		g_string_free(txin->scriptSig, TRUE);
+		txin->scriptSig = NULL;
+	}
+}
+
+void bp_txout_init(struct bp_txout *txout)
+{
+	memset(txout, 0, sizeof(*txout));
+}
+
+bool deser_bp_txout(struct bp_txout *txout, struct buffer *buf)
+{
+	if (!deser_s64(&txout->nValue, buf)) return false;
+	if (!deser_varstr(&txout->scriptPubKey, buf)) return false;
+	return true;
+}
+
+void ser_bp_txout(GString *s, const struct bp_txout *txout)
+{
+	ser_s64(s, txout->nValue);
+	ser_varstr(s, txout->scriptPubKey);
+}
+
+void bp_txout_free(struct bp_txout *txout)
+{
+	if (txout->scriptPubKey) {
+		g_string_free(txout->scriptPubKey, TRUE);
+		txout->scriptPubKey = NULL;
+	}
+}
+

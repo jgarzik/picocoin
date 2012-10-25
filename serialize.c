@@ -95,6 +95,17 @@ void ser_str(GString *s, const char *s_in, size_t maxlen)
 	ser_bytes(s, s_in, slen);
 }
 
+void ser_varstr(GString *s, GString *s_in)
+{
+	if (!s_in || !s_in->len) {
+		ser_varlen(s, 0);
+		return;
+	}
+
+	ser_varlen(s, s_in->len);
+	ser_bytes(s, s_in->str, s_in->len);
+}
+
 bool deser_skip(struct buffer *buf, size_t len)
 {
 	if (buf->len < len)
@@ -230,6 +241,30 @@ bool deser_str(char *so, struct buffer *buf, size_t maxlen)
 		so[len] = 0;
 	else
 		so[maxlen - 1] = 0;
+
+	return true;
+}
+
+bool deser_varstr(GString **so, struct buffer *buf)
+{
+	if (*so) {
+		g_string_free(*so, TRUE);
+		*so = NULL;
+	}
+
+	uint32_t len;
+	if (!deser_varlen(&len, buf)) return false;
+
+	if (buf->len < len)
+		return false;
+
+	GString *s = g_string_sized_new(len);
+	g_string_append_len(s, buf->p, len);
+
+	buf->p += len;
+	buf->len -= len;
+
+	*so = s;
 
 	return true;
 }

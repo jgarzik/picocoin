@@ -26,4 +26,25 @@ extern bool deser_bp_outpt(struct bp_outpt *outpt, struct buffer *buf);
 extern void ser_bp_outpt(GString *s, const struct bp_outpt *outpt);
 extern void bp_outpt_free(struct bp_outpt *outpt);
 
+struct bp_txin {
+	struct bp_outpt	prevout;
+	GString		*scriptSig;
+	uint32_t	nSequence;
+};
+
+extern void bp_txin_init(struct bp_txin *txin);
+extern bool deser_bp_txin(struct bp_txin *txin, struct buffer *buf);
+extern void ser_bp_txin(GString *s, const struct bp_txin *txin);
+extern void bp_txin_free(struct bp_txin *txin);
+
+struct bp_txout {
+	int64_t		nValue;
+	GString		*scriptPubKey;
+};
+
+extern void bp_txout_init(struct bp_txout *txout);
+extern bool deser_bp_txout(struct bp_txout *txout, struct buffer *buf);
+extern void ser_bp_txout(GString *s, const struct bp_txout *txout);
+extern void bp_txout_free(struct bp_txout *txout);
+
 #endif /* __PICOCOIN_CORE_H__ */
