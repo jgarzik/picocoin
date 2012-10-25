@@ -8,7 +8,7 @@ bin_PROGRAMS	= picocoin
 
 picocoin_SOURCES= picocoin.h dns.c main.c
 
-picocoin_LDADD	= @GLIB_LIBS@ @EVENT_LIBS@
+picocoin_LDADD	= @GLIB_LIBS@ @CRYPTO_LIBS@
 
 EXTRA_DIST	= autogen.sh
 
