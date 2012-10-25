@@ -12,12 +12,19 @@ struct p2p_addr {
 	uint64_t	nServices;
 };
 
+struct buffer {
+	void		*p;
+	size_t		len;
+};
+
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 #endif
 
+/* dns.c */
 extern GList *get_dns_seed_addrs(void);
 
+/* main.c */
 extern GHashTable *settings;
 extern const char ipv4_mapped_pfx[12];
 
