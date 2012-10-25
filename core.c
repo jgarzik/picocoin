@@ -26,6 +26,99 @@ void ser_bp_addr(GString *s, unsigned int protover, const struct bp_address *add
 	ser_u16(s, addr->port);
 }
 
+void bp_inv_init(struct bp_inv *inv)
+{
+	memset(inv, 0, sizeof(*inv));
+	BN_init(&inv->hash);
+}
+
+bool deser_bp_inv(struct bp_inv *inv, struct buffer *buf)
+{
+	if (!deser_u32(&inv->type, buf)) return false;
+	if (!deser_u256(&inv->hash, buf)) return false;
+	return true;
+}
+
+void ser_bp_inv(GString *s, const struct bp_inv *inv)
+{
+	ser_u32(s, inv->type);
+	ser_u256(s, &inv->hash);
+}
+
+void bp_inv_free(struct bp_inv *inv)
+{
+	BN_clear_free(&inv->hash);
+}
+
+void bp_locator_init(struct bp_locator *locator)
+{
+	memset(locator, 0, sizeof(*locator));
+}
+
+bool deser_bp_locator(struct bp_locator *locator, struct buffer *buf)
+{
+	if (!deser_u32(&locator->nVersion, buf)) return false;
+
+	uint32_t vlen;
+	if (!deser_varlen(&vlen, buf)) return false;
+	
+	unsigned int i;
+	for (i = 0; i < vlen; i++) {
+		BIGNUM *n;
+
+		n = BN_new();
+		if (!deser_u256(n, buf)) {
+			BN_clear_free(n);
+			goto err_out;
+		}
+
+		g_ptr_array_add(locator->vHave, n);
+	}
+
+	return true;
+
+err_out:
+	bp_locator_free(locator);
+	return false;
+}
+
+void ser_bp_locator(GString *s, const struct bp_locator *locator)
+{
+	ser_u32(s, locator->nVersion);
+
+	if (!locator->vHave || !locator->vHave->len) {
+		ser_varlen(s, 0);
+		return;
+	}
+
+	ser_varlen(s, locator->vHave->len);
+
+	unsigned int i;
+	for (i = 0; i < locator->vHave->len; i++) {
+		BIGNUM *n;
+
+		n = g_ptr_array_index(locator->vHave, i);
+		ser_u256(s, n);
+	}
+}
+
+void bp_locator_free(struct bp_locator *locator)
+{
+	if (locator->vHave) {
+		unsigned int i;
+
+		for (i = 0; i > locator->vHave->len; i++) {
+			BIGNUM *n;
+
+			n = g_ptr_array_index(locator->vHave, i);
+			BN_clear_free(n);
+		}
+
+		g_ptr_array_free(locator->vHave, TRUE);
+		locator->vHave = NULL;
+	}
+}
+
 void bp_outpt_init(struct bp_outpt *outpt)
 {
 	memset(outpt, 0, sizeof(*outpt));

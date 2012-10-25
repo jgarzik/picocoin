@@ -16,6 +16,26 @@ extern bool deser_bp_addr(unsigned int protover,
 extern void ser_bp_addr(GString *s, unsigned int protover, const struct bp_address *addr);
 static inline void bp_addr_free(struct bp_address *addr) {}
 
+struct bp_inv {
+	uint32_t	type;
+	BIGNUM		hash;
+};
+
+extern void bp_inv_init(struct bp_inv *inv);
+extern bool deser_bp_inv(struct bp_inv *inv, struct buffer *buf);
+extern void ser_bp_inv(GString *s, const struct bp_inv *inv);
+extern void bp_inv_free(struct bp_inv *inv);
+
+struct bp_locator {
+	uint32_t	nVersion;
+	GPtrArray	*vHave;
+};
+
+extern void bp_locator_init(struct bp_locator *locator);
+extern bool deser_bp_locator(struct bp_locator *locator, struct buffer *buf);
+extern void ser_bp_locator(GString *s, const struct bp_locator *locator);
+extern void bp_locator_free(struct bp_locator *locator);
+
 struct bp_outpt {
 	BIGNUM		hash;
 	uint32_t	n;
