@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <glib.h>
 #include <openssl/bn.h>
+#include <openssl/sha.h>
 #include "picocoin.h"
 #include "serialize.h"
 
@@ -267,5 +268,27 @@ bool deser_varstr(GString **so, struct buffer *buf)
 	*so = s;
 
 	return true;
+}
+
+void u256_from_compact(BIGNUM *vo, uint32_t c)
+{
+	uint32_t nbytes = (c >> 24) & 0xFF;
+	uint32_t cv = c & 0xFFFFFF;
+
+	BN_set_word(vo, cv);
+	BN_lshift(vo, vo, (8 * (nbytes - 3)));
+}
+
+void bp_hash(BIGNUM *vo, void *data, size_t data_len)
+{
+	unsigned char md1[SHA256_DIGEST_LENGTH];
+	unsigned char md2[SHA256_DIGEST_LENGTH];
+
+	SHA256(data, data_len, md1);
+	SHA256(md1, SHA256_DIGEST_LENGTH, md2);
+
+	struct buffer buf = { md2, SHA256_DIGEST_LENGTH };
+
+	deser_u256(vo, &buf);
 }
 

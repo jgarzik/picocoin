@@ -34,4 +34,7 @@ static inline bool deser_s64(int64_t *vo, struct buffer *buf)
 	return deser_u64((uint64_t *) vo, buf);
 }
 
+extern void u256_from_compact(BIGNUM *vo, uint32_t c);
+extern void bp_hash(BIGNUM *vo, void *data, size_t data_len);
+
 #endif /* __PICOCOIN_SERIALIZE_H__ */

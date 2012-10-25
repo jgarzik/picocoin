@@ -80,10 +80,15 @@ static inline bool bp_txout_valid(const struct bp_txout *txout)
 }
 
 struct bp_tx {
+	/* serialized */
 	uint32_t	nVersion;
 	GPtrArray	*vin;
 	GPtrArray	*vout;
 	uint32_t	nLockTime;
+
+	/* used at runtime */
+	bool		sha256_valid;
+	BIGNUM		sha256;
 };
 
 extern void bp_tx_init(struct bp_tx *tx);
@@ -91,6 +96,7 @@ extern bool deser_bp_tx(struct bp_tx *tx, struct buffer *buf);
 extern void ser_bp_tx(GString *s, const struct bp_tx *tx);
 extern void bp_tx_free(struct bp_tx *tx);
 extern bool bp_tx_valid(const struct bp_tx *tx);
+extern void bp_tx_calc_sha256(struct bp_tx *tx);
 
 static inline bool bp_tx_coinbase(const struct bp_tx *tx)
 {
@@ -105,6 +111,7 @@ static inline bool bp_tx_coinbase(const struct bp_tx *tx)
 }
 
 struct bp_block {
+	/* serialized */
 	uint32_t	nVersion;
 	BIGNUM		hashPrevBlock;
 	BIGNUM		hashMerkleRoot;
@@ -112,11 +119,18 @@ struct bp_block {
 	uint32_t	nBits;
 	uint32_t	nNonce;
 	GPtrArray	*vtx;
+
+	/* used at runtime */
+	bool		sha256_valid;
+	BIGNUM		sha256;
 };
 
 extern void bp_block_init(struct bp_block *block);
 extern bool deser_bp_block(struct bp_block *block, struct buffer *buf);
 extern void ser_bp_block(GString *s, const struct bp_block *block);
 extern void bp_block_free(struct bp_block *block);
+extern void bp_block_calc_sha256(struct bp_block *block);
+extern bool bp_block_merkle(BIGNUM *vo, const struct bp_block *block);
+extern bool bp_block_valid(struct bp_block *block);
 
 #endif /* __PICOCOIN_CORE_H__ */

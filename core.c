@@ -1,6 +1,7 @@
 
 #include "picocoin-config.h"
 
+#include <openssl/sha.h>
 #include "picocoin.h"
 #include "core.h"
 #include "coredefs.h"
@@ -203,6 +204,7 @@ void bp_txout_free(struct bp_txout *txout)
 void bp_tx_init(struct bp_tx *tx)
 {
 	memset(tx, 0, sizeof(*tx));
+	BN_init(&tx->sha256);
 }
 
 bool deser_bp_tx(struct bp_tx *tx, struct buffer *buf)
@@ -307,6 +309,23 @@ void bp_tx_free(struct bp_tx *tx)
 
 		tx->vout = NULL;
 	}
+
+	BN_clear_free(&tx->sha256);
+	tx->sha256_valid = false;
+}
+
+void bp_tx_calc_sha256(struct bp_tx *tx)
+{
+	if (tx->sha256_valid)
+		return;
+
+	GString *s = g_string_sized_new(512);
+	ser_bp_tx(s, tx);
+
+	bp_hash(&tx->sha256, s->str, s->len);
+	tx->sha256_valid = true;
+
+	g_string_free(s, TRUE);
 }
 
 bool bp_tx_valid(const struct bp_tx *tx)
@@ -341,6 +360,7 @@ void bp_block_init(struct bp_block *block)
 	memset(block, 0, sizeof(*block));
 	BN_init(&block->hashPrevBlock);
 	BN_init(&block->hashMerkleRoot);
+	BN_init(&block->sha256);
 }
 
 bool deser_bp_block(struct bp_block *block, struct buffer *buf)
@@ -378,7 +398,7 @@ err_out:
 	return false;
 }
 
-void ser_bp_block(GString *s, const struct bp_block *block)
+static void ser_bp_block_hdr(GString *s, const struct bp_block *block)
 {
 	ser_u32(s, block->nVersion);
 	ser_u256(s, &block->hashPrevBlock);
@@ -386,6 +406,11 @@ void ser_bp_block(GString *s, const struct bp_block *block)
 	ser_u32(s, block->nTime);
 	ser_u32(s, block->nBits);
 	ser_u32(s, block->nNonce);
+}
+
+void ser_bp_block(GString *s, const struct bp_block *block)
+{
+	ser_bp_block_hdr(s, block);
 
 	unsigned int i;
 	if (block->vtx) {
@@ -414,5 +439,132 @@ void bp_block_free(struct bp_block *block)
 
 		block->vtx = NULL;
 	}
+
+	BN_clear_free(&block->hashPrevBlock);
+	BN_clear_free(&block->hashMerkleRoot);
+	BN_clear_free(&block->sha256);
+}
+
+void bp_block_calc_sha256(struct bp_block *block)
+{
+	if (block->sha256_valid)
+		return;
+
+	GString *s = g_string_sized_new(10 * 1024);
+	ser_bp_block_hdr(s, block);
+
+	bp_hash(&block->sha256, s->str, s->len);
+	block->sha256_valid = true;
+
+	g_string_free(s, TRUE);
+}
+
+bool bp_block_merkle(BIGNUM *vo, const struct bp_block *block)
+{
+	if (!block->vtx)
+		return false;
+
+	GList *hashes = NULL;
+	unsigned int i;
+
+	for (i = 0; i < block->vtx->len; i++) {
+		struct bp_tx *tx;
+
+		tx = g_ptr_array_index(block->vtx, i);
+		bp_tx_calc_sha256(tx);
+
+		GString *s256 = g_string_sized_new(32);
+		ser_u256(s256, &tx->sha256);
+
+		hashes = g_list_append(hashes,
+				       g_string_free(s256, FALSE));
+	}
+
+	while (g_list_length(hashes) > 1) {
+		GList *newhashes;
+
+		newhashes = NULL;
+
+		for (i = 0; i < g_list_length(hashes); i += 2) {
+			unsigned int i2;
+
+			i2 = MIN(i + 1, g_list_length(hashes) - 1);
+
+			void *data1 = g_list_nth(hashes, i);
+			void *data2 = g_list_nth(hashes, i2);
+
+			unsigned char md1[SHA256_DIGEST_LENGTH];
+			unsigned char md2[SHA256_DIGEST_LENGTH], *md2_p;
+			SHA256_CTX ctx;
+
+			SHA256_Init(&ctx);
+			SHA256_Update(&ctx, data1, 32);
+			SHA256_Update(&ctx, data2, 32);
+			SHA256_Final(md1, &ctx);
+			SHA256(md1, SHA256_DIGEST_LENGTH, md2);
+
+			md2_p = g_memdup(md2, SHA256_DIGEST_LENGTH);
+
+			newhashes = g_list_append(newhashes, md2_p);
+		}
+
+		GList *del_tmp;
+
+		del_tmp = hashes;
+		hashes = newhashes;
+
+		g_list_free_full(del_tmp, g_free);
+	}
+
+	struct buffer buf = { hashes->data, SHA256_DIGEST_LENGTH };
+
+	deser_u256(vo, &buf);
+
+	return true;
+}
+
+bool bp_block_valid_target(struct bp_block *block)
+{
+	BIGNUM target;
+	BN_init(&target);
+
+	u256_from_compact(&target, block->nBits);
+
+	int cmp = BN_cmp(&block->sha256, &target);
+
+	BN_clear_free(&target);
+
+	if (cmp > 0)			/* sha256 > target */
+		return false;
+
+	return true;
+}
+
+bool bp_block_valid_merkle(struct bp_block *block)
+{
+	BIGNUM merkle;
+	BN_init(&merkle);
+
+	int merkle_cmp = -1;
+	bool merkle_rc = bp_block_merkle(&merkle, block);
+
+	if (merkle_rc)
+		merkle_cmp = BN_cmp(&merkle, &block->hashMerkleRoot);
+
+	BN_clear_free(&merkle);
+
+	return merkle_cmp == 0;
+}
+
+bool bp_block_valid(struct bp_block *block)
+{
+	bp_block_calc_sha256(block);
+
+	if (!bp_block_valid_target(block)) return false;
+	if (!bp_block_valid_merkle(block)) return false;
+
+	return true;
+
+
 }
 
