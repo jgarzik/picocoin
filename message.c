@@ -122,7 +122,10 @@ bool deser_msg_addr(unsigned int protover, struct msg_addr *ma,
 		struct bp_address *addr;
 
 		addr = calloc(1, sizeof(*addr));
-		if (!deser_bp_addr(protover, addr, buf)) goto err_out;
+		if (!deser_bp_addr(protover, addr, buf)) {
+			free(addr);
+			goto err_out;
+		}
 
 		g_ptr_array_add(ma->addrs, addr);
 	}

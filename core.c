@@ -107,3 +107,192 @@ void bp_txout_free(struct bp_txout *txout)
 	}
 }
 
+void bp_tx_init(struct bp_tx *tx)
+{
+	memset(tx, 0, sizeof(*tx));
+}
+
+bool deser_bp_tx(struct bp_tx *tx, struct buffer *buf)
+{
+	tx->vin = g_ptr_array_new_full(8, g_free);
+	tx->vout = g_ptr_array_new_full(8, g_free);
+
+	if (!deser_u32(&tx->nVersion, buf)) return false;
+
+	uint32_t vlen;
+	if (!deser_varlen(&vlen, buf)) return false;
+
+	unsigned int i;
+	for (i = 0; i < vlen; i++) {
+		struct bp_txin *txin;
+
+		txin = calloc(1, sizeof(*txin));
+		bp_txin_init(txin);
+		if (!deser_bp_txin(txin, buf)) {
+			free(txin);
+			goto err_out;
+		}
+
+		g_ptr_array_add(tx->vin, txin);
+	}
+
+	if (!deser_varlen(&vlen, buf)) return false;
+
+	for (i = 0; i < vlen; i++) {
+		struct bp_txout *txout;
+
+		txout = calloc(1, sizeof(*txout));
+		bp_txout_init(txout);
+		if (!deser_bp_txout(txout, buf)) {
+			free(txout);
+			goto err_out;
+		}
+
+		g_ptr_array_add(tx->vout, txout);
+	}
+
+	if (!deser_u32(&tx->nLockTime, buf)) return false;
+	return true;
+
+err_out:
+	bp_tx_free(tx);
+	return false;
+}
+
+void ser_bp_tx(GString *s, const struct bp_tx *tx)
+{
+	ser_u32(s, tx->nVersion);
+
+	unsigned int i;
+	if (tx->vin) {
+		for (i = 0; i < tx->vin->len; i++) {
+			struct bp_txin *txin;
+
+			txin = g_ptr_array_index(tx->vin, i);
+			ser_bp_txin(s, txin);
+		}
+	}
+
+	if (tx->vout) {
+		for (i = 0; i < tx->vout->len; i++) {
+			struct bp_txout *txout;
+
+			txout = g_ptr_array_index(tx->vout, i);
+			ser_bp_txout(s, txout);
+		}
+	}
+
+	ser_u32(s, tx->nLockTime);
+}
+
+void bp_tx_free(struct bp_tx *tx)
+{
+	unsigned int i;
+
+	if (tx->vin) {
+		for (i = 0; i < tx->vin->len; i++) {
+			struct bp_txin *txin;
+
+			txin = g_ptr_array_index(tx->vin, i);
+			bp_txin_free(txin);
+		}
+
+		g_ptr_array_free(tx->vin, TRUE);
+
+		tx->vin = NULL;
+	}
+
+	if (tx->vout) {
+		for (i = 0; i < tx->vout->len; i++) {
+			struct bp_txout *txout;
+
+			txout = g_ptr_array_index(tx->vout, i);
+			bp_txout_free(txout);
+		}
+
+		g_ptr_array_free(tx->vout, TRUE);
+
+		tx->vout = NULL;
+	}
+}
+
+void bp_block_init(struct bp_block *block)
+{
+	memset(block, 0, sizeof(*block));
+	BN_init(&block->hashPrevBlock);
+	BN_init(&block->hashMerkleRoot);
+}
+
+bool deser_bp_block(struct bp_block *block, struct buffer *buf)
+{
+	block->vtx = g_ptr_array_new_full(512, g_free);
+
+	if (!deser_u32(&block->nVersion, buf)) return false;
+	if (!deser_u256(&block->hashPrevBlock, buf)) return false;
+	if (!deser_u256(&block->hashMerkleRoot, buf)) return false;
+	if (!deser_u32(&block->nTime, buf)) return false;
+	if (!deser_u32(&block->nBits, buf)) return false;
+	if (!deser_u32(&block->nNonce, buf)) return false;
+
+	uint32_t vlen;
+	if (!deser_varlen(&vlen, buf)) return false;
+
+	unsigned int i;
+	for (i = 0; i < vlen; i++) {
+		struct bp_tx *tx;
+
+		tx = calloc(1, sizeof(*tx));
+		bp_tx_init(tx);
+		if (!deser_bp_tx(tx, buf)) {
+			free(tx);
+			goto err_out;
+		}
+
+		g_ptr_array_add(block->vtx, tx);
+	}
+
+	return true;
+
+err_out:
+	bp_block_free(block);
+	return false;
+}
+
+void ser_bp_block(GString *s, const struct bp_block *block)
+{
+	ser_u32(s, block->nVersion);
+	ser_u256(s, &block->hashPrevBlock);
+	ser_u256(s, &block->hashMerkleRoot);
+	ser_u32(s, block->nTime);
+	ser_u32(s, block->nBits);
+	ser_u32(s, block->nNonce);
+
+	unsigned int i;
+	if (block->vtx) {
+		for (i = 0; i < block->vtx->len; i++) {
+			struct bp_tx *tx;
+
+			tx = g_ptr_array_index(block->vtx, i);
+			ser_bp_tx(s, tx);
+		}
+	}
+}
+
+void bp_block_free(struct bp_block *block)
+{
+	unsigned int i;
+
+	if (block->vtx) {
+		for (i = 0; i < block->vtx->len; i++) {
+			struct bp_tx *tx;
+
+			tx = g_ptr_array_index(block->vtx, i);
+			bp_tx_free(tx);
+		}
+
+		g_ptr_array_free(block->vtx, TRUE);
+
+		block->vtx = NULL;
+	}
+}
+
