@@ -1,16 +1,21 @@
 
 #include "picocoin-config.h"
 
+#include <sys/types.h>
+#include <sys/socket.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <netdb.h>
 #include <ctype.h>
 #include <glib.h>
+#include "picocoin.h"
 
 const char *prog_name = "picocoin";
 GHashTable *settings;
+const char ipv4_mapped_pfx[12] = "\0\0\0\0\0\0\0\0\0\0\xff\xff";
 
 static bool parse_kvstr(const char *s, char **key, char **value)
 {
@@ -51,9 +56,12 @@ static void parse_settings(int argc, char **argv)
 		g_hash_table_replace(settings, key, value);
 	}
 
-	char *cfg_fn = g_hash_table_lookup(settings, "cfg");
-	if (!cfg_fn)
-		return;
+	char *cfg_fn = setting("config");
+	if (!cfg_fn) {
+		cfg_fn = setting("c");
+		if (!cfg_fn)
+			return;
+	}
 
 	FILE *cfg = fopen(cfg_fn, "r");
 	if (!cfg)
@@ -85,7 +93,54 @@ static void list_setting_iter(gpointer key_, gpointer value_, gpointer dummy)
 
 static void list_settings(void)
 {
+	printf("=SETTINGS\n");
 	g_hash_table_foreach(settings, list_setting_iter, NULL);
+	printf("=END_SETTINGS\n");
+}
+
+static void list_dns_seeds(void)
+{
+	GList *tmp, *addrlist = get_dns_seed_addrs();
+
+	printf("=DNS_SEEDS\n");
+
+	for (tmp = addrlist; tmp != NULL; tmp = tmp->next) {
+		struct p2p_addr *addr = tmp->data;
+		char host[64];
+		bool is_ipv4 = is_ipv4_mapped(addr->ip);
+
+		if (is_ipv4) {
+			struct sockaddr_in saddr;
+
+			memset(&saddr, 0, sizeof(saddr));
+			saddr.sin_family = AF_INET;
+			memcpy(&saddr.sin_addr, &addr->ip[12], 4);
+
+			getnameinfo((struct sockaddr *) &saddr, sizeof(saddr),
+				    host, sizeof(host),
+				    NULL, 0, NI_NUMERICHOST);
+		} else {
+			struct sockaddr_in6 saddr;
+
+			memset(&saddr, 0, sizeof(saddr));
+			saddr.sin6_family = AF_INET6;
+			memcpy(&saddr.sin6_addr, &addr->ip, 16);
+
+			getnameinfo((struct sockaddr *) &saddr, sizeof(saddr),
+				    host, sizeof(host),
+				    NULL, 0, NI_NUMERICHOST);
+		}
+
+		printf("v%c %s %u %llu\n",
+		       is_ipv4 ? '4' : '6',
+		       host,
+		       addr->port,
+		       (unsigned long long) addr->nServices);
+	}
+
+	g_list_free_full(addrlist, g_free);
+
+	printf("=END_DNS_SEEDS\n");
 }
 
 int main (int argc, char *argv[])
@@ -96,7 +151,10 @@ int main (int argc, char *argv[])
 
 	parse_settings(argc, argv);
 
-	list_settings();
+	if (setting("list-settings"))
+		list_settings();
+	if (setting("dns-seeds"))
+		list_dns_seeds();
 
 	return 0;
 }

@@ -1,1 +1,38 @@
-tiny bitcoin client
+
+
+
+Tiny bitcoin utility and lightweight client
+
+Dependencies:
+	GLib 2.x (from the GTK project)
+	libevent (TODO: unused for now)
+
+
+
+Command line and configuration file usage
+=========================================
+
+In general, the program stores settings in a key/value map.  These key=value
+parameters may be specified on the command line, or in a configuration file.
+
+The command line is processed first, then the configuration file is read.  The
+entries are processed in order, overwriting any existing duplicates.
+
+Once configuration has been read, execution begins.
+
+
+Recognized parameters
+=====================
+
+config (alias "c")
+------------------
+Specify a pathname to the configuration file.
+
+list-settings
+-------------
+Display settings map.
+
+dns-seeds
+---------
+Query and display bitcoin DNS seeds, for P2P node addresses.
+
