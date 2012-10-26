@@ -7,18 +7,14 @@
   Saju Pillai (saju.pillai@gmail.com)
 **/
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <string.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <unistd.h>
-#include <errno.h>
 #include <openssl/evp.h>
 #include <openssl/aes.h>
 #include <glib.h>
+#include "util.h"
 
 /**
  * Create an 256 bit key and IV using the supplied key_data. salt can be added for taste.
@@ -39,7 +35,7 @@ static bool aes_init(unsigned char *key_data, int key_data_len,
 	i = EVP_BytesToKey(EVP_aes_256_cbc(), EVP_sha512(), salt, key_data,
 			   key_data_len, nrounds, key, iv);
 	if (i != 32) {
-		printf("Key size is %d bits - should be 256 bits\n", i);
+		/* printf("Key size is %d bits - should be 256 bits\n", i); */
 		return false;
 	}
 
@@ -93,82 +89,6 @@ static unsigned char *aes_decrypt(EVP_CIPHER_CTX * e, const unsigned char *ciphe
 	*len = p_len + f_len;
 	return plaintext;
 }
-
-static bool read_file(const char *filename, void **data_, size_t *data_len_,
-		      size_t max_file_len)
-{
-	void *data;
-	struct stat st;
-
-	*data_ = NULL;
-	*data_len_ = 0;
-
-	int fd = open(filename, O_RDONLY);
-	if (fd < 0)
-		return false;
-
-	if (fstat(fd, &st) < 0)
-		goto err_out_fd;
-
-	if (st.st_size > max_file_len)
-		goto err_out_fd;
-
-	data = malloc(st.st_size);
-	if (!data)
-		goto err_out_fd;
-
-	ssize_t rrc = read(fd, data, st.st_size);
-	if (rrc != st.st_size)
-		goto err_out_mem;
-
-	close(fd);
-	fd = -1;
-
-	*data_ = data;
-	*data_len_ = st.st_size;
-
-	return true;
-
-err_out_mem:
-	free(data);
-err_out_fd:
-	if (fd >= 0)
-		close(fd);
-	return false;
-}
-
-static bool write_file(const char *filename, const void *data, size_t data_len)
-{
-	char *tmpfn = calloc(1, strlen(filename) + 16);
-	strcpy(tmpfn, filename);
-	strcat(tmpfn, ".XXXXXX");
-
-	int fd = mkstemp(tmpfn);
-	if (fd < 0)
-		goto err_out_tmpfn;
-
-	ssize_t wrc = write(fd, data, data_len);
-	if (wrc != data_len)
-		goto err_out_fd;
-
-	close(fd);
-	fd = -1;
-
-	if (rename(tmpfn, filename) < 0)
-		goto err_out_fd;
-
-	free(tmpfn);
-	return true;
-
-err_out_fd:
-	if (fd >= 0)
-		close(fd);
-	unlink(tmpfn);
-err_out_tmpfn:
-	free(tmpfn);
-	return false;
-}
-
 
 GString *read_aes_file(const char *filename, void *key, size_t key_len,
 		       size_t max_file_len)
