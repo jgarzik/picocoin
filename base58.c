@@ -28,6 +28,8 @@ GString *base58_encode(const void *data_, size_t data_len)
 	reverse_copy(swapbuf + sizeof(swapbuf) - 1, data, data_len);
 	swapbuf[0] = 0;
 
+	bn_setvch(&bn, swapbuf, sizeof(swapbuf));
+
 	GString *rs = g_string_sized_new(data_len * 138 / 100 + 1);
 
 	while (BN_cmp(&bn, &bn0) > 0) {
