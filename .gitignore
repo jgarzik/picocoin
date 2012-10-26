@@ -23,3 +23,5 @@ picocoin
 picocoin*.tar.gz
 picocoin-config.h*
 
+picocoin.wallet
+

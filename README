@@ -59,3 +59,8 @@ new-address
 Generate a new bitcoin address (ECDSA keypair).  Store it in the current
 wallet, 
 
+new-wallet
+----------
+Initialize a new wallet.  Refuses to initialize, if the filename already
+exists.
+

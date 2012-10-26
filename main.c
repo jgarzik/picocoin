@@ -171,7 +171,8 @@ static bool is_command(const char *s)
 {
 	return	!strcmp(s, "dns-seeds") ||
 		!strcmp(s, "list-settings") ||
-		!strcmp(s, "new-address")
+		!strcmp(s, "new-address") ||
+		!strcmp(s, "new-wallet")
 		;
 }
 
@@ -185,6 +186,9 @@ static bool do_command(const char *s)
 
 	else if (!strcmp(s, "new-address"))
 		wallet_new_address();
+
+	else if (!strcmp(s, "new-wallet"))
+		wallet_create();
 
 	return true;
 }

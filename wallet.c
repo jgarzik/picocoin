@@ -1,7 +1,10 @@
 
 #include "picocoin-config.h"
 
+#include <stdio.h>
+#include <unistd.h>
 #include <openssl/ripemd.h>
+#include <glib.h>
 #include "coredefs.h"
 #include "picocoin.h"
 #include "wallet.h"
@@ -10,17 +13,40 @@
 #include "key.h"
 #include "util.h"
 
+static char *wallet_filename(void)
+{
+	char *filename = setting("wallet");
+	if (!filename)
+		filename = setting("w");
+	return filename;
+}
+
 static bool load_rec_privkey(struct wallet *wlt, void *privkey, size_t pk_len)
 {
 	if (pk_len != 32)		/* 256 bit privkey required */
 		return false;
 
-	struct bp_key key;
+	struct bp_key *key;
 
-	bp_key_init(&key);
-	bp_privkey_set(&key, privkey, pk_len);
+	key = calloc(1, sizeof(*key));
+	bp_key_init(key);
+	bp_privkey_set(key, privkey, pk_len);
 
-	g_array_append_val(wlt->keys, key);
+	g_ptr_array_add(wlt->keys, key);
+
+	return true;
+}
+
+static bool load_rec_version(struct wallet *wlt, void *data, size_t data_len)
+{
+	struct buffer buf = { data, data_len };
+	uint32_t v;
+	if (!deser_u32(&v, &buf)) return false;
+
+	if (v != 1)
+		return false;
+
+	wlt->version = v;
 
 	return true;
 }
@@ -30,29 +56,38 @@ static bool load_record(struct wallet *wlt, struct p2p_message *msg)
 	if (!strncmp(msg->hdr.command, "privkey", sizeof(msg->hdr.command)))
 		return load_rec_privkey(wlt, msg->data, msg->hdr.data_len);
 
+	else if (!strncmp(msg->hdr.command, "version",sizeof(msg->hdr.command)))
+		return load_rec_version(wlt, msg->data, msg->hdr.data_len);
+
 	return true;	/* ignore unknown records */
 }
 
 struct wallet *load_wallet(void)
 {
 	char *passphrase = getenv("PICOCOIN_PASSPHRASE");
-	if (!passphrase)
+	if (!passphrase) {
+		fprintf(stderr, "missing PICOCOIN_PASSPHRASE\n");
 		return NULL;
+	}
 	
-	char *filename = setting("wallet");
-	if (!filename)
-		filename = setting("w");
-	if (!filename)
+	char *filename = wallet_filename();
+	if (!filename) {
+		fprintf(stderr, "wallet: no filename\n");
 		return NULL;
+	}
 	
 	GString *data = read_aes_file(filename, passphrase, strlen(passphrase),
 				      100 * 1024 * 1024);
-	if (!data)
+	if (!data) {
+		fprintf(stderr, "wallet: missing or invalid\n");
 		return NULL;
+	}
 
 	struct wallet *wlt;
 
 	wlt = calloc(1, sizeof(*wlt));
+
+	wlt->keys = g_ptr_array_new_full(1000, g_free);
 
 	struct buffer buf = { data->str, data->len };
 	struct p2p_message msg;
@@ -77,6 +112,8 @@ struct wallet *load_wallet(void)
 	return wlt;
 
 err_out:
+	fprintf(stderr, "wallet: invalid data found\n");
+	g_ptr_array_free(wlt->keys, TRUE);
 	free(wlt);
 	g_string_free(data, TRUE);
 	return NULL;
@@ -86,13 +123,15 @@ static GString *ser_wallet(struct wallet *wlt)
 {
 	unsigned int i;
 
-	GString *rs = g_string_new(NULL);
+	GString *rs = g_string_sized_new(20 * 1024);
+
+	ser_u32(rs, wlt->version);
 
 	if (wlt->keys) {
 		for (i = 0; i < wlt->keys->len; i++) {
 			struct bp_key *key;
 
-			key = &g_array_index(wlt->keys, struct bp_key, i);
+			key = g_ptr_array_index(wlt->keys, i);
 
 			void *privkey = NULL;
 			size_t pk_len = 0;
@@ -118,9 +157,7 @@ bool store_wallet(struct wallet *wlt)
 	if (!passphrase)
 		return false;
 	
-	char *filename = setting("wallet");
-	if (!filename)
-		filename = setting("w");
+	char *filename = wallet_filename();
 	if (!filename)
 		return false;
 	
@@ -145,11 +182,11 @@ void wallet_free(struct wallet *wlt)
 		for (i = 0; i < wlt->keys->len; i++) {
 			struct bp_key *key;
 
-			key = &g_array_index(wlt->keys, struct bp_key, i);
+			key = g_ptr_array_index(wlt->keys, i);
 			bp_key_free(key);
 		}
 
-		g_array_free(wlt->keys, TRUE);
+		g_ptr_array_free(wlt->keys, TRUE);
 		wlt->keys = NULL;
 	}
 }
@@ -163,19 +200,20 @@ void wallet_new_address(void)
 	
 	struct wallet *wlt = cur_wallet;
 
-	struct bp_key key;
+	struct bp_key *key;
 
-	bp_key_init(&key);
-	bp_key_generate(&key);
+	key = calloc(1, sizeof(*key));
+	bp_key_init(key);
+	bp_key_generate(key);
 
-	g_array_append_val(wlt->keys, key);
+	g_ptr_array_add(wlt->keys, key);
 
 	store_wallet(wlt);
 
 	void *pubkey = NULL;
 	size_t pk_len = 0;
 
-	bp_pubkey_get(&key, &pubkey, &pk_len);
+	bp_pubkey_get(key, &pubkey, &pk_len);
 
 	unsigned char md160[RIPEMD160_DIGEST_LENGTH];
 
@@ -186,5 +224,55 @@ void wallet_new_address(void)
 	printf("NEW_ADDRESS %s\n", btc_addr->str);
 
 	g_string_free(btc_addr, TRUE);
+}
+
+static void cur_wallet_free(void)
+{
+	if (!cur_wallet)
+		return;
+	
+	wallet_free(cur_wallet);
+	free(cur_wallet);
+
+	cur_wallet = NULL;
+}
+
+static void cur_wallet_update(struct wallet *wlt)
+{
+	if (!cur_wallet) {
+		cur_wallet = wlt;
+		return;
+	}
+	if (cur_wallet == wlt)
+		return;
+
+	cur_wallet_free();
+	cur_wallet = wlt;
+}
+
+void wallet_create(void)
+{
+	char *filename = wallet_filename();
+	if (!filename) {
+		fprintf(stderr, "wallet: no filename\n");
+		return;
+	}
+
+	if (access(filename, F_OK) == 0) {
+		fprintf(stderr, "wallet: already exists, aborting\n");
+		return;
+	}
+
+	struct wallet *wlt;
+
+	wlt = calloc(1, sizeof(*wlt));
+	wlt->version = 1;
+
+	cur_wallet_update(wlt);
+
+	if (!store_wallet(wlt)) {
+		fprintf(stderr, "wallet: failed to store\n");
+		return;
+	}
 }
 
