@@ -461,7 +461,7 @@ void bp_block_calc_sha256(struct bp_block *block)
 
 bool bp_block_merkle(BIGNUM *vo, const struct bp_block *block)
 {
-	if (!block->vtx)
+	if (!block->vtx || !block->vtx->len)
 		return false;
 
 	GList *hashes = NULL;
