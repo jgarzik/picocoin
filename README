@@ -64,3 +64,16 @@ new-wallet
 Initialize a new wallet.  Refuses to initialize, if the filename already
 exists.
 
+netsync
+-------
+Synchronize with network: send any pending payments, and check for
+new incoming payments.
+
+wallet-addr
+-----------
+List all bitcoin addresses in wallet.
+
+wallet-info
+-----------
+Informational summary of wallet data.
+

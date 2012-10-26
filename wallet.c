@@ -21,6 +21,24 @@ static char *wallet_filename(void)
 	return filename;
 }
 
+static bool deser_wallet_root(struct wallet *wlt, struct buffer *buf)
+{
+	if (!deser_u32(&wlt->version, buf)) return false;
+	if (!deser_bytes(&wlt->netmagic[0], buf, 4)) return false;
+
+	return true;
+}
+
+static GString *ser_wallet_root(const struct wallet *wlt)
+{
+	GString *rs = g_string_sized_new(8);
+
+	ser_u32(rs, wlt->version);
+	ser_bytes(rs, &wlt->netmagic[0], 4);
+
+	return rs;
+}
+
 static bool load_rec_privkey(struct wallet *wlt, const void *privkey, size_t pk_len)
 {
 	struct bp_key *key;
@@ -42,16 +60,14 @@ err_out:
 	return false;
 }
 
-static bool load_rec_version(struct wallet *wlt, void *data, size_t data_len)
+static bool load_rec_root(struct wallet *wlt, void *data, size_t data_len)
 {
 	struct buffer buf = { data, data_len };
-	uint32_t v;
-	if (!deser_u32(&v, &buf)) return false;
 
-	if (v != 1)
+	if (!deser_wallet_root(wlt, &buf)) return false;
+
+	if (wlt->version != 1)
 		return false;
-
-	wlt->version = v;
 
 	return true;
 }
@@ -61,8 +77,8 @@ static bool load_record(struct wallet *wlt, struct p2p_message *msg)
 	if (!strncmp(msg->hdr.command, "privkey", sizeof(msg->hdr.command)))
 		return load_rec_privkey(wlt, msg->data, msg->hdr.data_len);
 
-	else if (!strncmp(msg->hdr.command, "version",sizeof(msg->hdr.command)))
-		return load_rec_version(wlt, msg->data, msg->hdr.data_len);
+	else if (!strncmp(msg->hdr.command, "root", sizeof(msg->hdr.command)))
+		return load_rec_root(wlt, msg->data, msg->hdr.data_len);
 
 	return true;	/* ignore unknown records */
 }
@@ -130,13 +146,17 @@ static GString *ser_wallet(struct wallet *wlt)
 
 	GString *rs = g_string_sized_new(20 * 1024);
 
-	uint32_t v = GUINT32_TO_LE(wlt->version);
-
+	/*
+	 * ser "root" record
+	 */
+	GString *s_root = ser_wallet_root(wlt);
 	GString *recdata = message_str(netmagic_main,
-				       "version", &v, sizeof(v));
+				       "root", s_root->str, s_root->len);
 	g_string_append_len(rs, recdata->str, recdata->len);
 	g_string_free(recdata, TRUE);
+	g_string_free(s_root, TRUE);
 
+	/* ser "privkey" records */
 	if (wlt->keys) {
 		for (i = 0; i < wlt->keys->len; i++) {
 			struct bp_key *key;
@@ -285,6 +305,7 @@ void wallet_create(void)
 
 	wlt = calloc(1, sizeof(*wlt));
 	wlt->version = 1;
+	memcpy(wlt->netmagic, netmagic_main, sizeof(wlt->netmagic));
 
 	cur_wallet_update(wlt);
 
@@ -321,5 +342,26 @@ void wallet_addresses(void)
 
 out:
 	printf("=END_WALLET_ADDRESSES\n");
+}
+
+void wallet_info(void)
+{
+	if (!cur_wallet_load())
+		return;
+	struct wallet *wlt = cur_wallet;
+
+	printf("=WALLET_INFO\n");
+
+	printf("version=%d\n"
+	       "netmagic=%02x%02x%02x%02x\n"
+	       "n_privkeys=%d\n",
+	       wlt->version,
+	       wlt->netmagic[0],
+	       wlt->netmagic[1],
+	       wlt->netmagic[2],
+	       wlt->netmagic[3],
+	       wlt->keys ? wlt->keys->len : 0);
+
+	printf("=END_WALLET_INFO\n");
 }
 

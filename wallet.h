@@ -3,6 +3,8 @@
 
 struct wallet {
 	uint32_t	version;
+	unsigned char	netmagic[4];
+
 	GPtrArray	*keys;
 };
 
@@ -11,6 +13,7 @@ extern bool store_wallet(struct wallet *);
 extern void wallet_free(struct wallet *);
 extern void wallet_new_address(void);
 extern void wallet_create(void);
+extern void wallet_info(void);
 extern void wallet_addresses(void);
 extern void cur_wallet_free(void);
 
