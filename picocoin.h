@@ -42,6 +42,9 @@ extern const char ipv4_mapped_pfx[12];
 extern const unsigned char netmagic_main[4];
 extern struct wallet *cur_wallet;
 
+/* net.c */
+extern void network_sync(void);
+
 /* aes.c */
 extern GString *read_aes_file(const char *filename, void *key, size_t key_len,
 			      size_t max_file_len);

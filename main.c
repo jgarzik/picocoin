@@ -173,6 +173,7 @@ static bool is_command(const char *s)
 		!strcmp(s, "list-settings") ||
 		!strcmp(s, "new-address") ||
 		!strcmp(s, "new-wallet") ||
+		!strcmp(s, "netsync") ||
 		!strcmp(s, "wallet-addr")
 		;
 }
@@ -190,6 +191,9 @@ static bool do_command(const char *s)
 
 	else if (!strcmp(s, "new-wallet"))
 		wallet_create();
+
+	else if (!strcmp(s, "netsync"))
+		network_sync();
 
 	else if (!strcmp(s, "wallet-addr"))
 		wallet_addresses();

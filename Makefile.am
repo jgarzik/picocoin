@@ -17,6 +17,7 @@ picocoin_SOURCES=	\
 	main.c		\
 	message.c	\
 	message.h	\
+	net.c		\
 	picocoin.h	\
 	serialize.c	\
 	serialize.h	\
