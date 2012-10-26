@@ -23,18 +23,23 @@ static char *wallet_filename(void)
 
 static bool load_rec_privkey(struct wallet *wlt, void *privkey, size_t pk_len)
 {
-	if (pk_len != 32)		/* 256 bit privkey required */
-		return false;
-
 	struct bp_key *key;
 
 	key = calloc(1, sizeof(*key));
-	bp_key_init(key);
-	bp_privkey_set(key, privkey, pk_len);
+	if (!bp_key_init(key))
+		goto err_out;
+	if (!bp_privkey_set(key, privkey, pk_len))
+		goto err_out_kf;
 
 	g_ptr_array_add(wlt->keys, key);
 
 	return true;
+
+err_out_kf:
+	bp_key_free(key);
+err_out:
+	free(key);
+	return false;
 }
 
 static bool load_rec_version(struct wallet *wlt, void *data, size_t data_len)
@@ -125,7 +130,12 @@ static GString *ser_wallet(struct wallet *wlt)
 
 	GString *rs = g_string_sized_new(20 * 1024);
 
-	ser_u32(rs, wlt->version);
+	uint32_t v = GUINT32_TO_LE(wlt->version);
+
+	GString *recdata = message_str(netmagic_main,
+				       "version", &v, sizeof(v));
+	g_string_append_len(rs, recdata->str, recdata->len);
+	g_string_free(recdata, TRUE);
 
 	if (wlt->keys) {
 		for (i = 0; i < wlt->keys->len; i++) {
@@ -191,13 +201,22 @@ void wallet_free(struct wallet *wlt)
 	}
 }
 
-void wallet_new_address(void)
+static bool cur_wallet_load(void)
 {
 	if (!cur_wallet)
 		cur_wallet = load_wallet();
-	if (!cur_wallet)
+	if (!cur_wallet) {
+		fprintf(stderr, "wallet: no wallet loaded\n");
+		return false;
+	}
+
+	return true;
+}
+
+void wallet_new_address(void)
+{
+	if (!cur_wallet_load())
 		return;
-	
 	struct wallet *wlt = cur_wallet;
 
 	struct bp_key *key;
@@ -218,16 +237,7 @@ void wallet_new_address(void)
 
 	store_wallet(wlt);
 
-	void *pubkey = NULL;
-	size_t pk_len = 0;
-
-	bp_pubkey_get(key, &pubkey, &pk_len);
-
-	unsigned char md160[RIPEMD160_DIGEST_LENGTH];
-
-	Hash160(md160, pubkey, pk_len);
-
-	GString *btc_addr = base58_address_encode(0, md160, sizeof(md160));
+	GString *btc_addr = bp_pubkey_get_address(key, 0);
 
 	printf("NEW_ADDRESS %s\n", btc_addr->str);
 
@@ -282,5 +292,34 @@ void wallet_create(void)
 		fprintf(stderr, "wallet: failed to store\n");
 		return;
 	}
+}
+
+void wallet_addresses(void)
+{
+	if (!cur_wallet_load())
+		return;
+	struct wallet *wlt = cur_wallet;
+
+	printf("=WALLET_ADDRESSES\n");
+
+	if (!wlt->keys)
+		goto out;
+
+	unsigned int i;
+	for (i = 0; i < wlt->keys->len; i++) {
+		struct bp_key *key;
+		GString *btc_addr;
+
+		key = g_ptr_array_index(wlt->keys, i);
+
+		btc_addr = bp_pubkey_get_address(key, 0);
+
+		printf("%s\n", btc_addr->str);
+
+		g_string_free(btc_addr, TRUE);
+	}
+
+out:
+	printf("=END_WALLET_ADDRESSES\n");
 }
 

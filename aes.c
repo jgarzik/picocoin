@@ -185,7 +185,7 @@ GString *read_aes_file(const char *filename, void *key, size_t key_len,
 	if (!aes_init(key, key_len, (unsigned char *) &salt, &en, &de))
 		goto out;
 
-	size_t pt_len = 0;
+	size_t pt_len = ct_len;
 	void *plaintext = aes_decrypt(&de, ciphertext, &pt_len);
 
 	rs = g_string_new_len(plaintext, pt_len);

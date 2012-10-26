@@ -5,7 +5,10 @@
 #include <openssl/ec.h>
 #include <openssl/ecdsa.h>
 #include <openssl/obj_mac.h>
+#include <openssl/ripemd.h>
 #include "key.h"
+#include "picocoin.h"
+#include "util.h"
 
 bool bp_key_init(struct bp_key *key)
 {
@@ -39,14 +42,20 @@ bool bp_key_generate(struct bp_key *key)
 	return true;
 }
 
-void bp_privkey_set(struct bp_key *key, void *privkey, size_t pk_len)
+bool bp_privkey_set(struct bp_key *key, const void *privkey_, size_t pk_len)
 {
-	d2i_ECPrivateKey(&key->k, privkey, pk_len);
+	const unsigned char *privkey = privkey_;
+	if (!d2i_ECPrivateKey(&key->k, &privkey, pk_len))
+		return false;
+	return true;
 }
 
-void bp_pubkey_set(struct bp_key *key, void *pubkey, size_t pk_len)
+bool bp_pubkey_set(struct bp_key *key, const void *pubkey_, size_t pk_len)
 {
-	o2i_ECPublicKey(&key->k, pubkey, pk_len);
+	const unsigned char *pubkey = pubkey_;
+	if (!o2i_ECPublicKey(&key->k, &pubkey, pk_len))
+		return false;
+	return true;
 }
 
 bool bp_privkey_get(struct bp_key *key, void **privkey, size_t *pk_len)
@@ -79,6 +88,25 @@ bool bp_pubkey_get(struct bp_key *key, void **pubkey, size_t *pk_len)
 	*pk_len = sz;
 
 	return true;
+}
+
+GString *bp_pubkey_get_address(struct bp_key *key, unsigned char addrtype)
+{
+	void *pubkey = NULL;
+	size_t pk_len = 0;
+
+	bp_pubkey_get(key, &pubkey, &pk_len);
+
+	unsigned char md160[RIPEMD160_DIGEST_LENGTH];
+
+	Hash160(md160, pubkey, pk_len);
+
+	free(pubkey);
+
+	GString *btc_addr = base58_address_encode(addrtype,
+						  md160, sizeof(md160));
+
+	return btc_addr;
 }
 
 bool bp_sign(struct bp_key *key, const void *data, size_t data_len,

@@ -11,5 +11,6 @@ extern bool store_wallet(struct wallet *);
 extern void wallet_free(struct wallet *);
 extern void wallet_new_address(void);
 extern void wallet_create(void);
+extern void wallet_addresses(void);
 
 #endif /* __PICOCOIN_WALLET_H__ */
