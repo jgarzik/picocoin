@@ -7,6 +7,7 @@
 #include <openssl/sha.h>
 #include "picocoin.h"
 #include "serialize.h"
+#include "util.h"
 
 void ser_bytes(GString *s, const void *p, size_t len)
 {
@@ -281,13 +282,11 @@ void u256_from_compact(BIGNUM *vo, uint32_t c)
 
 void bp_hash(BIGNUM *vo, void *data, size_t data_len)
 {
-	unsigned char md1[SHA256_DIGEST_LENGTH];
-	unsigned char md2[SHA256_DIGEST_LENGTH];
+	unsigned char md256[SHA256_DIGEST_LENGTH];
 
-	SHA256(data, data_len, md1);
-	SHA256(md1, SHA256_DIGEST_LENGTH, md2);
+	Hash(md256, data, data_len);
 
-	struct buffer buf = { md2, SHA256_DIGEST_LENGTH };
+	struct buffer buf = { md256, SHA256_DIGEST_LENGTH };
 
 	deser_u256(vo, &buf);
 }

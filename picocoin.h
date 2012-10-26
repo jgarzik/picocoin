@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <glib.h>
+#include <openssl/bn.h>
 
 struct wallet;
 
@@ -22,6 +23,15 @@ struct buffer {
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 #endif
+
+/* base58.c */
+extern GString *base58_encode(const void *data_, size_t data_len);
+extern GString *base58_address_encode(unsigned char addrtype, const void *data,
+			       size_t data_len);
+
+/* bignum.c */
+extern void bn_setvch(BIGNUM *vo, const void *data_, size_t data_len);
+extern void reverse_copy(unsigned char *dst, const unsigned char *src, size_t len);
 
 /* dns.c */
 extern GList *get_dns_seed_addrs(void);

@@ -1,12 +1,14 @@
 
 #include "picocoin-config.h"
 
+#include <openssl/ripemd.h>
 #include "coredefs.h"
 #include "picocoin.h"
 #include "wallet.h"
 #include "message.h"
 #include "serialize.h"
 #include "key.h"
+#include "util.h"
 
 static bool load_rec_privkey(struct wallet *wlt, void *privkey, size_t pk_len)
 {
@@ -169,5 +171,20 @@ void wallet_new_address(void)
 	g_array_append_val(wlt->keys, key);
 
 	store_wallet(wlt);
+
+	void *pubkey = NULL;
+	size_t pk_len = 0;
+
+	bp_pubkey_get(&key, &pubkey, &pk_len);
+
+	unsigned char md160[RIPEMD160_DIGEST_LENGTH];
+
+	Hash160(md160, pubkey, pk_len);
+
+	GString *btc_addr = base58_address_encode(0, md160, sizeof(md160));
+
+	printf("NEW_ADDRESS %s\n", btc_addr->str);
+
+	g_string_free(btc_addr, TRUE);
 }
 

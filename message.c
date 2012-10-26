@@ -8,6 +8,7 @@
 #include "picocoin.h"
 #include "message.h"
 #include "serialize.h"
+#include "util.h"
 
 void parse_message_hdr(struct p2p_message_hdr *hdr, const unsigned char *data)
 {
@@ -23,13 +24,11 @@ bool message_valid(struct p2p_message *msg)
 	/* TODO: validate network magic */
 
 	/* data checksum */
-	unsigned char md1[SHA256_DIGEST_LENGTH];
-	unsigned char md2[SHA256_DIGEST_LENGTH];
+	unsigned char md32[4];
 
-	SHA256(msg->data, msg->hdr.data_len, md1);
-	SHA256(md1, SHA256_DIGEST_LENGTH, md2);
+	Hash4(md32, msg->data, msg->hdr.data_len);
 
-	return memcmp(msg->hdr.hash, &md2[SHA256_DIGEST_LENGTH - 4], 4) == 0;
+	return memcmp(msg->hdr.hash, md32, sizeof(md32)) == 0;
 }
 
 GString *message_str(const unsigned char netmagic[4],
@@ -51,13 +50,11 @@ GString *message_str(const unsigned char netmagic[4],
 	g_string_append_len(s, (gchar *) &data_len_le, 4);
 
 	/* data checksum */
-	unsigned char md1[SHA256_DIGEST_LENGTH];
-	unsigned char md2[SHA256_DIGEST_LENGTH];
+	unsigned char md32[4];
 
-	SHA256(data, data_len, md1);
-	SHA256(md1, SHA256_DIGEST_LENGTH, md2);
+	Hash4(md32, data, data_len);
 
-	g_string_append_len(s, (gchar *) &md2[SHA256_DIGEST_LENGTH - 4], 4);
+	g_string_append_len(s, (gchar *) &md32[0], 4);
 
 	/* data payload */
 	if (data_len > 0)

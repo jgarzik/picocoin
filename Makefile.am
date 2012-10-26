@@ -8,6 +8,8 @@ bin_PROGRAMS	= picocoin
 
 picocoin_SOURCES=	\
 	aes.c		\
+	base58.c	\
+	bignum.c	\
 	coredefs.h	\
 	core.c core.h	\
 	dns.c		\
@@ -18,6 +20,7 @@ picocoin_SOURCES=	\
 	picocoin.h	\
 	serialize.c	\
 	serialize.h	\
+	util.c util.h	\
 	wallet.c wallet.h
 
 picocoin_LDADD	= @GLIB_LIBS@ @CRYPTO_LIBS@

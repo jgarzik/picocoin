@@ -13,6 +13,7 @@
 #include <glib.h>
 #include "picocoin.h"
 #include "coredefs.h"
+#include "wallet.h"
 
 const char *prog_name = "picocoin";
 GHashTable *settings;
