@@ -6,6 +6,8 @@
 #include <string.h>
 #include <glib.h>
 
+struct wallet;
+
 struct p2p_addr {
 	unsigned char	ip[16];
 	unsigned short	port;
@@ -28,6 +30,7 @@ extern GList *get_dns_seed_addrs(void);
 extern GHashTable *settings;
 extern const char ipv4_mapped_pfx[12];
 extern const unsigned char netmagic_main[4];
+extern struct wallet *cur_wallet;
 
 /* aes.c */
 extern GString *read_aes_file(const char *filename, void *key, size_t key_len,

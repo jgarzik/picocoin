@@ -129,6 +129,7 @@ bool store_wallet(struct wallet *wlt)
 	bool rc = write_aes_file(filename, passphrase, strlen(passphrase),
 				 plaintext->str, plaintext->len);
 
+	memset(plaintext->str, 0, plaintext->len);
 	g_string_free(plaintext, TRUE);
 	
 	return rc;
@@ -149,5 +150,24 @@ void wallet_free(struct wallet *wlt)
 		g_array_free(wlt->keys, TRUE);
 		wlt->keys = NULL;
 	}
+}
+
+void wallet_new_address(void)
+{
+	if (!cur_wallet)
+		cur_wallet = load_wallet();
+	if (!cur_wallet)
+		return;
+	
+	struct wallet *wlt = cur_wallet;
+
+	struct bp_key key;
+
+	bp_key_init(&key);
+	bp_key_generate(&key);
+
+	g_array_append_val(wlt->keys, key);
+
+	store_wallet(wlt);
 }
 

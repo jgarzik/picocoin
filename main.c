@@ -16,6 +16,7 @@
 
 const char *prog_name = "picocoin";
 GHashTable *settings;
+struct wallet *cur_wallet;
 const char ipv4_mapped_pfx[12] = "\0\0\0\0\0\0\0\0\0\0\xff\xff";
 const unsigned char netmagic_main[4] = NETMAGIC_MAINNET;
 
@@ -167,17 +168,22 @@ static void list_dns_seeds(void)
 
 static bool is_command(const char *s)
 {
-	return	!strcmp(s, "list-settings") ||
-		!strcmp(s, "dns-seeds");
+	return	!strcmp(s, "dns-seeds") ||
+		!strcmp(s, "list-settings") ||
+		!strcmp(s, "new-address")
+		;
 }
 
 static bool do_command(const char *s)
 {
-	if (!strcmp(s, "list-settings"))
+	if (!strcmp(s, "dns-seeds"))
+		list_dns_seeds();
+
+	else if (!strcmp(s, "list-settings"))
 		list_settings();
 
-	else if (!strcmp(s, "dns-seeds"))
-		list_dns_seeds();
+	else if (!strcmp(s, "new-address"))
+		wallet_new_address();
 
 	return true;
 }

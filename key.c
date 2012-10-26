@@ -20,6 +20,11 @@ void bp_key_free(struct bp_key *key)
 	key->k = NULL;
 }
 
+void bp_key_generate(struct bp_key *key)
+{
+	EC_KEY_generate_key(key->k);
+}
+
 void bp_privkey_set(struct bp_key *key, void *privkey, size_t pk_len)
 {
 	d2i_ECPrivateKey(&key->k, privkey, pk_len);

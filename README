@@ -22,6 +22,10 @@ The command line is processed in-order.  For example
 will execute the "list-settings" command twice, each with "value" setting
 initialized to a different parameter.
 
+Similarly, you may read multiple configuration files into the settings map:
+
+	$ ./picocoin config=file1 config=file2 config=file3
+
 
 Recognized parameters
 =====================
@@ -42,11 +46,16 @@ environment variable PICOCOIN_PASSPHRASE.
 Recognized commands
 ===================
 
+dns-seeds
+---------
+Query and display bitcoin DNS seeds, for P2P node addresses.
+
 list-settings
 -------------
 Display settings map.
 
-dns-seeds
----------
-Query and display bitcoin DNS seeds, for P2P node addresses.
+new-address
+-----------
+Generate a new bitcoin address (ECDSA keypair).  Store it in the current
+wallet, 
 

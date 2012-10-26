@@ -10,6 +10,7 @@ struct bp_key {
 
 extern void bp_key_init(struct bp_key *key);
 extern void bp_key_free(struct bp_key *key);
+extern void bp_key_generate(struct bp_key *key);
 extern void bp_privkey_set(struct bp_key *key, void *privkey, size_t pk_len);
 extern void bp_pubkey_set(struct bp_key *key, void *pubkey, size_t pk_len);
 extern void bp_privkey_get(struct bp_key *key, void **privkey, size_t *pk_len);
