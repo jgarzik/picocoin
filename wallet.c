@@ -21,7 +21,7 @@ static char *wallet_filename(void)
 	return filename;
 }
 
-static bool load_rec_privkey(struct wallet *wlt, void *privkey, size_t pk_len)
+static bool load_rec_privkey(struct wallet *wlt, const void *privkey, size_t pk_len)
 {
 	struct bp_key *key;
 
