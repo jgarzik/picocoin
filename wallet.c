@@ -244,7 +244,7 @@ void wallet_new_address(void)
 	g_string_free(btc_addr, TRUE);
 }
 
-static void cur_wallet_free(void)
+void cur_wallet_free(void)
 {
 	if (!cur_wallet)
 		return;

@@ -85,8 +85,16 @@ static bool do_setting(const char *arg)
 
 	g_hash_table_replace(settings, key, value);
 
+	/*
+	 * trigger special setting-specific behaviors
+	 */
+
 	if (!strcmp(key, "config") || !strcmp(key, "c"))
 		return read_config_file(value);
+
+	/* clear previous wallet, if new wallet file seen */
+	if (!strcmp(key, "wallet") || !strcmp(key, "w"))
+		cur_wallet_free();
 
 	return true;
 }
