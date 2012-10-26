@@ -203,8 +203,16 @@ void wallet_new_address(void)
 	struct bp_key *key;
 
 	key = calloc(1, sizeof(*key));
-	bp_key_init(key);
-	bp_key_generate(key);
+	if (!bp_key_init(key)) {
+		free(key);
+		fprintf(stderr, "wallet: key init failed\n");
+		return;
+	}
+
+	if (!bp_key_generate(key)) {
+		fprintf(stderr, "wallet: key gen failed\n");
+		return;
+	}
 
 	g_ptr_array_add(wlt->keys, key);
 
