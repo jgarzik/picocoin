@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <signal.h>
 #include <poll.h>
+#include "util.h"
 
 struct net_engine {
 	bool		running;
@@ -28,6 +29,33 @@ enum netcmds {
 	NC_START,
 	NC_STOP,
 };
+
+struct peer_manager {
+	GList		*addrlist;	/* of struct bp_address */
+};
+
+static struct peer_manager *peerman_read(void)
+{
+	return NULL;	/* TODO */
+}
+
+static struct peer_manager *peerman_seed(void)
+{
+	struct peer_manager *peers;
+
+	peers = calloc(1, sizeof(*peers));
+	if (!peers)
+		return NULL;
+	
+	peers->addrlist = bu_dns_seed_addrs();
+	
+	return peers;
+}
+
+static void peerman_write(struct peer_manager *peers)
+{
+	/* TODO */
+}
 
 static void pipwr(int fd, const void *buf, size_t len)
 {
@@ -76,6 +104,14 @@ static enum netcmds readcmd(int fd, int timeout_secs)
 
 static void network_child(int read_fd, int write_fd)
 {
+	struct peer_manager *peers;
+
+	peers = peerman_read();
+	if (!peers) {
+		peers = peerman_seed();
+		peerman_write(peers);
+	}
+
 	while (1) {
 		enum netcmds nc = readcmd(read_fd, 0);
 		switch (nc) {
@@ -86,13 +122,17 @@ static void network_child(int read_fd, int write_fd)
 
 		case NC_STOP:
 			sendcmd(write_fd, NC_OK);
-			exit(0);
+			goto out;
 
 		default:
 			/* do nothing */
 			break;
 		}
 	}
+
+out:
+	peerman_write(peers);
+	exit(0);
 }
 
 struct net_engine *neteng_new(void)
