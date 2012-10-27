@@ -12,6 +12,7 @@
 #include <signal.h>
 #include <poll.h>
 #include <glib.h>
+#include <event.h>
 #include "util.h"
 #include "mbr.h"
 #include "core.h"
@@ -37,6 +38,12 @@ enum netcmds {
 struct peer_manager {
 	GList		*addrlist;	/* of struct bp_address */
 	unsigned int	count;		/* # of peers in addrlist */
+};
+
+struct net_child_info {
+	int			read_fd;
+	int			write_fd;
+	struct peer_manager	*peers;
 };
 
 static void peerman_free(struct peer_manager *peers)
@@ -212,6 +219,29 @@ static enum netcmds readcmd(int fd, int timeout_secs)
 	return v;
 }
 
+static struct event_base *nc_eb;
+
+static void network_child_pipe_evt(int fd, short events, void *priv)
+{
+	struct net_child_info *nci = priv;
+
+	enum netcmds nc = readcmd(nci->read_fd, 0);
+	switch (nc) {
+
+	case NC_START:
+		sendcmd(nci->write_fd, NC_OK);
+		break;
+
+	case NC_STOP:
+		sendcmd(nci->write_fd, NC_OK);
+		event_base_loopbreak(nc_eb);
+		break;
+
+	default:
+		exit(1);
+	}
+}
+
 static void network_child(int read_fd, int write_fd)
 {
 	struct peer_manager *peers;
@@ -222,25 +252,17 @@ static void network_child(int read_fd, int write_fd)
 		peerman_write(peers);
 	}
 
-	while (1) {
-		enum netcmds nc = readcmd(read_fd, 0);
-		switch (nc) {
+	struct net_child_info nci = { read_fd, write_fd, peers };
 
-		case NC_START:
-			sendcmd(write_fd, NC_OK);
-			break;
+	struct event *pipe_evt;
 
-		case NC_STOP:
-			sendcmd(write_fd, NC_OK);
-			goto out;
+	nc_eb = event_base_new();
+	pipe_evt = event_new(nc_eb, read_fd, EV_READ | EV_PERSIST,
+			     network_child_pipe_evt, &nci);
+	event_add(pipe_evt, NULL);
 
-		default:
-			/* do nothing */
-			break;
-		}
-	}
+	event_base_dispatch(nc_eb);	/* main loop */
 
-out:
 	peerman_write(peers);
 	exit(0);
 }

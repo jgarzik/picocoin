@@ -61,8 +61,8 @@ dnl 	AC_MSG_ERROR([Missing required libdb 4.x])
 dnl fi
 
 AC_CHECK_LIB(crypto, MD5_Init, CRYPTO_LIBS=-lcrypto)
-dnl AC_CHECK_LIB(event, event_base_new, EVENT_LIBS=-levent,
-dnl   [AC_MSG_ERROR([Missing required libevent])])
+AC_CHECK_LIB(event, event_base_new, EVENT_LIBS=-levent,
+  [AC_MSG_ERROR([Missing required libevent])])
 
 dnl -------------------------------------
 dnl Checks for optional library functions
@@ -81,7 +81,7 @@ AM_PATH_GLIB_2_0(2.0.0, , exit 1)
 
 dnl AC_SUBST(GSSRPC_LIBS)
 dnl AC_SUBST(DB4_LIBS)
-dnl AC_SUBST(EVENT_LIBS)
+AC_SUBST(EVENT_LIBS)
 AC_SUBST(CRYPTO_LIBS)
 dnl AC_SUBST(ARGP_LIBS)
 

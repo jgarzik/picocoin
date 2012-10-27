@@ -33,7 +33,7 @@ picocoin_SOURCES=	\
 	picocoin.h	\
 	wallet.c wallet.h
 
-picocoin_LDADD	= libccoin.a @GLIB_LIBS@ @CRYPTO_LIBS@
+picocoin_LDADD	= libccoin.a @GLIB_LIBS@ @CRYPTO_LIBS@ @EVENT_LIBS@
 
 EXTRA_DIST	= autogen.sh
 

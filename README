@@ -6,6 +6,7 @@ Tiny bitcoin utility and lightweight client
 Dependencies:
 	GLib 2.x (from the GTK project)
 	OpenSSL
+	libevent
 
 
 
