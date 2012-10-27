@@ -11,6 +11,7 @@
 #include <netdb.h>
 #include <ctype.h>
 #include <glib.h>
+#include <openssl/bn.h>
 #include "picocoin.h"
 #include "coredefs.h"
 #include "wallet.h"
@@ -21,7 +22,9 @@ const char *prog_name = "picocoin";
 GHashTable *settings;
 struct wallet *cur_wallet;
 const char ipv4_mapped_pfx[12] = "\0\0\0\0\0\0\0\0\0\0\xff\xff";
-const struct chain_info *chain = &chain_metadata[CHAIN_BITCOIN];
+const struct chain_info *chain = NULL;
+BIGNUM *chain_genesis = NULL;
+
 
 static bool parse_kvstr(const char *s, char **key, char **value)
 {
@@ -178,16 +181,27 @@ static void list_dns_seeds(void)
 	printf("=END_DNS_SEEDS\n");
 }
 
-static void set_chain(void)
+static void chain_set(void)
 {
 	char *name = setting("chain");
 	const struct chain_info *new_chain = chain_find(name);
 	if (!new_chain) {
-		fprintf(stderr, "unknown chain '%s'\n", name);
+		fprintf(stderr, "chain-set: unknown chain '%s'\n", name);
 		exit(1);
 	}
 
+	BIGNUM *new_genesis = NULL;
+	if (!BN_hex2bn(&new_genesis, new_chain->genesis_hash)) {
+		fprintf(stderr, "chain-set: invalid genesis hash %s\n",
+			new_chain->genesis_hash);
+		exit(1);
+	}
+
+	if (chain_genesis)
+		BN_clear_free(chain_genesis);
+
 	chain = new_chain;
+	chain_genesis = new_genesis;
 }
 
 static bool is_command(const char *s)
@@ -207,7 +221,7 @@ static bool is_command(const char *s)
 static bool do_command(const char *s)
 {
 	if (!strcmp(s, "chain-set"))
-		set_chain();
+		chain_set();
 
 	else if (!strcmp(s, "dns-seeds"))
 		list_dns_seeds();
@@ -241,8 +255,10 @@ int main (int argc, char *argv[])
 	prog_name = argv[0];
 	settings = g_hash_table_new_full(g_str_hash, g_str_equal,
 					 g_free, g_free);
+
 	if (!preload_settings())
 		return 1;
+	chain_set();
 
 	unsigned int arg;
 	for (arg = 1; arg < argc; arg++) {
