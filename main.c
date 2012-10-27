@@ -25,6 +25,12 @@ const char ipv4_mapped_pfx[12] = "\0\0\0\0\0\0\0\0\0\0\xff\xff";
 const struct chain_info *chain = NULL;
 BIGNUM *chain_genesis = NULL;
 
+static const char *const_settings[] = {
+	"wallet=picocoin.wallet",
+	"chain=bitcoin",
+	"peers=picocoin.peers",
+};
+
 
 static bool parse_kvstr(const char *s, char **key, char **value)
 {
@@ -103,11 +109,6 @@ static bool do_setting(const char *arg)
 
 	return true;
 }
-
-static const char *const_settings[] = {
-	"wallet=picocoin.wallet",
-	"chain=bitcoin",
-};
 
 static bool preload_settings(void)
 {
