@@ -1,5 +1,5 @@
-#ifndef __PICOCOIN_CORE_H__
-#define __PICOCOIN_CORE_H__
+#ifndef __LIBCCOIN_CORE_H__
+#define __LIBCCOIN_CORE_H__
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -136,4 +136,4 @@ extern void bp_block_calc_sha256(struct bp_block *block);
 extern bool bp_block_merkle(BIGNUM *vo, const struct bp_block *block);
 extern bool bp_block_valid(struct bp_block *block);
 
-#endif /* __PICOCOIN_CORE_H__ */
+#endif /* __LIBCCOIN_CORE_H__ */

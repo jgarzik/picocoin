@@ -138,7 +138,7 @@ static void list_settings(void)
 
 static void list_dns_seeds(void)
 {
-	GList *tmp, *addrlist = get_dns_seed_addrs();
+	GList *tmp, *addrlist = bu_dns_seed_addrs();
 
 	printf("=DNS_SEEDS\n");
 

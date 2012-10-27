@@ -7,8 +7,6 @@
 #include <openssl/obj_mac.h>
 #include <openssl/ripemd.h>
 #include "key.h"
-#include "base58.h"
-#include "util.h"
 
 bool bp_key_init(struct bp_key *key)
 {
@@ -88,25 +86,6 @@ bool bp_pubkey_get(struct bp_key *key, void **pubkey, size_t *pk_len)
 	*pk_len = sz;
 
 	return true;
-}
-
-GString *bp_pubkey_get_address(struct bp_key *key, unsigned char addrtype)
-{
-	void *pubkey = NULL;
-	size_t pk_len = 0;
-
-	bp_pubkey_get(key, &pubkey, &pk_len);
-
-	unsigned char md160[RIPEMD160_DIGEST_LENGTH];
-
-	bu_Hash160(md160, pubkey, pk_len);
-
-	free(pubkey);
-
-	GString *btc_addr = base58_address_encode(addrtype,
-						  md160, sizeof(md160));
-
-	return btc_addr;
 }
 
 bool bp_sign(struct bp_key *key, const void *data, size_t data_len,

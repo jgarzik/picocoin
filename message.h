@@ -1,9 +1,11 @@
-#ifndef __PICOCOIN_MESSAGE_H__
-#define __PICOCOIN_MESSAGE_H__
+#ifndef __LIBCCOIN_MESSAGE_H__
+#define __LIBCCOIN_MESSAGE_H__
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <glib.h>
 #include "core.h"
+#include "buffer.h"
 
 #define P2P_HDR_SZ	(4 + 12 + 4 + 4)
 
@@ -48,4 +50,4 @@ extern bool deser_msg_addr(unsigned int protover, struct msg_addr *ma, struct bu
 extern GString *ser_msg_addr(unsigned int protover, const struct msg_addr *ma);
 extern void msg_addr_free(struct msg_addr *ma);
 
-#endif /* __PICOCOIN_MESSAGE_H__ */
+#endif /* __LIBCCOIN_MESSAGE_H__ */

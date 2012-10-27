@@ -10,13 +10,6 @@
 
 struct wallet;
 
-/* bignum.c */
-extern void bn_setvch(BIGNUM *vo, const void *data_, size_t data_len);
-extern void reverse_copy(unsigned char *dst, const unsigned char *src, size_t len);
-
-/* dns.c */
-extern GList *get_dns_seed_addrs(void);
-
 /* main.c */
 extern GHashTable *settings;
 extern const char ipv4_mapped_pfx[12];

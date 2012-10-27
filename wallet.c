@@ -10,6 +10,7 @@
 #include "picocoin.h"
 #include "wallet.h"
 #include "message.h"
+#include "address.h"
 #include "serialize.h"
 #include "key.h"
 #include "util.h"

@@ -67,7 +67,7 @@ static GList *query_seed(GList *l, const char *seedname)
 	return l;
 }
 
-GList *get_dns_seed_addrs(void)
+GList *bu_dns_seed_addrs(void)
 {
 	unsigned int i;
 	GList *l = NULL;
