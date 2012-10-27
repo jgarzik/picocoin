@@ -198,6 +198,7 @@ static bool is_command(const char *s)
 		!strcmp(s, "new-address") ||
 		!strcmp(s, "new-wallet") ||
 		!strcmp(s, "netsync") ||
+		!strcmp(s, "version") ||
 		!strcmp(s, "wallet-addr") ||
 		!strcmp(s, "wallet-info")
 		;
@@ -222,6 +223,9 @@ static bool do_command(const char *s)
 
 	else if (!strcmp(s, "netsync"))
 		network_sync();
+
+	else if (!strcmp(s, "version"))
+		printf("version=%s\n", VERSION);
 
 	else if (!strcmp(s, "wallet-addr"))
 		wallet_addresses();

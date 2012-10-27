@@ -36,6 +36,7 @@ AC_HEADER_STDC
 dnl AC_CHECK_HEADERS(sys/ioctl.h unistd.h)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
+AC_C_BIGENDIAN
 AC_TYPE_SIZE_T
 dnl AC_TYPE_PID_T
 
