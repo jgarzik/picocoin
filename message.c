@@ -25,7 +25,7 @@ bool message_valid(struct p2p_message *msg)
 	/* data checksum */
 	unsigned char md32[4];
 
-	Hash4(md32, msg->data, msg->hdr.data_len);
+	bu_Hash4(md32, msg->data, msg->hdr.data_len);
 
 	return memcmp(msg->hdr.hash, md32, sizeof(md32)) == 0;
 }
@@ -51,7 +51,7 @@ GString *message_str(const unsigned char netmagic[4],
 	/* data checksum */
 	unsigned char md32[4];
 
-	Hash4(md32, data, data_len);
+	bu_Hash4(md32, data, data_len);
 
 	g_string_append_len(s, (gchar *) &md32[0], 4);
 

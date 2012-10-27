@@ -1,5 +1,5 @@
-#ifndef __PICOCOIN_SERIALIZE_H__
-#define __PICOCOIN_SERIALIZE_H__
+#ifndef __LIBCCOIN_SERIALIZE_H__
+#define __LIBCCOIN_SERIALIZE_H__
 
 #include <openssl/bn.h>
 #include <stdint.h>
@@ -39,4 +39,4 @@ static inline bool deser_s64(int64_t *vo, struct buffer *buf)
 extern void u256_from_compact(BIGNUM *vo, uint32_t c);
 extern void bp_hash(BIGNUM *vo, void *data, size_t data_len);
 
-#endif /* __PICOCOIN_SERIALIZE_H__ */
+#endif /* __LIBCCOIN_SERIALIZE_H__ */

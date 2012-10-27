@@ -99,7 +99,7 @@ GString *bp_pubkey_get_address(struct bp_key *key, unsigned char addrtype)
 
 	unsigned char md160[RIPEMD160_DIGEST_LENGTH];
 
-	Hash160(md160, pubkey, pk_len);
+	bu_Hash160(md160, pubkey, pk_len);
 
 	free(pubkey);
 

@@ -99,7 +99,7 @@ GString *read_aes_file(const char *filename, void *key, size_t key_len,
 	size_t ct_len = 0;
 	GString *rs = NULL;
 
-	if (!read_file(filename, &ciphertext, &ct_len, max_file_len))
+	if (!bu_read_file(filename, &ciphertext, &ct_len, max_file_len))
 		goto out;
 
 	if (!aes_init(key, key_len, (unsigned char *) &salt, &en, &de))
@@ -133,7 +133,7 @@ bool write_aes_file(const char *filename, void *key, size_t key_len,
 	EVP_CIPHER_CTX_cleanup(&en);
 	EVP_CIPHER_CTX_cleanup(&de);
 
-	bool rc = write_file(filename, ciphertext, ct_len);
+	bool rc = bu_write_file(filename, ciphertext, ct_len);
 	
 	free(ciphertext);
 

@@ -11,7 +11,10 @@ noinst_LIBRARIES= libccoin.a
 libccoin_a_SOURCES=	\
 	buffer.h	\
 	coredefs.c	\
-	coredefs.h
+	coredefs.h	\
+	serialize.c	\
+	serialize.h	\
+	util.c util.h
 
 picocoin_SOURCES=	\
 	aes.c		\
@@ -25,9 +28,6 @@ picocoin_SOURCES=	\
 	message.h	\
 	net.c		\
 	picocoin.h	\
-	serialize.c	\
-	serialize.h	\
-	util.c util.h	\
 	wallet.c wallet.h
 
 picocoin_LDADD	= libccoin.a @GLIB_LIBS@ @CRYPTO_LIBS@

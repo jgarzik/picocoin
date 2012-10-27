@@ -284,7 +284,7 @@ void bp_hash(BIGNUM *vo, void *data, size_t data_len)
 {
 	unsigned char md256[SHA256_DIGEST_LENGTH];
 
-	Hash(md256, data, data_len);
+	bu_Hash(md256, data, data_len);
 
 	struct buffer buf = { md256, SHA256_DIGEST_LENGTH };
 
