@@ -10,6 +10,7 @@ picocoin_SOURCES=	\
 	aes.c		\
 	base58.c	\
 	bignum.c	\
+	coredefs.c	\
 	coredefs.h	\
 	core.c core.h	\
 	dns.c		\

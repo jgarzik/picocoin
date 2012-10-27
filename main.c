@@ -14,12 +14,14 @@
 #include "picocoin.h"
 #include "coredefs.h"
 #include "wallet.h"
+#include "coredefs.h"
+#include "util.h"
 
 const char *prog_name = "picocoin";
 GHashTable *settings;
 struct wallet *cur_wallet;
 const char ipv4_mapped_pfx[12] = "\0\0\0\0\0\0\0\0\0\0\xff\xff";
-const unsigned char netmagic_main[4] = NETMAGIC_MAINNET;
+const struct chain_info *chain = &chain_metadata[CHAIN_BITCOIN];
 
 static bool parse_kvstr(const char *s, char **key, char **value)
 {
@@ -101,6 +103,7 @@ static bool do_setting(const char *arg)
 
 static const char *const_settings[] = {
 	"wallet=picocoin.wallet",
+	"chain=bitcoin",
 };
 
 static bool preload_settings(void)
@@ -175,9 +178,22 @@ static void list_dns_seeds(void)
 	printf("=END_DNS_SEEDS\n");
 }
 
+static void set_chain(void)
+{
+	char *name = setting("chain");
+	const struct chain_info *new_chain = chain_find(name);
+	if (!new_chain) {
+		fprintf(stderr, "unknown chain '%s'\n", name);
+		exit(1);
+	}
+
+	chain = new_chain;
+}
+
 static bool is_command(const char *s)
 {
-	return	!strcmp(s, "dns-seeds") ||
+	return	!strcmp(s, "chain-set") ||
+		!strcmp(s, "dns-seeds") ||
 		!strcmp(s, "list-settings") ||
 		!strcmp(s, "new-address") ||
 		!strcmp(s, "new-wallet") ||
@@ -189,7 +205,10 @@ static bool is_command(const char *s)
 
 static bool do_command(const char *s)
 {
-	if (!strcmp(s, "dns-seeds"))
+	if (!strcmp(s, "chain-set"))
+		set_chain();
+
+	else if (!strcmp(s, "dns-seeds"))
 		list_dns_seeds();
 
 	else if (!strcmp(s, "list-settings"))

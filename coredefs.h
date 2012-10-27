@@ -5,7 +5,21 @@ enum {
 	CADDR_TIME_VERSION	= 31402
 };
 
-#define NETMAGIC_MAINNET "\xf9\xbe\xb4\xd9"
-#define NETMAGIC_TESTNET3 "\x0b\x11\x09\x07"
+enum chains {
+	CHAIN_BITCOIN,
+	CHAIN_TESTNET3,
+
+	CHAIN_LAST = CHAIN_TESTNET3
+};
+
+struct chain_info {
+	enum chains		chain_id;
+	const char		*name;		/* "bitcoin", "testnet3" */
+	unsigned char		netmagic[4];
+	const char		*genesis_hash;	/* hex string */
+};
+
+extern const struct chain_info chain_metadata[];
+extern const struct chain_info *chain_find(const char *name);
 
 #endif /* __PICOCOIN_COREDEFS_H__ */

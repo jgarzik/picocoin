@@ -46,6 +46,12 @@ environment variable PICOCOIN_PASSPHRASE.
 Recognized commands
 ===================
 
+chain-set
+---------
+Select blockchain and network.  Reads the "chain" settings variable.
+Acceptable values are "chain=bitcoin" and "chain=testnet3".  Updates
+internal parameters (pchMessageStart / network magic, genesis block, ...)
+
 dns-seeds
 ---------
 Query and display bitcoin DNS seeds, for P2P node addresses.

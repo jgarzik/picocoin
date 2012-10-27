@@ -66,8 +66,16 @@ static bool load_rec_root(struct wallet *wlt, void *data, size_t data_len)
 
 	if (!deser_wallet_root(wlt, &buf)) return false;
 
-	if (wlt->version != 1)
+	if (wlt->version != 1) {
+		fprintf(stderr, "wallet root: unsupported wallet version %u\n",
+			wlt->version);
 		return false;
+	}
+
+	if (memcmp(chain->netmagic, wlt->netmagic, 4)) {
+		fprintf(stderr, "wallet root: foreign chain detected, aborting load.  Try 'chain-set' first.\n");
+		return false;
+	}
 
 	return true;
 }
@@ -150,7 +158,7 @@ static GString *ser_wallet(struct wallet *wlt)
 	 * ser "root" record
 	 */
 	GString *s_root = ser_wallet_root(wlt);
-	GString *recdata = message_str(netmagic_main,
+	GString *recdata = message_str(wlt->netmagic,
 				       "root", s_root->str, s_root->len);
 	g_string_append_len(rs, recdata->str, recdata->len);
 	g_string_free(recdata, TRUE);
@@ -168,7 +176,7 @@ static GString *ser_wallet(struct wallet *wlt)
 
 			bp_privkey_get(key, &privkey, &pk_len);
 
-			GString *recdata = message_str(netmagic_main,
+			GString *recdata = message_str(wlt->netmagic,
 						       "privkey",
 						       privkey, pk_len);
 			free(privkey);
@@ -305,7 +313,7 @@ void wallet_create(void)
 
 	wlt = calloc(1, sizeof(*wlt));
 	wlt->version = 1;
-	memcpy(wlt->netmagic, netmagic_main, sizeof(wlt->netmagic));
+	memcpy(wlt->netmagic, chain->netmagic, sizeof(wlt->netmagic));
 
 	cur_wallet_update(wlt);
 

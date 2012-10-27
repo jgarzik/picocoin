@@ -6,6 +6,7 @@
 #include <string.h>
 #include <glib.h>
 #include <openssl/bn.h>
+#include "coredefs.h"
 
 struct wallet;
 
@@ -19,10 +20,6 @@ struct buffer {
 	void		*p;
 	size_t		len;
 };
-
-#ifndef ARRAY_SIZE
-#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
-#endif
 
 /* base58.c */
 extern GString *base58_encode(const void *data_, size_t data_len);
@@ -39,8 +36,8 @@ extern GList *get_dns_seed_addrs(void);
 /* main.c */
 extern GHashTable *settings;
 extern const char ipv4_mapped_pfx[12];
-extern const unsigned char netmagic_main[4];
 extern struct wallet *cur_wallet;
+extern const struct chain_info *chain;
 
 /* net.c */
 extern void network_sync(void);

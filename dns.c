@@ -8,6 +8,7 @@
 #include <netdb.h>
 #include <glib.h>
 #include "picocoin.h"
+#include "util.h"
 
 static const char *dns_seeds[] = {
 	"seed.bitcoin.sipa.be",

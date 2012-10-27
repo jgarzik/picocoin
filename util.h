@@ -4,6 +4,10 @@
 #include <stdbool.h>
 #include <openssl/bn.h>
 
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+#endif
+
 extern void reverse_copy(unsigned char *dst, const unsigned char *src, size_t len);
 extern void bn_setvch(BIGNUM *vo, const void *data_, size_t data_len);
 extern void Hash(unsigned char *md256, const void *data, size_t data_len);
