@@ -14,6 +14,7 @@
 #include "serialize.h"
 #include "key.h"
 #include "util.h"
+#include "mbr.h"
 
 static char *wallet_filename(void)
 {
@@ -121,23 +122,20 @@ struct wallet *load_wallet(void)
 	wlt->keys = g_ptr_array_new_full(1000, g_free);
 
 	struct buffer buf = { data->str, data->len };
-	struct p2p_message msg;
-	unsigned char hdrbuf[P2P_HDR_SZ];
+	struct mbuf_reader mbr;
 
-	while (deser_bytes(hdrbuf, &buf, P2P_HDR_SZ)) {
-		parse_message_hdr(&msg.hdr, hdrbuf);
-		msg.data = buf.p;
-		if (buf.len < msg.hdr.data_len)
+	mbr_init(&mbr, &buf);
+
+	while (mbr_read(&mbr)) {
+		if (!load_record(wlt, &mbr.msg)) {
+			mbr_free(&mbr);
 			goto err_out;
+		}
+	}
 
-		buf.p += msg.hdr.data_len;
-		buf.len -= msg.hdr.data_len;
-
-		if (!message_valid(&msg))
-			goto err_out;
-
-		if (!load_record(wlt, &msg))
-			goto err_out;
+	if (mbr.error) {
+		mbr_free(&mbr);
+		goto err_out;
 	}
 
 	return wlt;

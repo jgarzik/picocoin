@@ -19,6 +19,7 @@ libccoin_a_SOURCES=	\
 	coredefs.h	\
 	dns.c		\
 	key.c key.h	\
+	mbr.c mbr.h	\
 	message.c	\
 	message.h	\
 	serialize.c	\
