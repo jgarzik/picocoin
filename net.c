@@ -4,11 +4,22 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include <stdio.h>
 #include <signal.h>
 #include <poll.h>
+
+struct net_engine {
+	bool		running;
+	int		rx_pipefd[2];
+	int		tx_pipefd[2];
+	int		par_read;
+	int		par_write;
+	pid_t		child;
+};
 
 enum netcmds {
 	NC_OK,
@@ -84,56 +95,132 @@ static void network_child(int read_fd, int write_fd)
 	}
 }
 
-static void network_parent(pid_t child, int read_fd, int write_fd)
+struct net_engine *neteng_new(void)
 {
-	sendcmd(write_fd, NC_START);
+	struct net_engine *neteng;
 
-	enum netcmds nc = readcmd(read_fd, 300);
-	if (nc != NC_OK)
-		goto err_out;
-	
-	sendcmd(write_fd, NC_STOP);
+	neteng = calloc(1, sizeof(*neteng));
 
-	nc = readcmd(read_fd, 300);
-	if (nc != NC_OK)
-		goto err_out;
-	
-	sleep(1);
-	waitpid(child, NULL, WNOHANG);
+	neteng->rx_pipefd[0] = -1;
+	neteng->rx_pipefd[1] = -1;
+	neteng->tx_pipefd[0] = -1;
+	neteng->tx_pipefd[1] = -1;
 
-	return;
+	return neteng;
+}
 
-err_out:
-	fprintf(stderr, "network parent: error seen, killing child\n");
+static void neteng_child_kill(pid_t child)
+{
 	kill(child, SIGTERM);
 	sleep(1);
 	waitpid(child, NULL, WNOHANG);
 }
 
+static bool neteng_cmd_exec(pid_t child, int read_fd, int write_fd,
+			    enum netcmds nc)
+{
+	sendcmd(write_fd, nc);
+
+	enum netcmds ncr = readcmd(read_fd, 60);
+	if (ncr != NC_OK)
+		return false;
+	
+	return true;
+}
+
+bool neteng_start(struct net_engine *neteng)
+{
+	if (neteng->running)
+		return false;
+
+	if (pipe(neteng->rx_pipefd) < 0)
+		return false;
+	if (pipe(neteng->tx_pipefd) < 0)
+		goto err_out_rxfd;
+
+	neteng->child = fork();
+	if (neteng->child == -1)
+		goto err_out_txfd;
+
+	/* child execution path continues here */
+	if (neteng->child == 0) {
+		network_child(neteng->tx_pipefd[0], neteng->rx_pipefd[1]);
+		exit(0);
+	}
+
+	/* otherwise, we are the parent */
+
+	int par_read = neteng->par_read = neteng->rx_pipefd[0];
+	int par_write = neteng->par_write = neteng->tx_pipefd[1];
+
+	if (!neteng_cmd_exec(neteng->child, par_read, par_write, NC_START))
+		goto err_out_child;
+
+	neteng->running = true;
+	return true;
+
+err_out_child:
+	neteng_child_kill(neteng->child);
+err_out_txfd:
+	close(neteng->tx_pipefd[0]);
+	close(neteng->tx_pipefd[1]);
+err_out_rxfd:
+	close(neteng->rx_pipefd[0]);
+	close(neteng->rx_pipefd[1]);
+	neteng->rx_pipefd[0] = -1;
+	neteng->rx_pipefd[1] = -1;
+	neteng->tx_pipefd[0] = -1;
+	neteng->tx_pipefd[1] = -1;
+	return false;
+}
+
+void neteng_stop(struct net_engine *neteng)
+{
+	if (!neteng->running)
+		return;
+
+	if (!neteng_cmd_exec(neteng->child, neteng->par_read,
+			     neteng->par_write, NC_STOP))
+		kill(neteng->child, SIGTERM);
+	sleep(1);
+	waitpid(neteng->child, NULL, WNOHANG);
+
+	close(neteng->tx_pipefd[0]);
+	close(neteng->tx_pipefd[1]);
+	close(neteng->rx_pipefd[0]);
+	close(neteng->rx_pipefd[1]);
+	neteng->rx_pipefd[0] = -1;
+	neteng->rx_pipefd[1] = -1;
+	neteng->tx_pipefd[0] = -1;
+	neteng->tx_pipefd[1] = -1;
+
+	neteng->running = false;
+}
+
+void neteng_free(struct net_engine *neteng)
+{
+	neteng_stop(neteng);
+	
+	memset(neteng, 0, sizeof(*neteng));
+	free(neteng);
+}
+
 void network_sync(void)
 {
-	int tx_pipefd[2], rx_pipefd[2];
-	pid_t child;
+	struct net_engine *neteng;
 
-	if (pipe(tx_pipefd) < 0 || pipe(rx_pipefd) < 0) {
-		perror("pipe");
+	neteng = neteng_new();
+	if (!neteng) {
+		fprintf(stderr, "netsync: neteng new fail\n");
 		exit(1);
 	}
 
-	child = fork();
-	if (child == -1) {
-		perror("fork");
+	if (!neteng_start(neteng)) {
+		fprintf(stderr, "netsync: failed to start engine\n");
 		exit(1);
 	}
 
-	if (child == 0)
-		network_child(tx_pipefd[0], rx_pipefd[1]);
-	else
-		network_parent(child, rx_pipefd[0], tx_pipefd[1]);
-
-	close(rx_pipefd[0]);
-	close(rx_pipefd[1]);
-	close(tx_pipefd[0]);
-	close(tx_pipefd[1]);
+	neteng_stop(neteng);
+	neteng_free(neteng);
 }
 
