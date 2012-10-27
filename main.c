@@ -15,7 +15,7 @@
 #include "picocoin.h"
 #include "coredefs.h"
 #include "wallet.h"
-#include "coredefs.h"
+#include "core.h"
 #include "util.h"
 
 const char *prog_name = "picocoin";
@@ -143,7 +143,7 @@ static void list_dns_seeds(void)
 	printf("=DNS_SEEDS\n");
 
 	for (tmp = addrlist; tmp != NULL; tmp = tmp->next) {
-		struct p2p_addr *addr = tmp->data;
+		struct bp_address *addr = tmp->data;
 		char host[64];
 		bool is_ipv4 = is_ipv4_mapped(addr->ip);
 

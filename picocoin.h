@@ -10,22 +10,6 @@
 
 struct wallet;
 
-struct p2p_addr {
-	unsigned char	ip[16];
-	unsigned short	port;
-	uint64_t	nServices;
-};
-
-struct buffer {
-	void		*p;
-	size_t		len;
-};
-
-/* base58.c */
-extern GString *base58_encode(const void *data_, size_t data_len);
-extern GString *base58_address_encode(unsigned char addrtype, const void *data,
-			       size_t data_len);
-
 /* bignum.c */
 extern void bn_setvch(BIGNUM *vo, const void *data_, size_t data_len);
 extern void reverse_copy(unsigned char *dst, const unsigned char *src, size_t len);

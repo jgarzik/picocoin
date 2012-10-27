@@ -2,10 +2,10 @@
 #include "picocoin-config.h"
 
 #include <stdint.h>
+#include <string.h>
 #include <glib.h>
 #include <openssl/bn.h>
 #include <openssl/sha.h>
-#include "picocoin.h"
 #include "serialize.h"
 #include "util.h"
 

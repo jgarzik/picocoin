@@ -5,7 +5,6 @@
 #include <string.h>
 #include <glib.h>
 #include <openssl/sha.h>
-#include "picocoin.h"
 #include "message.h"
 #include "serialize.h"
 #include "util.h"

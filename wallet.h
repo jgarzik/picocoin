@@ -1,6 +1,10 @@
 #ifndef __PICOCOIN_WALLET_H__
 #define __PICOCOIN_WALLET_H__
 
+#include <stdint.h>
+#include <stdbool.h>
+#include <glib.h>
+
 struct wallet {
 	uint32_t	version;
 	unsigned char	netmagic[4];

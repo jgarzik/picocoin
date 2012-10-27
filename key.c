@@ -7,7 +7,7 @@
 #include <openssl/obj_mac.h>
 #include <openssl/ripemd.h>
 #include "key.h"
-#include "picocoin.h"
+#include "base58.h"
 #include "util.h"
 
 bool bp_key_init(struct bp_key *key)

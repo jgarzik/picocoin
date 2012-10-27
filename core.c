@@ -1,8 +1,8 @@
 
 #include "picocoin-config.h"
 
+#include <string.h>
 #include <openssl/sha.h>
-#include "picocoin.h"
 #include "core.h"
 #include "coredefs.h"
 #include "serialize.h"

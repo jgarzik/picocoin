@@ -1,5 +1,5 @@
-#ifndef __PICOCOIN_COREDEFS_H__
-#define __PICOCOIN_COREDEFS_H__
+#ifndef __LIBCCOIN_COREDEFS_H__
+#define __LIBCCOIN_COREDEFS_H__
 
 enum {
 	CADDR_TIME_VERSION	= 31402
@@ -22,4 +22,4 @@ struct chain_info {
 extern const struct chain_info chain_metadata[];
 extern const struct chain_info *chain_find(const char *name);
 
-#endif /* __PICOCOIN_COREDEFS_H__ */
+#endif /* __LIBCCOIN_COREDEFS_H__ */

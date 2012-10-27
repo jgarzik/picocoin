@@ -1,8 +1,11 @@
 #ifndef __PICOCOIN_CORE_H__
 #define __PICOCOIN_CORE_H__
 
-#include <openssl/bn.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include <glib.h>
+#include <openssl/bn.h>
+#include "buffer.h"
 
 struct bp_address {
 	uint32_t	nTime;

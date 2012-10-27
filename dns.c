@@ -7,8 +7,8 @@
 #include <string.h>
 #include <netdb.h>
 #include <glib.h>
-#include "picocoin.h"
 #include "util.h"
+#include "core.h"
 
 static const char *dns_seeds[] = {
 	"seed.bitcoin.sipa.be",
@@ -19,7 +19,7 @@ static const char *dns_seeds[] = {
 
 static GList *add_seed_addr(GList *l, const struct addrinfo *ai)
 {
-	struct p2p_addr *addr;
+	struct bp_address *addr;
 
 	addr = calloc(1, sizeof(*addr));
 	if (!addr)
