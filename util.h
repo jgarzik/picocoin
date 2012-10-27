@@ -20,4 +20,11 @@ extern bool bu_read_file(const char *filename, void **data_, size_t *data_len_,
 extern bool bu_write_file(const char *filename, const void *data, size_t data_len);
 extern GList *bu_dns_seed_addrs(void);
 
+extern const char ipv4_mapped_pfx[12];
+
+static inline bool is_ipv4_mapped(const unsigned char *ipaddr)
+{
+	return memcmp(ipaddr, ipv4_mapped_pfx, 12) == 0;
+}
+
 #endif /* __LIBCCOIN_UTIL_H__ */

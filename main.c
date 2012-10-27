@@ -21,7 +21,6 @@
 const char *prog_name = "picocoin";
 GHashTable *settings;
 struct wallet *cur_wallet;
-const char ipv4_mapped_pfx[12] = "\0\0\0\0\0\0\0\0\0\0\xff\xff";
 const struct chain_info *chain = NULL;
 BIGNUM *chain_genesis = NULL;
 
