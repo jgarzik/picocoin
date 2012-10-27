@@ -205,22 +205,28 @@ void neteng_free(struct net_engine *neteng)
 	free(neteng);
 }
 
-void network_sync(void)
+static struct net_engine *neteng_new_start(void)
 {
 	struct net_engine *neteng;
 
 	neteng = neteng_new();
 	if (!neteng) {
-		fprintf(stderr, "netsync: neteng new fail\n");
+		fprintf(stderr, "neteng new fail\n");
 		exit(1);
 	}
 
 	if (!neteng_start(neteng)) {
-		fprintf(stderr, "netsync: failed to start engine\n");
+		fprintf(stderr, "failed to start engine\n");
 		exit(1);
 	}
 
-	neteng_stop(neteng);
+	return neteng;
+}
+
+void network_sync(void)
+{
+	struct net_engine *neteng = neteng_new_start();
+
 	neteng_free(neteng);
 }
 
