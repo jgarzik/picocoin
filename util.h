@@ -2,6 +2,7 @@
 #define __LIBCCOIN_UTIL_H__
 
 #include <stdbool.h>
+#include <string.h>
 #include <glib.h>
 #include <openssl/bn.h>
 
