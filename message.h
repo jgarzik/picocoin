@@ -52,6 +52,11 @@ struct msg_addr {
 	GPtrArray	*addrs;
 };
 
+static inline void msg_addr_init(struct msg_addr *ma)
+{
+	memset(ma, 0, sizeof(*ma));
+}
+
 extern bool deser_msg_addr(unsigned int protover, struct msg_addr *ma, struct buffer *buf);
 extern GString *ser_msg_addr(unsigned int protover, const struct msg_addr *ma);
 extern void msg_addr_free(struct msg_addr *ma);
