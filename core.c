@@ -20,7 +20,7 @@ bool deser_bp_addr(unsigned int protover,
 
 void ser_bp_addr(GString *s, unsigned int protover, const struct bp_address *addr)
 {
-	if (protover >= CADDR_TIME_VERSION) 
+	if (protover >= CADDR_TIME_VERSION)
 		ser_u32(s, addr->nTime);
 	ser_u64(s, addr->nServices);
 	ser_bytes(s, addr->ip, 16);
@@ -62,7 +62,7 @@ bool deser_bp_locator(struct bp_locator *locator, struct buffer *buf)
 
 	uint32_t vlen;
 	if (!deser_varlen(&vlen, buf)) return false;
-	
+
 	unsigned int i;
 	for (i = 0; i < vlen; i++) {
 		BIGNUM *n;

@@ -15,7 +15,7 @@ bool bp_key_init(struct bp_key *key)
 	key->k = EC_KEY_new_by_curve_name(NID_secp256k1);
 	if (!key->k)
 		return false;
-	
+
 	return true;
 }
 

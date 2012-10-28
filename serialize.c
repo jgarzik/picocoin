@@ -123,7 +123,7 @@ bool deser_bytes(void *po, struct buffer *buf, size_t len)
 {
 	if (buf->len < len)
 		return false;
-	
+
 	memcpy(po, buf->p, len);
 	buf->p += len;
 	buf->len -= len;

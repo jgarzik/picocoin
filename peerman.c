@@ -11,7 +11,7 @@ void peerman_free(struct peer_manager *peers)
 {
 	if (!peers)
 		return;
-	
+
 	g_list_free_full(peers->addrlist, g_free);
 
 	free(peers);
@@ -85,10 +85,10 @@ struct peer_manager *peerman_seed(void)
 	peers = calloc(1, sizeof(*peers));
 	if (!peers)
 		return NULL;
-	
+
 	peers->addrlist = bu_dns_seed_addrs();
 	peers->count = g_list_length(peers->addrlist);
-	
+
 	return peers;
 }
 

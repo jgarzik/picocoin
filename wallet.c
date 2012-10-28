@@ -101,13 +101,13 @@ struct wallet *load_wallet(void)
 		fprintf(stderr, "missing PICOCOIN_PASSPHRASE\n");
 		return NULL;
 	}
-	
+
 	char *filename = wallet_filename();
 	if (!filename) {
 		fprintf(stderr, "wallet: no filename\n");
 		return NULL;
 	}
-	
+
 	GString *data = read_aes_file(filename, passphrase, strlen(passphrase),
 				      100 * 1024 * 1024);
 	if (!data) {
@@ -194,11 +194,11 @@ bool store_wallet(struct wallet *wlt)
 	char *passphrase = getenv("PICOCOIN_PASSPHRASE");
 	if (!passphrase)
 		return false;
-	
+
 	char *filename = wallet_filename();
 	if (!filename)
 		return false;
-	
+
 	GString *plaintext = ser_wallet(wlt);
 	if (!plaintext)
 		return false;
@@ -208,7 +208,7 @@ bool store_wallet(struct wallet *wlt)
 
 	memset(plaintext->str, 0, plaintext->len);
 	g_string_free(plaintext, TRUE);
-	
+
 	return rc;
 }
 
@@ -276,7 +276,7 @@ void cur_wallet_free(void)
 {
 	if (!cur_wallet)
 		return;
-	
+
 	wallet_free(cur_wallet);
 	free(cur_wallet);
 

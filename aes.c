@@ -2,7 +2,7 @@
   AES encryption/decryption demo program using OpenSSL EVP apis
   gcc -Wall openssl_aes.c -lcrypto
 
-  this is public domain code. 
+  this is public domain code.
 
   Saju Pillai (saju.pillai@gmail.com)
 **/
@@ -134,7 +134,7 @@ bool write_aes_file(const char *filename, void *key, size_t key_len,
 	EVP_CIPHER_CTX_cleanup(&de);
 
 	bool rc = bu_write_file(filename, ciphertext, ct_len);
-	
+
 	free(ciphertext);
 
 	return rc;
@@ -148,8 +148,8 @@ int main(int argc, char **argv)
 	EVP_CIPHER_CTX en, de;
 
 	/* 8 bytes to salt the key_data during key generation. This is an example of
-	   compiled in salt. We just read the bit pattern created by these two 4 byte 
-	   integers on the stack as 64 bits of contigous salt material - 
+	   compiled in salt. We just read the bit pattern created by these two 4 byte
+	   integers on the stack as 64 bits of contigous salt material -
 	   ofcourse this only works if sizeof(int) >= 4 */
 	unsigned int salt[] = { 12345, 54321 };
 	unsigned char *key_data;
@@ -177,9 +177,9 @@ int main(int argc, char **argv)
 		unsigned char *ciphertext;
 		int olen, len;
 
-		/* The enc/dec functions deal with binary data and not C strings. strlen() will 
+		/* The enc/dec functions deal with binary data and not C strings. strlen() will
 		   return length of the string without counting the '\0' string marker. We always
-		   pass in the marker byte to the encrypt/decrypt functions so that after decryption 
+		   pass in the marker byte to the encrypt/decrypt functions so that after decryption
 		   we end up with a legal C string */
 		olen = len = strlen(input[i]) + 1;
 

@@ -66,7 +66,7 @@ static bool read_config_file(const char *cfg_fn)
 		return false;
 
 	bool rc = false;
-	
+
 	char line[1024];
 	while (fgets(line, sizeof(line), cfg) != NULL) {
 		char *key, *value;
@@ -119,7 +119,7 @@ static bool preload_settings(void)
 	for (i = 0; i < ARRAY_SIZE(const_settings); i++)
 		if (!do_setting(const_settings[i]))
 			return false;
-	
+
 	return true;
 }
 

@@ -19,7 +19,7 @@ bool message_valid(struct p2p_message *msg)
 {
 	if (!msg || !msg->data)
 		return false;
-	
+
 	/* TODO: validate network magic */
 
 	/* data checksum */

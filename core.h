@@ -113,7 +113,7 @@ static inline bool bp_tx_coinbase(const struct bp_tx *tx)
 	struct bp_txin *txin = g_ptr_array_index(tx->vin, 0);
 	if (!bp_outpt_null(&txin->prevout))
 		return false;
-	
+
 	return true;
 }
 
