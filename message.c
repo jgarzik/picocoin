@@ -20,8 +20,6 @@ bool message_valid(struct p2p_message *msg)
 	if (!msg || !msg->data)
 		return false;
 
-	/* TODO: validate network magic */
-
 	/* data checksum */
 	unsigned char md32[4];
 
@@ -108,10 +106,10 @@ bool deser_msg_addr(unsigned int protover, struct msg_addr *ma,
 {
 	memset(ma, 0, sizeof(*ma));
 
-	ma->addrs = g_ptr_array_new_full(512, g_free);
-
 	uint32_t vlen;
-	if (!deser_varlen(&vlen, buf)) goto err_out;
+	if (!deser_varlen(&vlen, buf)) return false;
+
+	ma->addrs = g_ptr_array_new_full(vlen, g_free);
 
 	unsigned int i;
 	for (i = 0; i < vlen; i++) {
