@@ -62,7 +62,7 @@ GString *message_str(const unsigned char netmagic[4],
 	return s;
 }
 
-bool deser_version(struct msg_version *mv, struct buffer *buf)
+bool deser_msg_version(struct msg_version *mv, struct buffer *buf)
 {
 	memset(mv, 0, sizeof(*mv));
 
@@ -85,7 +85,7 @@ bool deser_version(struct msg_version *mv, struct buffer *buf)
 	return true;
 }
 
-GString *ser_version(const struct msg_version *mv)
+GString *ser_msg_version(const struct msg_version *mv)
 {
 	GString *s = g_string_sized_new(256);
 

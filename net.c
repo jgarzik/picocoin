@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
+#include <sys/uio.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -14,11 +15,13 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <poll.h>
+#include <errno.h>
 #include <glib.h>
 #include <event.h>
 #include "util.h"
 #include "mbr.h"
 #include "core.h"
+#include "message.h"
 #include "picocoin.h"
 
 struct net_engine {
@@ -59,18 +62,31 @@ struct nc_conn {
 	struct event		*ev;
 	struct net_child_info	*nci;
 
+	struct event		*write_ev;
+	GList			*write_q;	/* of struct buffer */
+	unsigned int		write_partial;
+
 	struct p2p_message	msg;
 
 	void			*msg_p;
 	unsigned int		expected;
 	bool			reading_hdr;
 	unsigned char		hdrbuf[P2P_HDR_SZ];
+
+	bool			seen_version;
+	uint32_t		protover;
 };
 
 
 enum {
 	NC_MAX_CONN		= 8,
 };
+
+static void nc_conn_free(struct nc_conn *conn);
+static bool nc_conn_read_enable(struct nc_conn *conn);
+static bool nc_conn_read_disable(struct nc_conn *conn);
+static bool nc_conn_write_enable(struct nc_conn *conn);
+static bool nc_conn_write_disable(struct nc_conn *conn);
 
 static void peerman_free(struct peer_manager *peers)
 {
@@ -262,11 +278,195 @@ static enum netcmds readcmd(int fd, int timeout_secs)
 	return v;
 }
 
+static void nc_conn_build_iov(GList *write_q, unsigned int partial,
+			      struct iovec **iov_, unsigned int *iov_len_)
+{
+	*iov_ = NULL;
+	*iov_len_ = 0;
+
+	unsigned int i, iov_len = g_list_length(write_q);
+	struct iovec *iov = calloc(iov_len, sizeof(struct iovec));
+
+	GList *tmp = write_q;
+
+	i = 0;
+	while (tmp) {
+		struct buffer *buf = tmp->data;
+
+		iov[i].iov_base = buf->p;
+		iov[i].iov_len = buf->len;
+
+		if (i == 0) {
+			iov[0].iov_base += partial;
+			iov[0].iov_len -= partial;
+		}
+
+		tmp = tmp->next;
+		i++;
+	}
+
+	*iov_ = iov;
+	*iov_len_ = iov_len;
+}
+
+static void nc_conn_written(struct nc_conn *conn, size_t bytes)
+{
+	while (bytes > 0) {
+		GList *tmp;
+		struct buffer *buf;
+		unsigned int left;
+
+		tmp = conn->write_q;
+		buf = tmp->data;
+		left = buf->len - conn->write_partial;
+
+		/* buffer fully written; free */
+		if (bytes >= left) {
+			free(buf->p);
+			free(buf);
+			conn->write_partial = 0;
+			conn->write_q = g_list_delete_link(tmp, tmp);
+
+			bytes -= left;
+		}
+
+		/* buffer partially written; store state */
+		else {
+			conn->write_partial += bytes;
+			break;
+		}
+	}
+}
+
+static void nc_conn_write_evt(int fd, short events, void *priv)
+{
+	struct nc_conn *conn = priv;
+	struct iovec *iov = NULL;
+	unsigned int iov_len = 0;
+
+	/* build list of outgoing data buffers */
+	nc_conn_build_iov(conn->write_q, conn->write_partial, &iov, &iov_len);
+
+	/* send data to network */
+	ssize_t wrc = writev(conn->fd, iov, iov_len);
+
+	free(iov);
+
+	if (wrc < 0) {
+		if (errno != EAGAIN && errno != EWOULDBLOCK)
+			nc_conn_free(conn);
+		return;
+	}
+
+	/* handle partially and fully completed buffers */
+	nc_conn_written(conn, wrc);
+
+	/* thaw read, if write fully drained */
+	if (!conn->write_q) {
+		nc_conn_write_disable(conn);
+		nc_conn_read_enable(conn);
+	}
+}
+
+static bool nc_conn_send(struct nc_conn *conn, const char *command,
+			 const void *data, size_t data_len)
+{
+	/* build wire message */
+	GString *msg = message_str(chain->netmagic, command, data, data_len);
+	if (!msg)
+		return false;
+	
+	/* buffer now owns message data */
+	struct buffer *buf = calloc(1, sizeof(struct buffer));
+	buf->p = msg->str;
+	buf->len = msg->len;
+
+	g_string_free(msg, FALSE);
+
+	/* if write q exists, write_evt will handle output */
+	if (conn->write_q) {
+		conn->write_q = g_list_append(conn->write_q, buf);
+		return true;
+	}
+
+	/* attempt optimistic write */
+	ssize_t wrc = write(conn->fd, buf->p, buf->len);
+	if (wrc < 0) {
+		if (errno != EAGAIN && errno != EWOULDBLOCK) {
+			free(buf->p);
+			free(buf);
+			return false;
+		}
+
+		conn->write_q = g_list_append(conn->write_q, buf);
+		return true;
+	}
+
+	/* message fully sent */
+	if (wrc == buf->len) {
+		free(buf->p);
+		free(buf);
+		return true;
+	}
+
+	/* message partially sent; pause read; poll for writable */
+	conn->write_q = g_list_append(conn->write_q, buf);
+	conn->write_partial = wrc;
+
+	nc_conn_read_disable(conn);
+	nc_conn_write_enable(conn);
+	return true;
+}
+
+static bool nc_msg_version(struct nc_conn *conn)
+{
+	if (conn->seen_version)
+		return false;
+	conn->seen_version = true;
+
+	struct buffer buf = { conn->msg.data, conn->msg.hdr.data_len };
+	struct msg_version mv;
+	bool rc = false;
+
+	msg_version_init(&mv);
+
+	if (!deser_msg_version(&mv, &buf))
+		goto out;
+
+	if (!(mv.nServices & NODE_NETWORK))	/* req NODE_NETWORK */
+		goto out;
+	if (mv.nonce == instance_nonce)		/* connected to ourselves? */
+		goto out;
+
+	conn->protover = MIN(mv.nVersion, PROTO_VERSION);
+
+	if (!nc_conn_send(conn, "verack", NULL, 0))
+		goto out;
+	
+	rc = true;
+
+out:
+	msg_version_free(&mv);
+	return rc;
+}
+
 static bool nc_conn_message(struct nc_conn *conn)
 {
-	/* TODO: we have a valid incoming message... do something with it */
+	/* verify correct network */
+	if (memcmp(conn->msg.hdr.netmagic, chain->netmagic, 4))
+		return false;
 
-	return false; /* FIXME */
+	char *command = conn->msg.hdr.command;
+
+	if (!strncmp(command, "version", 12))
+		return nc_msg_version(conn);
+
+	/* "version" must be first message */
+	if (!conn->seen_version)
+		return false;
+
+	/* ignore unknown messages */
+	return true;
 }
 
 static bool nc_conn_ip_active(struct net_child_info *nci,
@@ -305,9 +505,29 @@ static void nc_conn_free(struct nc_conn *conn)
 	if (!conn)
 		return;
 
+	if (conn->write_q) {
+		GList *tmp = conn->write_q;
+
+		while (tmp) {
+			struct buffer *buf;
+
+			buf = tmp->data;
+			tmp = tmp->next;
+
+			free(buf->p);
+			free(buf);
+		}
+
+		g_list_free(conn->write_q);
+	}
+
 	if (conn->ev) {
 		event_del(conn->ev);
 		event_free(conn->ev);
+	}
+	if (conn->write_ev) {
+		event_del(conn->write_ev);
+		event_free(conn->write_ev);
 	}
 
 	if (conn->fd >= 0)
@@ -430,6 +650,89 @@ static void nc_conn_evt(int fd, short events, void *priv)
 	}
 }
 
+static GString *nc_version_build(struct nc_conn *conn)
+{
+	struct msg_version mv;
+
+	msg_version_init(&mv);
+
+	mv.nVersion = PROTO_VERSION;
+	mv.nTime = (int64_t) time(NULL);
+	mv.nonce = instance_nonce;
+	sprintf(mv.strSubVer, "/picocoin:%s/", VERSION);
+
+	GString *rs = ser_msg_version(&mv);
+
+	msg_version_free(&mv);
+
+	return rs;
+}
+
+static bool nc_conn_read_enable(struct nc_conn *conn)
+{
+	if (conn->ev)
+		return true;
+	
+	conn->ev = event_new(conn->nci->eb, conn->fd, EV_READ | EV_PERSIST, 
+			     nc_conn_evt, conn);
+	if (!conn->ev)
+		return false;
+
+	if (event_add(conn->ev, NULL) != 0) {
+		event_free(conn->ev);
+		conn->ev = NULL;
+		return false;
+	}
+
+	return true;
+}
+
+static bool nc_conn_read_disable(struct nc_conn *conn)
+{
+	if (!conn->ev)
+		return true;
+	
+	event_del(conn->ev);
+	event_free(conn->ev);
+
+	conn->ev = NULL;
+
+	return true;
+}
+
+static bool nc_conn_write_enable(struct nc_conn *conn)
+{
+	if (conn->write_ev)
+		return true;
+	
+	conn->write_ev = event_new(conn->nci->eb, conn->fd,
+				   EV_WRITE | EV_PERSIST, 
+				   nc_conn_write_evt, conn);
+	if (!conn->write_ev)
+		return false;
+
+	if (event_add(conn->write_ev, NULL) != 0) {
+		event_free(conn->write_ev);
+		conn->write_ev = NULL;
+		return false;
+	}
+
+	return true;
+}
+
+static bool nc_conn_write_disable(struct nc_conn *conn)
+{
+	if (!conn->write_ev)
+		return true;
+	
+	event_del(conn->write_ev);
+	event_free(conn->write_ev);
+
+	conn->write_ev = NULL;
+
+	return true;
+}
+
 static void nc_conn_evt_connected(int fd, short events, void *priv)
 {
 	struct nc_conn *conn = priv;
@@ -437,6 +740,7 @@ static void nc_conn_evt_connected(int fd, short events, void *priv)
 	int err = 0;
 	socklen_t len = sizeof(err);
 
+	/* check success of connect(2) */
 	if ((getsockopt(conn->fd, SOL_SOCKET, SO_ERROR, &err, &len) < 0) ||
 	    (err != 0))
 		goto err_out;
@@ -444,20 +748,28 @@ static void nc_conn_evt_connected(int fd, short events, void *priv)
 	conn->connected = true;
 
 	event_free(conn->ev);
+	conn->ev = NULL;
 
-	// FIXME: send initial network protocol greetings etc.
+	/* build and send "version" message */
+	GString *msg_data = nc_version_build(conn);
+	GString *msg = message_str(chain->netmagic, "version",
+				   msg_data->str, msg_data->len);
+	g_string_free(msg_data, TRUE);
+
+	unsigned int msg_len = msg->len;
+	ssize_t wrc = write(conn->fd, msg->str, msg_len);
+
+	g_string_free(msg, TRUE);
+
+	if (wrc != msg_len)
+		goto err_out;
 
 	/* switch to read-header state */
 	conn->msg_p = conn->hdrbuf;
 	conn->expected = P2P_HDR_SZ;
 	conn->reading_hdr = true;
 
-	conn->ev = event_new(conn->nci->eb, conn->fd, EV_READ | EV_PERSIST, 
-			     nc_conn_evt, conn);
-	if (!conn->ev)
-		goto err_out;
-
-	if (event_add(conn->ev, NULL) != 0)
+	if (!nc_conn_read_enable(conn))
 		goto err_out;
 
 	return;

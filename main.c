@@ -12,6 +12,7 @@
 #include <ctype.h>
 #include <glib.h>
 #include <openssl/bn.h>
+#include <openssl/rand.h>
 #include "picocoin.h"
 #include "coredefs.h"
 #include "wallet.h"
@@ -23,6 +24,7 @@ GHashTable *settings;
 struct wallet *cur_wallet;
 const struct chain_info *chain = NULL;
 BIGNUM *chain_genesis = NULL;
+uint64_t instance_nonce;
 
 static const char *const_settings[] = {
 	"wallet=picocoin.wallet",
@@ -259,6 +261,8 @@ int main (int argc, char *argv[])
 	if (!preload_settings())
 		return 1;
 	chain_set();
+
+	RAND_bytes((unsigned char *)&instance_nonce, sizeof(instance_nonce));
 
 	unsigned int arg;
 	for (arg = 1; arg < argc; arg++) {

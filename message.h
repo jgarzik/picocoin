@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include <glib.h>
 #include "core.h"
 #include "buffer.h"
@@ -37,6 +38,11 @@ struct msg_version {
 	char		strSubVer[80];
 	uint32_t	nStartingHeight;
 };
+
+static inline void msg_version_init(struct msg_version *mv)
+{
+	memset(mv, 0, sizeof(*mv));
+}
 
 extern bool deser_msg_version(struct msg_version *mv, struct buffer *buf);
 extern GString *ser_msg_version(const struct msg_version *mv);

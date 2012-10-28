@@ -10,10 +10,15 @@
 
 struct wallet;
 
+enum {
+	PROTO_VERSION		= 60002,
+};
+
 /* main.c */
 extern GHashTable *settings;
 extern struct wallet *cur_wallet;
 extern const struct chain_info *chain;
+extern uint64_t instance_nonce;
 
 /* net.c */
 extern void network_sync(void);

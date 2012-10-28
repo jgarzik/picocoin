@@ -7,6 +7,10 @@
 #include <openssl/bn.h>
 #include "buffer.h"
 
+enum service_bits {
+	NODE_NETWORK	= (1 << 0),
+};
+
 struct bp_address {
 	uint32_t	nTime;
 	uint64_t	nServices;
