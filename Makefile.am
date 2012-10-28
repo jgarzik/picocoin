@@ -30,6 +30,8 @@ picocoin_SOURCES=	\
 	aes.c		\
 	main.c		\
 	net.c		\
+	peerman.c	\
+	peerman.h	\
 	picocoin.h	\
 	wallet.c wallet.h
 
