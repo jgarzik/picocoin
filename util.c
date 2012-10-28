@@ -123,3 +123,19 @@ err_out_tmpfn:
 	return false;
 }
 
+/* "djb2"-derived hash function */
+unsigned long djb2_hash(unsigned long hash, const void *_buf, size_t buflen)
+{
+	const unsigned char *buf = _buf;
+	int c;
+
+	while (buflen > 0) {
+		c = *buf++;
+		buflen--;
+
+		hash = ((hash << 5) + hash) ^ c; /* hash * 33 ^ c */
+	}
+
+	return hash;
+}
+

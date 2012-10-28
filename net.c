@@ -70,6 +70,7 @@ struct nc_conn {
 	unsigned char		hdrbuf[P2P_HDR_SZ];
 
 	bool			seen_version;
+	bool			seen_verack;
 	uint32_t		protover;
 };
 
@@ -116,7 +117,7 @@ static enum netcmds readcmd(int fd, int timeout_secs)
 	}
 	if (prc == 0)
 		return NC_TIMEOUT;
-	
+
 	uint8_t v;
 	ssize_t rrc = read(fd, &v, 1);
 	if (rrc < 0) {
@@ -226,7 +227,7 @@ static bool nc_conn_send(struct nc_conn *conn, const char *command,
 	GString *msg = message_str(chain->netmagic, command, data, data_len);
 	if (!msg)
 		return false;
-	
+
 	/* buffer now owns message data */
 	struct buffer *buf = calloc(1, sizeof(struct buffer));
 	buf->p = msg->str;
@@ -284,21 +285,74 @@ static bool nc_msg_version(struct nc_conn *conn)
 	if (!deser_msg_version(&mv, &buf))
 		goto out;
 
-	if (!(mv.nServices & NODE_NETWORK))	/* req NODE_NETWORK */
+	if (!(mv.nServices & NODE_NETWORK))	/* require NODE_NETWORK */
 		goto out;
 	if (mv.nonce == instance_nonce)		/* connected to ourselves? */
 		goto out;
 
 	conn->protover = MIN(mv.nVersion, PROTO_VERSION);
 
+	/* acknowledge version receipt */
 	if (!nc_conn_send(conn, "verack", NULL, 0))
 		goto out;
-	
+
 	rc = true;
 
 out:
 	msg_version_free(&mv);
 	return rc;
+}
+
+static bool nc_msg_addr(struct nc_conn *conn)
+{
+	struct buffer buf = { conn->msg.data, conn->msg.hdr.data_len };
+	struct msg_addr ma;
+	bool rc = false;
+
+	msg_addr_init(&ma);
+
+	if (!deser_msg_addr(conn->protover, &ma, &buf))
+		goto out;
+
+	/* ignore ancient addresses */
+	if (conn->protover < CADDR_TIME_VERSION)
+		goto out_ok;
+
+	/* feed addresses to peer manager */
+	unsigned int i;
+	for (i = 0; i < ma.addrs->len; i++) {
+		struct bp_address *addr = g_ptr_array_index(ma.addrs, i);
+		peerman_add(conn->nci->peers, addr, false);
+	}
+
+out_ok:
+	rc = true;
+
+out:
+	msg_addr_free(&ma);
+	return rc;
+}
+
+static bool nc_msg_verack(struct nc_conn *conn)
+{
+	if (conn->seen_verack)
+		return false;
+	conn->seen_verack = true;
+
+	/*
+	 * When a connection attempt is made, the peer is deleted
+	 * from the peer list.  When we successfully connect,
+	 * the peer is re-added.  Thus, peers are immediately
+	 * forgotten if they fail, on the first try.
+	 */
+	peerman_add(conn->nci->peers, &conn->addr, true);
+
+	/* request peer addresses */
+	if ((conn->protover >= CADDR_TIME_VERSION) &&
+	    (!nc_conn_send(conn, "getaddr", NULL, 0)))
+		return false;
+
+	return true;
 }
 
 static bool nc_conn_message(struct nc_conn *conn)
@@ -309,12 +363,25 @@ static bool nc_conn_message(struct nc_conn *conn)
 
 	char *command = conn->msg.hdr.command;
 
+	/* incoming message: version */
 	if (!strncmp(command, "version", 12))
 		return nc_msg_version(conn);
 
 	/* "version" must be first message */
 	if (!conn->seen_version)
 		return false;
+
+	/* incoming message: verack */
+	if (!strncmp(command, "verack", 12))
+		return nc_msg_verack(conn);
+
+	/* "verack" must be second message */
+	if (!conn->seen_verack)
+		return false;
+
+	/* incoming message: addr */
+	if (!strncmp(command, "addr", 12))
+		return nc_msg_addr(conn);
 
 	/* ignore unknown messages */
 	return true;
@@ -331,7 +398,7 @@ static bool nc_conn_ip_active(struct net_child_info *nci,
 		if (!memcmp(conn->addr.ip, conn_new->addr.ip, 16))
 			return true;
 	}
-	
+
 	return false;
 }
 
@@ -385,7 +452,7 @@ static void nc_conn_free(struct nc_conn *conn)
 		close(conn->fd);
 
 	free(conn->msg.data);
-	
+
 	free(conn);
 }
 
@@ -496,7 +563,7 @@ static void nc_conn_evt(int fd, short events, void *priv)
 	if (conn->expected == 0) {
 		if (conn->reading_hdr)
 			nc_conn_got_header(conn);
-		else	
+		else
 			nc_conn_got_msg(conn);
 	}
 }
@@ -523,8 +590,8 @@ static bool nc_conn_read_enable(struct nc_conn *conn)
 {
 	if (conn->ev)
 		return true;
-	
-	conn->ev = event_new(conn->nci->eb, conn->fd, EV_READ | EV_PERSIST, 
+
+	conn->ev = event_new(conn->nci->eb, conn->fd, EV_READ | EV_PERSIST,
 			     nc_conn_evt, conn);
 	if (!conn->ev)
 		return false;
@@ -542,7 +609,7 @@ static bool nc_conn_read_disable(struct nc_conn *conn)
 {
 	if (!conn->ev)
 		return true;
-	
+
 	event_del(conn->ev);
 	event_free(conn->ev);
 
@@ -555,9 +622,9 @@ static bool nc_conn_write_enable(struct nc_conn *conn)
 {
 	if (conn->write_ev)
 		return true;
-	
+
 	conn->write_ev = event_new(conn->nci->eb, conn->fd,
-				   EV_WRITE | EV_PERSIST, 
+				   EV_WRITE | EV_PERSIST,
 				   nc_conn_write_evt, conn);
 	if (!conn->write_ev)
 		return false;
@@ -575,7 +642,7 @@ static bool nc_conn_write_disable(struct nc_conn *conn)
 {
 	if (!conn->write_ev)
 		return true;
-	
+
 	event_del(conn->write_ev);
 	event_free(conn->write_ev);
 
@@ -631,7 +698,8 @@ err_out:
 
 static void nc_conns_open(struct net_child_info *nci)
 {
-	while (nci->peers->count && (nci->conns->len < NC_MAX_CONN)) {
+	while ((g_hash_table_size(nci->peers->map_addr) > 0) &&
+	       (nci->conns->len < NC_MAX_CONN)) {
 
 		/* delete peer from front of address list.  it will be
 		 * re-added before writing peer file, if successful
@@ -748,7 +816,7 @@ static bool neteng_cmd_exec(pid_t child, int read_fd, int write_fd,
 	enum netcmds ncr = readcmd(read_fd, 60);
 	if (ncr != NC_OK)
 		return false;
-	
+
 	return true;
 }
 
@@ -824,7 +892,7 @@ void neteng_stop(struct net_engine *neteng)
 void neteng_free(struct net_engine *neteng)
 {
 	neteng_stop(neteng);
-	
+
 	memset(neteng, 0, sizeof(*neteng));
 	free(neteng);
 }

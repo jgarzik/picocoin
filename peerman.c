@@ -1,20 +1,59 @@
 
 #include "picocoin-config.h"
 
+#include <string.h>
 #include "peerman.h"
 #include "mbr.h"
 #include "util.h"
 #include "coredefs.h"
 #include "picocoin.h"
 
+static guint addr_hash(gconstpointer key)
+{
+	return djb2_hash(0x1721, key, 16);
+}
+
+static gboolean addr_equal(gconstpointer a, gconstpointer b)
+{
+	return memcmp(a, b, 16) == 0 ? TRUE : FALSE;
+}
+
+static struct peer_manager *peerman_new(void)
+{
+	struct peer_manager *peers;
+
+	peers = calloc(1, sizeof(*peers));
+	if (!peers)
+		return NULL;
+	
+	peers->map_addr = g_hash_table_new(addr_hash, addr_equal);
+
+	return peers;
+}
+
 void peerman_free(struct peer_manager *peers)
 {
 	if (!peers)
 		return;
 
+	if (peers->map_addr)
+		g_hash_table_unref(peers->map_addr);
+
 	g_list_free_full(peers->addrlist, g_free);
 
+	memset(peers, 0, sizeof(*peers));
 	free(peers);
+}
+
+static void __peerman_add(struct peer_manager *peers, struct bp_address *addr,
+			  bool prepend_front)
+{
+	if (prepend_front)
+		peers->addrlist = g_list_prepend(peers->addrlist, addr);
+	else
+		peers->addrlist = g_list_append(peers->addrlist, addr);
+
+	g_hash_table_insert(peers->map_addr, addr->ip, GUINT_TO_POINTER(1));
 }
 
 static bool peerman_read_rec(struct peer_manager *peers,struct p2p_message *msg)
@@ -28,15 +67,19 @@ static bool peerman_read_rec(struct peer_manager *peers,struct p2p_message *msg)
 
 	addr = calloc(1, sizeof(*addr));
 
-	if (!deser_bp_addr(CADDR_TIME_VERSION, addr, &buf)) {
-		free(addr);
-		return false;
-	}
+	if (!deser_bp_addr(CADDR_TIME_VERSION, addr, &buf))
+		goto err_out;
 
-	peers->addrlist = g_list_prepend(peers->addrlist, addr);
-	peers->count++;
+	if (!g_hash_table_lookup(peers->map_addr, addr->ip))
+		__peerman_add(peers, addr, false);
+	else
+		goto err_out;
 
 	return true;
+
+err_out:
+	free(addr);
+	return false;
 }
 
 struct peer_manager *peerman_read(void)
@@ -53,7 +96,7 @@ struct peer_manager *peerman_read(void)
 
 	struct peer_manager *peers;
 
-	peers = calloc(1, sizeof(*peers));
+	peers = peerman_new();
 
 	struct buffer buf = { data, data_len };
 	struct mbuf_reader mbr;
@@ -82,20 +125,29 @@ struct peer_manager *peerman_seed(void)
 {
 	struct peer_manager *peers;
 
-	peers = calloc(1, sizeof(*peers));
+	peers = peerman_new();
 	if (!peers)
 		return NULL;
 
-	peers->addrlist = bu_dns_seed_addrs();
-	peers->count = g_list_length(peers->addrlist);
+	/* make DNS query for seed data */
+	GList *tmp, *seedlist = bu_dns_seed_addrs();
+
+	/* import seed data into peerman */
+	tmp = seedlist;
+	while (tmp) {
+		__peerman_add(peers, tmp->data, true);
+		tmp = tmp->next;
+	}
+	g_list_free(seedlist);
 
 	return peers;
 }
 
 static GString *ser_peerman(struct peer_manager *peers)
 {
+	unsigned int peer_count = g_hash_table_size(peers->map_addr);
 	GString *s = g_string_sized_new(
-		peers->count * (24 + sizeof(struct bp_address)));
+		peer_count * (24 + sizeof(struct bp_address)));
 
 	GList *tmp = peers->addrlist;
 
@@ -147,8 +199,23 @@ struct bp_address *peerman_pop(struct peer_manager *peers)
 	addr = tmp->data;
 
 	peers->addrlist = g_list_delete_link(tmp, tmp);
-	peers->count--;
+
+	g_hash_table_remove(peers->map_addr, addr->ip);
 
 	return addr;
+}
+
+void peerman_add(struct peer_manager *peers,
+		 const struct bp_address *addr_in, bool known_working)
+{
+	struct bp_address *addr;
+
+	if (g_hash_table_lookup(peers->map_addr, addr_in->ip))
+		return;
+
+	addr = malloc(sizeof(*addr));
+	memcpy(addr, addr_in, sizeof(*addr));
+
+	__peerman_add(peers, addr, !known_working);
 }
 
