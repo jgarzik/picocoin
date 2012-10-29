@@ -56,6 +56,28 @@ err_out_data:
 	return false;
 }
 
+static struct blkinfo *bi_new(void)
+{
+	struct blkinfo *bi;
+
+	bi = calloc(1, sizeof(*bi));
+	BN_init(&bi->work);
+	bi->height = -1;
+
+	return bi;
+}
+
+static void bi_free(struct blkinfo *bi)
+{
+	if (!bi)
+		return;
+	
+	BN_clear_free(&bi->work);
+
+	memset(bi, 0, sizeof(*bi));
+	free(bi);
+}
+
 static guint blk_hash(gconstpointer key_)
 {
 	const guint *key = key_;
@@ -79,6 +101,10 @@ bool blkdb_init(struct blkdb *db, const unsigned char *netmagic,
 	db->fd = -1;
 
 	BN_hex2bn(&db->block0, genesis_hash);
+
+	BN_init(&db->hashBestChain);
+	BN_init(&db->bnBestChainWork);
+	db->nBestHeight = -1;
 
 	memcpy(db->netmagic, netmagic, sizeof(db->netmagic));
 	db->blocks = g_hash_table_new_full(blk_hash, blk_equal, NULL, g_free);
@@ -107,9 +133,11 @@ static bool blkdb_read_rec(struct blkdb *db, const struct p2p_message *msg)
 	if (strncmp(msg->hdr.command, "rec", 12))
 		return false;
 
-	bi = calloc(1, sizeof(*bi));
-	BIGNUM blkhash;
+	bi = bi_new();
+
+	BIGNUM blkhash, cur_work;
 	BN_init(&blkhash);
+	BN_init(&cur_work);
 
 	/* deserialize record */
 	if (!deser_u256(&blkhash, &buf))
@@ -127,26 +155,54 @@ static bool blkdb_read_rec(struct blkdb *db, const struct p2p_message *msg)
 	/* copy serialized block hash, to be used as hash table index */
 	memcpy(&bi->ser_hash[0], msg->data, sizeof(bi->ser_hash));
 
+	u256_from_compact(&cur_work, bi->hdr.nBits);
+
+	bool best_chain = false;
+
 	/* verify genesis block matches first record */
 	if (g_hash_table_size(db->blocks) == 0) {
 		if (BN_cmp(&blkhash, db->block0) != 0)
 			goto err_out;
+
+		bi->height = 0;
+
+		BN_copy(&bi->work, &cur_work);
+
+		best_chain = true;
 	}
 	
-	/* verify previous block exists in database */
+	/* lookup and verify previous block */
 	else {
-		if (!blkdb_lookup(db, &bi->hdr.hashPrevBlock))
+		struct blkinfo *prev = blkdb_lookup(db, &bi->hdr.hashPrevBlock);
+		if (!prev)
 			goto err_out;
+
+		bi->height = prev->height + 1;
+
+		if (!BN_add(&bi->work, &cur_work, &prev->work))
+			goto err_out;
+
+		if (BN_cmp(&bi->work, &db->bnBestChainWork) > 0)
+			best_chain = true;
+	}
+
+	/* if new best chain found, update pointers */
+	if (best_chain) {
+		BN_copy(&db->hashBestChain, &bi->hdr.sha256);
+		BN_copy(&db->bnBestChainWork, &cur_work);
+		db->nBestHeight = bi->height;
 	}
 
 	/* add to block map */
 	g_hash_table_insert(db->blocks, bi->ser_hash, bi);
 
+	BN_clear_free(&cur_work);
 	BN_clear_free(&blkhash);
 	return true;
 
 err_out:
-	free(bi);
+	bi_free(bi);
+	BN_clear_free(&cur_work);
 	BN_clear_free(&blkhash);
 	return false;
 }
@@ -228,6 +284,8 @@ void blkdb_free(struct blkdb *db)
 		close(db->fd);
 
 	BN_clear_free(db->block0);
+	BN_clear_free(&db->hashBestChain);
+	BN_clear_free(&db->bnBestChainWork);
 
 	g_hash_table_unref(db->blocks);
 }

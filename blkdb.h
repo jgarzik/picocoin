@@ -8,6 +8,9 @@
 struct blkinfo {
 	unsigned char	ser_hash[32];
 	struct bp_block	hdr;
+
+	BIGNUM		work;
+	int		height;
 };
 
 struct blkdb {
@@ -19,6 +22,10 @@ struct blkdb {
 	BIGNUM		*block0;
 
 	GHashTable	*blocks;
+
+	BIGNUM		hashBestChain;
+	BIGNUM		bnBestChainWork;
+	int		nBestHeight;
 };
 
 extern bool blkdb_init(struct blkdb *db, const unsigned char *netmagic,
