@@ -71,11 +71,14 @@ static gboolean blk_equal(gconstpointer a, gconstpointer b)
 	return memcmp(hash1, hash2, 32) == 0;
 }
 
-bool blkdb_init(struct blkdb *db, const unsigned char *netmagic)
+bool blkdb_init(struct blkdb *db, const unsigned char *netmagic,
+		const char *genesis_hash)
 {
 	memset(db, 0, sizeof(*db));
 
 	db->fd = -1;
+
+	BN_hex2bn(&db->block0, genesis_hash);
 
 	memcpy(db->netmagic, netmagic, sizeof(db->netmagic));
 	db->blocks = g_hash_table_new_full(blk_hash, blk_equal, NULL, g_free);
@@ -110,6 +113,11 @@ static bool blkdb_read_rec(struct blkdb *db, const struct p2p_message *msg)
 
 	/* copy serialized block hash, to be used as hash table index */
 	memcpy(&bi->ser_hash[0], msg->data, sizeof(bi->ser_hash));
+
+	/* verify genesis block matches first record */
+	if ((g_hash_table_size(db->blocks) == 0) &&
+	    (BN_cmp(&blkhash, db->block0) != 0))
+		goto err_out;
 
 	/* add to block map */
 	g_hash_table_insert(db->blocks, bi->ser_hash, bi);
@@ -198,6 +206,8 @@ void blkdb_free(struct blkdb *db)
 {
 	if (db->close_fd && (db->fd >= 0))
 		close(db->fd);
+
+	BN_clear_free(db->block0);
 
 	g_hash_table_unref(db->blocks);
 }
