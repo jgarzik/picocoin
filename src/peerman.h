@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 #include <glib.h>
-#include "core.h"
+#include <ccoin/core.h>
 
 struct peer_manager {
 	GHashTable	*map_addr;

@@ -5,8 +5,8 @@
 #include <stdbool.h>
 #include <string.h>
 #include <glib.h>
-#include "core.h"
-#include "buffer.h"
+#include <ccoin/core.h>
+#include <ccoin/buffer.h>
 
 #define P2P_HDR_SZ	(4 + 12 + 4 + 4)
 

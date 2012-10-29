@@ -9,10 +9,10 @@
 #include <string.h>
 #include <openssl/bn.h>
 #include <glib.h>
-#include "blkdb.h"
-#include "message.h"
-#include "serialize.h"
-#include "buint.h"
+#include <ccoin/blkdb.h>
+#include <ccoin/message.h>
+#include <ccoin/serialize.h>
+#include <ccoin/buint.h>
 
 static bool fread_message(int fd, struct p2p_message *msg, bool *read_ok)
 {

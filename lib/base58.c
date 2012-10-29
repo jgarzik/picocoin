@@ -3,7 +3,7 @@
 
 #include <openssl/bn.h>
 #include <glib.h>
-#include "util.h"
+#include <ccoin/util.h>
 
 static const char base58_chars[] =
 	"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";

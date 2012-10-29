@@ -5,8 +5,8 @@
 #include <stdbool.h>
 #include <openssl/bn.h>
 #include <glib.h>
-#include "buffer.h"
-#include "buint.h"
+#include <ccoin/buffer.h>
+#include <ccoin/buint.h>
 
 extern void ser_bytes(GString *s, const void *p, size_t len);
 extern void ser_u16(GString *s, uint16_t v_);

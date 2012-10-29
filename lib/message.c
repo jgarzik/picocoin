@@ -5,9 +5,9 @@
 #include <string.h>
 #include <glib.h>
 #include <openssl/sha.h>
-#include "message.h"
-#include "serialize.h"
-#include "util.h"
+#include <ccoin/message.h>
+#include <ccoin/serialize.h>
+#include <ccoin/util.h>
 
 void parse_message_hdr(struct p2p_message_hdr *hdr, const unsigned char *data)
 {

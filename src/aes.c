@@ -14,7 +14,7 @@
 #include <openssl/evp.h>
 #include <openssl/aes.h>
 #include <glib.h>
-#include "util.h"
+#include <ccoin/util.h>
 
 /**
  * Create an 256 bit key and IV using the supplied key_data. salt can be added for taste.

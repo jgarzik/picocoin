@@ -2,8 +2,8 @@
 #include "picocoin-config.h"
 
 #include <string.h>
-#include "coredefs.h"
-#include "util.h"
+#include <ccoin/coredefs.h>
+#include <ccoin/util.h>
 
 const struct chain_info chain_metadata[] = {
 	[CHAIN_BITCOIN] = { CHAIN_BITCOIN, "bitcoin", "\xf9\xbe\xb4\xd9",

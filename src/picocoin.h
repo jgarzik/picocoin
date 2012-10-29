@@ -5,8 +5,8 @@
 #include <stdbool.h>
 #include <string.h>
 #include <glib.h>
-#include "coredefs.h"
-#include "buint.h"
+#include <ccoin/coredefs.h>
+#include <ccoin/buint.h>
 
 struct wallet;
 

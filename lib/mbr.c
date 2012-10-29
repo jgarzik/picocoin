@@ -2,8 +2,8 @@
 #include "picocoin-config.h"
 
 #include <string.h>
-#include "mbr.h"
-#include "message.h"
+#include <ccoin/mbr.h>
+#include <ccoin/message.h>
 
 void mbr_init(struct mbuf_reader *mbr, struct buffer *buf)
 {

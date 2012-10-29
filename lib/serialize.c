@@ -6,8 +6,8 @@
 #include <glib.h>
 #include <openssl/sha.h>
 #include <openssl/bn.h>
-#include "serialize.h"
-#include "util.h"
+#include <ccoin/serialize.h>
+#include <ccoin/util.h>
 
 void ser_bytes(GString *s, const void *p, size_t len)
 {

@@ -2,7 +2,7 @@
 #include "picocoin-config.h"
 
 #include <openssl/bn.h>
-#include "util.h"
+#include <ccoin/util.h>
 
 void bn_setvch(BIGNUM *vo, const void *data_, size_t data_len)
 {

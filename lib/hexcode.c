@@ -3,7 +3,7 @@
 
 #include <string.h>
 #include <stdbool.h>
-#include "hexcode.h"
+#include <ccoin/hexcode.h>
 
 static const unsigned char hexdigit_val[256] = {
 	['0'] = 0,

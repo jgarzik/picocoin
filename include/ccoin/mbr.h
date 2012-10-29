@@ -2,8 +2,8 @@
 #define __LIBCCOIN_MBR_H__
 
 #include <stdbool.h>
-#include "buffer.h"
-#include "message.h"
+#include <ccoin/buffer.h>
+#include <ccoin/message.h>
 
 struct mbuf_reader {
 	struct buffer		*buf;

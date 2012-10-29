@@ -18,13 +18,13 @@
 #include <errno.h>
 #include <glib.h>
 #include <event.h>
-#include "util.h"
-#include "mbr.h"
-#include "core.h"
-#include "message.h"
+#include <ccoin/util.h>
+#include <ccoin/mbr.h>
+#include <ccoin/core.h>
+#include <ccoin/message.h>
 #include "picocoin.h"
 #include "peerman.h"
-#include "blkdb.h"
+#include <ccoin/blkdb.h>
 
 struct net_engine {
 	bool		running;

@@ -6,15 +6,15 @@
 #include <string.h>
 #include <openssl/ripemd.h>
 #include <glib.h>
-#include "coredefs.h"
+#include <ccoin/coredefs.h>
 #include "picocoin.h"
 #include "wallet.h"
-#include "message.h"
-#include "address.h"
-#include "serialize.h"
-#include "key.h"
-#include "util.h"
-#include "mbr.h"
+#include <ccoin/message.h>
+#include <ccoin/address.h>
+#include <ccoin/serialize.h>
+#include <ccoin/key.h>
+#include <ccoin/util.h>
+#include <ccoin/mbr.h>
 
 static char *wallet_filename(void)
 {

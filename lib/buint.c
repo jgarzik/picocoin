@@ -4,8 +4,8 @@
 #include <string.h>
 #include <openssl/bn.h>
 #include <glib.h>
-#include "buint.h"
-#include "hexcode.h"
+#include <ccoin/buint.h>
+#include <ccoin/hexcode.h>
 
 void bu256_bn(BIGNUM *vo, const bu256_t *vi)
 {

@@ -3,9 +3,9 @@
 
 #include <string.h>
 #include <openssl/sha.h>
-#include "core.h"
-#include "coredefs.h"
-#include "serialize.h"
+#include <ccoin/core.h>
+#include <ccoin/coredefs.h>
+#include <ccoin/serialize.h>
 
 bool deser_bp_addr(unsigned int protover,
 		struct bp_address *addr, struct buffer *buf)

@@ -19,12 +19,6 @@ push
 stamp-h1
 
 # app-specific
-libccoin.a
-
-picocoin
 picocoin*.tar.gz
 picocoin-config.h*
-
-picocoin.peers
-picocoin.wallet
 

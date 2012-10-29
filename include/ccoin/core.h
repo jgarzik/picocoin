@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <glib.h>
-#include "buffer.h"
-#include "buint.h"
+#include <ccoin/buffer.h>
+#include <ccoin/buint.h>
 
 enum service_bits {
 	NODE_NETWORK	= (1 << 0),

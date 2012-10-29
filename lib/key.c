@@ -6,7 +6,7 @@
 #include <openssl/ecdsa.h>
 #include <openssl/obj_mac.h>
 #include <openssl/ripemd.h>
-#include "key.h"
+#include <ccoin/key.h>
 
 bool bp_key_init(struct bp_key *key)
 {

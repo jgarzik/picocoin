@@ -14,10 +14,10 @@
 #include <openssl/bn.h>
 #include <openssl/rand.h>
 #include "picocoin.h"
-#include "coredefs.h"
+#include <ccoin/coredefs.h>
 #include "wallet.h"
-#include "core.h"
-#include "util.h"
+#include <ccoin/core.h>
+#include <ccoin/util.h>
 
 const char *prog_name = "picocoin";
 GHashTable *settings;

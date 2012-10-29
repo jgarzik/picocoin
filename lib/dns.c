@@ -7,8 +7,8 @@
 #include <string.h>
 #include <netdb.h>
 #include <glib.h>
-#include "util.h"
-#include "core.h"
+#include <ccoin/util.h>
+#include <ccoin/core.h>
 
 static const char *dns_seeds[] = {
 	"seed.bitcoin.sipa.be",

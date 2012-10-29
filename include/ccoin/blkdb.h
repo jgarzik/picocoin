@@ -3,8 +3,8 @@
 
 #include <stdbool.h>
 #include <glib.h>
-#include "core.h"
-#include "buint.h"
+#include <ccoin/core.h>
+#include <ccoin/buint.h>
 
 struct blkinfo {
 	bu256_t		hash;

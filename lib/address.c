@@ -3,9 +3,9 @@
 
 #include <openssl/ripemd.h>
 #include <glib.h>
-#include "address.h"
-#include "base58.h"
-#include "util.h"
+#include <ccoin/address.h>
+#include <ccoin/base58.h>
+#include <ccoin/util.h>
 
 GString *bp_pubkey_get_address(struct bp_key *key, unsigned char addrtype)
 {

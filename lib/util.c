@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <openssl/sha.h>
 #include <openssl/ripemd.h>
-#include "util.h"
+#include <ccoin/util.h>
 
 const char ipv4_mapped_pfx[12] = "\0\0\0\0\0\0\0\0\0\0\xff\xff";
 
