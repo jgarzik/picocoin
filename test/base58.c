@@ -18,8 +18,11 @@ static void test_encdec(const char *hexstr, const char *enc)
 	assert(rc);
 
 	GString *s = base58_encode(raw, out_len);
-	assert(s->len == strlen(enc));
-	assert(!strcmp(s->str, enc));
+	if (strcmp(s->str, enc)) {
+		fprintf(stderr, "base58 mismatch: '%s' vs expected '%s'\n",
+			s->str, enc);
+		assert(!strcmp(s->str, enc));
+	}
 }
 
 int main (int argc, char *argv[])

@@ -15,7 +15,7 @@ void bn_setvch(BIGNUM *vo, const void *data_, size_t data_len)
 	vch2[2] = (data_len >> 8) & 0xff;
 	vch2[3] = (data_len >> 0) & 0xff;
 
-	bu_reverse_copy(vch2 + vch2_len - 1, data, data_len);
+	bu_reverse_copy(vch2 + 4, data, data_len);
 
 	BN_mpi2bn(vch2, vch2_len, vo);
 }

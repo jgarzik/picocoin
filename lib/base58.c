@@ -25,8 +25,8 @@ GString *base58_encode(const void *data_, size_t data_len)
 	BN_set_word(&bn0, 0);
 
 	unsigned char swapbuf[data_len + 1];
-	bu_reverse_copy(swapbuf + sizeof(swapbuf) - 1, data, data_len);
-	swapbuf[0] = 0;
+	bu_reverse_copy(swapbuf, data, data_len);
+	swapbuf[data_len] = 0;
 
 	bn_setvch(&bn, swapbuf, sizeof(swapbuf));
 
@@ -51,7 +51,7 @@ GString *base58_encode(const void *data_, size_t data_len)
 
 	GString *rs_swap = g_string_sized_new(rs->len);
 	g_string_set_size(rs_swap, rs->len);
-	bu_reverse_copy((unsigned char *) rs_swap->str + rs->len - 1,
+	bu_reverse_copy((unsigned char *) rs_swap->str,
 		     (unsigned char *) rs->str, rs->len);
 
 	g_string_free(rs, TRUE);
