@@ -46,7 +46,10 @@ enum netcmds {
 struct net_child_info {
 	int			read_fd;
 	int			write_fd;
+
 	struct peer_manager	*peers;
+	struct blkdb		*db;
+
 	GPtrArray		*conns;
 	struct event_base	*eb;
 };
@@ -579,6 +582,7 @@ static GString *nc_version_build(struct nc_conn *conn)
 	mv.nTime = (int64_t) time(NULL);
 	mv.nonce = instance_nonce;
 	sprintf(mv.strSubVer, "/picocoin:%s/", VERSION);
+	mv.nStartingHeight = conn->nci->db->nBestHeight;
 
 	GString *rs = ser_msg_version(&mv);
 
@@ -797,7 +801,7 @@ static void network_child(int read_fd, int write_fd)
 	/*
 	 * set up libevent dispatch
 	 */
-	struct net_child_info nci = { read_fd, write_fd, peers };
+	struct net_child_info nci = { read_fd, write_fd, peers, &db };
 	nci.conns = g_ptr_array_sized_new(8);
 
 	struct event *pipe_evt;
