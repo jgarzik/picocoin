@@ -59,6 +59,11 @@ static void __peerman_add(struct peer_manager *peers, struct bp_address *addr,
 	g_hash_table_insert(peers->map_addr, addr->ip, addr->ip);
 }
 
+static bool peerman_has_addr(struct peer_manager *peers,const unsigned char *ip)
+{
+	return g_hash_table_lookup_extended(peers->map_addr, ip, NULL, NULL);
+}
+
 static bool peerman_read_rec(struct peer_manager *peers,struct p2p_message *msg)
 {
 	if (strncmp(msg->hdr.command, "CAddress", sizeof(msg->hdr.command)) ||
@@ -73,10 +78,10 @@ static bool peerman_read_rec(struct peer_manager *peers,struct p2p_message *msg)
 	if (!deser_bp_addr(CADDR_TIME_VERSION, addr, &buf))
 		goto err_out;
 
-	if (!g_hash_table_lookup(peers->map_addr, addr->ip))
+	if (!peerman_has_addr(peers, addr->ip))
 		__peerman_add(peers, addr, false);
 	else
-		goto err_out;
+		free(addr);
 
 	return true;
 
@@ -213,7 +218,7 @@ void peerman_add(struct peer_manager *peers,
 {
 	struct bp_address *addr;
 
-	if (g_hash_table_lookup(peers->map_addr, addr_in->ip))
+	if (peerman_has_addr(peers, addr_in->ip))
 		return;
 
 	addr = malloc(sizeof(*addr));
