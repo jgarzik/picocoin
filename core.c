@@ -374,6 +374,10 @@ bool deser_bp_block(struct bp_block *block, struct buffer *buf)
 	if (!deser_u32(&block->nBits, buf)) return false;
 	if (!deser_u32(&block->nNonce, buf)) return false;
 
+	/* permit header-only blocks */
+	if (buf->len == 0)
+		return true;
+
 	uint32_t vlen;
 	if (!deser_varlen(&vlen, buf)) return false;
 
@@ -414,6 +418,8 @@ void ser_bp_block(GString *s, const struct bp_block *block)
 
 	unsigned int i;
 	if (block->vtx) {
+		ser_varlen(s, block->vtx->len);
+
 		for (i = 0; i < block->vtx->len; i++) {
 			struct bp_tx *tx;
 
