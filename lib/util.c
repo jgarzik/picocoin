@@ -17,10 +17,7 @@ void bu_reverse_copy(unsigned char *dst, const unsigned char *src, size_t len)
 {
 	unsigned int i;
 	for (i = 0; i < len; i++) {
-		*dst = *src;
-
-		src++;
-		dst--;
+		dst[len - i - 1] = src[i];
 	}
 }
 
