@@ -86,6 +86,19 @@ bool blkdb_init(struct blkdb *db, const unsigned char *netmagic,
 	return true;
 }
 
+static struct blkinfo *blkdb_lookup(struct blkdb *db, const BIGNUM *hash)
+{
+	GString *ser_hash = g_string_sized_new(32);
+	ser_u256(ser_hash, hash);
+
+	struct blkinfo *bi;
+	bi = g_hash_table_lookup(db->blocks, ser_hash->str);
+
+	g_string_free(ser_hash, TRUE);
+
+	return bi;
+}
+
 static bool blkdb_read_rec(struct blkdb *db, const struct p2p_message *msg)
 {
 	struct blkinfo *bi;
@@ -115,9 +128,16 @@ static bool blkdb_read_rec(struct blkdb *db, const struct p2p_message *msg)
 	memcpy(&bi->ser_hash[0], msg->data, sizeof(bi->ser_hash));
 
 	/* verify genesis block matches first record */
-	if ((g_hash_table_size(db->blocks) == 0) &&
-	    (BN_cmp(&blkhash, db->block0) != 0))
-		goto err_out;
+	if (g_hash_table_size(db->blocks) == 0) {
+		if (BN_cmp(&blkhash, db->block0) != 0)
+			goto err_out;
+	}
+	
+	/* verify previous block exists in database */
+	else {
+		if (!blkdb_lookup(db, &bi->hdr.hashPrevBlock))
+			goto err_out;
+	}
 
 	/* add to block map */
 	g_hash_table_insert(db->blocks, bi->ser_hash, bi);
