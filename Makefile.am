@@ -13,6 +13,7 @@ libccoin_a_SOURCES=	\
 	address.h	\
 	base58.c base58.h \
 	bignum.c	\
+	blkdb.c blkdb.h	\
 	buffer.h	\
 	core.c core.h	\
 	coredefs.c	\
