@@ -4,9 +4,10 @@
 #include <stdbool.h>
 #include <glib.h>
 #include "core.h"
+#include "buint.h"
 
 struct blkinfo {
-	unsigned char	ser_hash[32];
+	bu256_t		hash;
 	struct bp_block	hdr;
 
 	BIGNUM		work;
@@ -19,17 +20,17 @@ struct blkdb {
 	bool		close_fd;
 
 	unsigned char	netmagic[4];
-	BIGNUM		*block0;
+	bu256_t		block0;
 
 	GHashTable	*blocks;
 
-	BIGNUM		hashBestChain;
+	bu256_t		hashBestChain;
 	BIGNUM		bnBestChainWork;
 	int		nBestHeight;
 };
 
 extern bool blkdb_init(struct blkdb *db, const unsigned char *netmagic,
-		       const char *genesis_hash);
+		       const bu256_t *genesis_block);
 extern void blkdb_free(struct blkdb *db);
 extern bool blkdb_read(struct blkdb *db, const char *idx_fn);
 extern bool blkdb_add(struct blkdb *db, struct blkinfo *bi);

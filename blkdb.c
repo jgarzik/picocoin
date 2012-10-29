@@ -12,6 +12,7 @@
 #include "blkdb.h"
 #include "message.h"
 #include "serialize.h"
+#include "buint.h"
 
 static bool fread_message(int fd, struct p2p_message *msg, bool *read_ok)
 {
@@ -87,22 +88,22 @@ static guint blk_hash(gconstpointer key_)
 
 static gboolean blk_equal(gconstpointer a, gconstpointer b)
 {
-	const unsigned char *hash1 = a;
-	const unsigned char *hash2 = b;
+	const bu256_t *v1 = a;
+	const bu256_t *v2 = b;
 
-	return memcmp(hash1, hash2, 32) == 0;
+	return bu256_equal(v1, v2);
 }
 
 bool blkdb_init(struct blkdb *db, const unsigned char *netmagic,
-		const char *genesis_hash)
+		const bu256_t *genesis_block)
 {
 	memset(db, 0, sizeof(*db));
 
 	db->fd = -1;
 
-	BN_hex2bn(&db->block0, genesis_hash);
+	bu256_copy(&db->block0, genesis_block);
 
-	BN_init(&db->hashBestChain);
+	bu256_zero(&db->hashBestChain);
 	BN_init(&db->bnBestChainWork);
 	db->nBestHeight = -1;
 
@@ -112,17 +113,9 @@ bool blkdb_init(struct blkdb *db, const unsigned char *netmagic,
 	return true;
 }
 
-static struct blkinfo *blkdb_lookup(struct blkdb *db, const BIGNUM *hash)
+static struct blkinfo *blkdb_lookup(struct blkdb *db, const bu256_t *hash)
 {
-	GString *ser_hash = g_string_sized_new(32);
-	ser_u256(ser_hash, hash);
-
-	struct blkinfo *bi;
-	bi = g_hash_table_lookup(db->blocks, ser_hash->str);
-
-	g_string_free(ser_hash, TRUE);
-
-	return bi;
+	return g_hash_table_lookup(db->blocks, hash);
 }
 
 static bool blkdb_connect(struct blkdb *db, struct blkinfo *bi)
@@ -137,7 +130,7 @@ static bool blkdb_connect(struct blkdb *db, struct blkinfo *bi)
 
 	/* verify genesis block matches first record */
 	if (g_hash_table_size(db->blocks) == 0) {
-		if (BN_cmp(&bi->hdr.sha256, db->block0) != 0)
+		if (!bu256_equal(&bi->hdr.sha256, &db->block0))
 			goto out;
 
 		bi->height = 0;
@@ -164,13 +157,13 @@ static bool blkdb_connect(struct blkdb *db, struct blkinfo *bi)
 
 	/* if new best chain found, update pointers */
 	if (best_chain) {
-		BN_copy(&db->hashBestChain, &bi->hdr.sha256);
+		bu256_copy(&db->hashBestChain, &bi->hdr.sha256);
 		BN_copy(&db->bnBestChainWork, &cur_work);
 		db->nBestHeight = bi->height;
 	}
 
 	/* add to block map */
-	g_hash_table_insert(db->blocks, bi->ser_hash, bi);
+	g_hash_table_insert(db->blocks, &bi->hash, bi);
 
 	rc = true;
 
@@ -191,11 +184,8 @@ static bool blkdb_read_rec(struct blkdb *db, const struct p2p_message *msg)
 	if (!bi)
 		return false;
 
-	BIGNUM blkhash;
-	BN_init(&blkhash);
-
 	/* deserialize record */
-	if (!deser_u256(&blkhash, &buf))
+	if (!deser_u256(&bi->hash, &buf))
 		goto err_out;
 	if (!deser_bp_block(&bi->hdr, &buf))
 		goto err_out;
@@ -204,22 +194,17 @@ static bool blkdb_read_rec(struct blkdb *db, const struct p2p_message *msg)
 	 * self-verification step
 	 */
 	bp_block_calc_sha256(&bi->hdr);
-	if (BN_cmp(&blkhash, &bi->hdr.sha256) != 0)
+	if (!bu256_equal(&bi->hash, &bi->hdr.sha256))
 		goto err_out;
-
-	/* copy serialized block hash, to be used as hash table index */
-	memcpy(&bi->ser_hash[0], msg->data, sizeof(bi->ser_hash));
 
 	/* verify block may be added to chain, then add it */
 	if (!blkdb_connect(db, bi))
 		goto err_out;
 
-	BN_clear_free(&blkhash);
 	return true;
 
 err_out:
 	bi_free(bi);
-	BN_clear_free(&blkhash);
 	return false;
 }
 
@@ -227,7 +212,7 @@ static GString *ser_blkinfo(const struct blkinfo *bi)
 {
 	GString *rs = g_string_sized_new(sizeof(*bi));
 
-	g_string_append_len(rs, (gchar *) bi->ser_hash, sizeof(bi->ser_hash));
+	ser_u256(rs, &bi->hash);
 	ser_bp_block(rs, &bi->hdr);
 
 	return rs;
@@ -297,8 +282,6 @@ void blkdb_free(struct blkdb *db)
 	if (db->close_fd && (db->fd >= 0))
 		close(db->fd);
 
-	BN_clear_free(db->block0);
-	BN_clear_free(&db->hashBestChain);
 	BN_clear_free(&db->bnBestChainWork);
 
 	g_hash_table_unref(db->blocks);

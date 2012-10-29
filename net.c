@@ -781,7 +781,7 @@ static void network_child(int read_fd, int write_fd)
 	 * read block database
 	 */
 	struct blkdb db;
-	if (!blkdb_init(&db, chain->netmagic, chain->genesis_hash))
+	if (!blkdb_init(&db, chain->netmagic, &chain_genesis))
 		exit(1);
 
 	char *blkdb_fn = setting("blkdb");

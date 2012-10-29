@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <glib.h>
-#include <openssl/bn.h>
 #include "buffer.h"
+#include "buint.h"
 
 enum service_bits {
 	NODE_NETWORK	= (1 << 0),
@@ -25,13 +25,13 @@ static inline void bp_addr_free(struct bp_address *addr) {}
 
 struct bp_inv {
 	uint32_t	type;
-	BIGNUM		hash;
+	bu256_t		hash;
 };
 
 extern void bp_inv_init(struct bp_inv *inv);
 extern bool deser_bp_inv(struct bp_inv *inv, struct buffer *buf);
 extern void ser_bp_inv(GString *s, const struct bp_inv *inv);
-extern void bp_inv_free(struct bp_inv *inv);
+static inline void bp_inv_free(struct bp_inv *inv) {}
 
 struct bp_locator {
 	uint32_t	nVersion;
@@ -44,18 +44,18 @@ extern void ser_bp_locator(GString *s, const struct bp_locator *locator);
 extern void bp_locator_free(struct bp_locator *locator);
 
 struct bp_outpt {
-	BIGNUM		hash;
+	bu256_t		hash;
 	uint32_t	n;
 };
 
 extern void bp_outpt_init(struct bp_outpt *outpt);
 extern bool deser_bp_outpt(struct bp_outpt *outpt, struct buffer *buf);
 extern void ser_bp_outpt(GString *s, const struct bp_outpt *outpt);
-extern void bp_outpt_free(struct bp_outpt *outpt);
+static inline void bp_outpt_free(struct bp_outpt *outpt) {}
 
 static inline bool bp_outpt_null(const struct bp_outpt *outpt)
 {
-	return BN_is_zero(&outpt->hash) && outpt->n == 0xffffffff;
+	return bu256_is_zero(&outpt->hash) && outpt->n == 0xffffffff;
 }
 
 struct bp_txin {
@@ -95,7 +95,7 @@ struct bp_tx {
 
 	/* used at runtime */
 	bool		sha256_valid;
-	BIGNUM		sha256;
+	bu256_t		sha256;
 };
 
 extern void bp_tx_init(struct bp_tx *tx);
@@ -120,8 +120,8 @@ static inline bool bp_tx_coinbase(const struct bp_tx *tx)
 struct bp_block {
 	/* serialized */
 	uint32_t	nVersion;
-	BIGNUM		hashPrevBlock;
-	BIGNUM		hashMerkleRoot;
+	bu256_t		hashPrevBlock;
+	bu256_t		hashMerkleRoot;
 	uint32_t	nTime;
 	uint32_t	nBits;
 	uint32_t	nNonce;
@@ -129,7 +129,7 @@ struct bp_block {
 
 	/* used at runtime */
 	bool		sha256_valid;
-	BIGNUM		sha256;
+	bu256_t		sha256;
 };
 
 extern void bp_block_init(struct bp_block *block);
@@ -137,7 +137,7 @@ extern bool deser_bp_block(struct bp_block *block, struct buffer *buf);
 extern void ser_bp_block(GString *s, const struct bp_block *block);
 extern void bp_block_free(struct bp_block *block);
 extern void bp_block_calc_sha256(struct bp_block *block);
-extern bool bp_block_merkle(BIGNUM *vo, const struct bp_block *block);
+extern bool bp_block_merkle(bu256_t *vo, const struct bp_block *block);
 extern bool bp_block_valid(struct bp_block *block);
 
 #endif /* __LIBCCOIN_CORE_H__ */

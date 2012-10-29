@@ -30,7 +30,6 @@ void ser_bp_addr(GString *s, unsigned int protover, const struct bp_address *add
 void bp_inv_init(struct bp_inv *inv)
 {
 	memset(inv, 0, sizeof(*inv));
-	BN_init(&inv->hash);
 }
 
 bool deser_bp_inv(struct bp_inv *inv, struct buffer *buf)
@@ -44,11 +43,6 @@ void ser_bp_inv(GString *s, const struct bp_inv *inv)
 {
 	ser_u32(s, inv->type);
 	ser_u256(s, &inv->hash);
-}
-
-void bp_inv_free(struct bp_inv *inv)
-{
-	BN_clear_free(&inv->hash);
 }
 
 void bp_locator_init(struct bp_locator *locator)
@@ -65,11 +59,11 @@ bool deser_bp_locator(struct bp_locator *locator, struct buffer *buf)
 
 	unsigned int i;
 	for (i = 0; i < vlen; i++) {
-		BIGNUM *n;
+		bu256_t *n;
 
-		n = BN_new();
+		n = bu256_new();
 		if (!deser_u256(n, buf)) {
-			BN_clear_free(n);
+			bu256_free(n);
 			goto err_out;
 		}
 
@@ -96,7 +90,7 @@ void ser_bp_locator(GString *s, const struct bp_locator *locator)
 
 	unsigned int i;
 	for (i = 0; i < locator->vHave->len; i++) {
-		BIGNUM *n;
+		bu256_t *n;
 
 		n = g_ptr_array_index(locator->vHave, i);
 		ser_u256(s, n);
@@ -109,10 +103,10 @@ void bp_locator_free(struct bp_locator *locator)
 		unsigned int i;
 
 		for (i = 0; i > locator->vHave->len; i++) {
-			BIGNUM *n;
+			bu256_t *n;
 
 			n = g_ptr_array_index(locator->vHave, i);
-			BN_clear_free(n);
+			bu256_free(n);
 		}
 
 		g_ptr_array_free(locator->vHave, TRUE);
@@ -123,7 +117,6 @@ void bp_locator_free(struct bp_locator *locator)
 void bp_outpt_init(struct bp_outpt *outpt)
 {
 	memset(outpt, 0, sizeof(*outpt));
-	BN_init(&outpt->hash);
 }
 
 bool deser_bp_outpt(struct bp_outpt *outpt, struct buffer *buf)
@@ -137,11 +130,6 @@ void ser_bp_outpt(GString *s, const struct bp_outpt *outpt)
 {
 	ser_u256(s, &outpt->hash);
 	ser_u32(s, outpt->n);
-}
-
-void bp_outpt_free(struct bp_outpt *outpt)
-{
-	BN_clear_free(&outpt->hash);
 }
 
 void bp_txin_init(struct bp_txin *txin)
@@ -204,7 +192,6 @@ void bp_txout_free(struct bp_txout *txout)
 void bp_tx_init(struct bp_tx *tx)
 {
 	memset(tx, 0, sizeof(*tx));
-	BN_init(&tx->sha256);
 }
 
 bool deser_bp_tx(struct bp_tx *tx, struct buffer *buf)
@@ -310,7 +297,6 @@ void bp_tx_free(struct bp_tx *tx)
 		tx->vout = NULL;
 	}
 
-	BN_clear_free(&tx->sha256);
 	tx->sha256_valid = false;
 }
 
@@ -358,9 +344,6 @@ bool bp_tx_valid(const struct bp_tx *tx)
 void bp_block_init(struct bp_block *block)
 {
 	memset(block, 0, sizeof(*block));
-	BN_init(&block->hashPrevBlock);
-	BN_init(&block->hashMerkleRoot);
-	BN_init(&block->sha256);
 }
 
 bool deser_bp_block(struct bp_block *block, struct buffer *buf)
@@ -445,10 +428,6 @@ void bp_block_free(struct bp_block *block)
 
 		block->vtx = NULL;
 	}
-
-	BN_clear_free(&block->hashPrevBlock);
-	BN_clear_free(&block->hashMerkleRoot);
-	BN_clear_free(&block->sha256);
 }
 
 void bp_block_calc_sha256(struct bp_block *block)
@@ -465,7 +444,7 @@ void bp_block_calc_sha256(struct bp_block *block)
 	g_string_free(s, TRUE);
 }
 
-bool bp_block_merkle(BIGNUM *vo, const struct bp_block *block)
+bool bp_block_merkle(bu256_t *vo, const struct bp_block *block)
 {
 	if (!block->vtx || !block->vtx->len)
 		return false;
@@ -531,14 +510,17 @@ bool bp_block_merkle(BIGNUM *vo, const struct bp_block *block)
 
 bool bp_block_valid_target(struct bp_block *block)
 {
-	BIGNUM target;
+	BIGNUM target, sha256;
 	BN_init(&target);
+	BN_init(&sha256);
 
 	u256_from_compact(&target, block->nBits);
+	bu256_bn(&sha256, &block->sha256);
 
-	int cmp = BN_cmp(&block->sha256, &target);
+	int cmp = BN_cmp(&sha256, &target);
 
 	BN_clear_free(&target);
+	BN_clear_free(&sha256);
 
 	if (cmp > 0)			/* sha256 > target */
 		return false;
@@ -548,18 +530,14 @@ bool bp_block_valid_target(struct bp_block *block)
 
 bool bp_block_valid_merkle(struct bp_block *block)
 {
-	BIGNUM merkle;
-	BN_init(&merkle);
+	bu256_t merkle;
 
-	int merkle_cmp = -1;
 	bool merkle_rc = bp_block_merkle(&merkle, block);
 
 	if (merkle_rc)
-		merkle_cmp = BN_cmp(&merkle, &block->hashMerkleRoot);
+		return bu256_equal(&merkle, &block->hashMerkleRoot);
 
-	BN_clear_free(&merkle);
-
-	return merkle_cmp == 0;
+	return false;
 }
 
 bool bp_block_valid(struct bp_block *block)

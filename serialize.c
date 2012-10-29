@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <string.h>
 #include <glib.h>
-#include <openssl/bn.h>
 #include <openssl/sha.h>
+#include <openssl/bn.h>
 #include "serialize.h"
 #include "util.h"
 
@@ -30,39 +30,6 @@ void ser_u64(GString *s, uint64_t v_)
 {
 	uint64_t v = GUINT64_TO_LE(v_);
 	g_string_append_len(s, (gchar *) &v, sizeof(v));
-}
-
-void ser_u256(GString *s, const BIGNUM *v_)
-{
-	BIGNUM tmp;
-
-	BN_init(&tmp);
-	BN_copy(&tmp, v_);
-
-	unsigned int i;
-	for (i = 0; i < 8; i++) {
-		BIGNUM tmp2;
-
-		/* tmp2 = tmp & 0xffffffff */
-		BN_init(&tmp2);
-		BN_copy(&tmp2, &tmp);
-		if (BN_num_bits(&tmp2) > 32)
-			BN_mask_bits(&tmp2, 32);
-
-		/* serialize tmp2 */
-		uint32_t v32 = BN_get_word(&tmp2);
-		ser_u32(s, v32);
-
-		/* tmp >>= 32 */
-		if (BN_num_bits(&tmp) <= 32)
-			BN_zero(&tmp);
-		else
-			BN_rshift(&tmp, &tmp, 32);
-
-		BN_clear_free(&tmp2);
-	}
-
-	BN_clear_free(&tmp);
 }
 
 void ser_varlen(GString *s, uint32_t vlen)
@@ -164,36 +131,6 @@ bool deser_u64(uint64_t *vo, struct buffer *buf)
 	return true;
 }
 
-bool deser_u256(BIGNUM *vo, struct buffer *buf)
-{
-	BN_init(vo);
-
-	unsigned int i;
-	for (i = 0; i < 8; i++) {
-		BIGNUM btmp;
-		uint32_t v32;
-
-		if (!deser_u32(&v32, buf)) goto err_out;
-
-		BN_init(&btmp);
-
-		/* tmp = value << (i * 32) */
-		BN_set_word(&btmp, v32);
-		BN_lshift(&btmp, &btmp, i * 32);
-
-		/* total = total + tmp */
-		BN_add(vo, vo, &btmp);
-
-		BN_clear_free(&btmp);
-	}
-
-	return true;
-
-err_out:
-	BN_clear_free(vo);
-	return false;
-}
-
 bool deser_varlen(uint32_t *lo, struct buffer *buf)
 {
 	uint32_t len;
@@ -280,14 +217,17 @@ void u256_from_compact(BIGNUM *vo, uint32_t c)
 	BN_lshift(vo, vo, (8 * (nbytes - 3)));
 }
 
-void bp_hash(BIGNUM *vo, void *data, size_t data_len)
+void bp_hash(bu256_t *vo, void *data, size_t data_len)
 {
 	unsigned char md256[SHA256_DIGEST_LENGTH];
 
 	bu_Hash(md256, data, data_len);
 
-	struct buffer buf = { md256, SHA256_DIGEST_LENGTH };
+	bu256_t *v_be = (bu256_t *) md256;
 
-	deser_u256(vo, &buf);
+	/* bitcoin considers sha256 results big endian; swap
+	 * to little endian, for serialized format
+	 */
+	bu256_copy_swap(vo, v_be);
 }
 

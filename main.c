@@ -23,7 +23,7 @@ const char *prog_name = "picocoin";
 GHashTable *settings;
 struct wallet *cur_wallet;
 const struct chain_info *chain = NULL;
-BIGNUM *chain_genesis = NULL;
+bu256_t chain_genesis;
 uint64_t instance_nonce;
 
 static const char *const_settings[] = {
@@ -192,18 +192,15 @@ static void chain_set(void)
 		exit(1);
 	}
 
-	BIGNUM *new_genesis = NULL;
-	if (!BN_hex2bn(&new_genesis, new_chain->genesis_hash)) {
+	bu256_t new_genesis;
+	if (!hex_bu256(&new_genesis, new_chain->genesis_hash)) {
 		fprintf(stderr, "chain-set: invalid genesis hash %s\n",
 			new_chain->genesis_hash);
 		exit(1);
 	}
 
-	if (chain_genesis)
-		BN_clear_free(chain_genesis);
-
 	chain = new_chain;
-	chain_genesis = new_genesis;
+	bu256_copy(&chain_genesis, &new_genesis);
 }
 
 static bool is_command(const char *s)

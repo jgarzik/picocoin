@@ -5,8 +5,8 @@
 #include <stdbool.h>
 #include <string.h>
 #include <glib.h>
-#include <openssl/bn.h>
 #include "coredefs.h"
+#include "buint.h"
 
 struct wallet;
 
@@ -18,6 +18,7 @@ enum {
 extern GHashTable *settings;
 extern struct wallet *cur_wallet;
 extern const struct chain_info *chain;
+extern bu256_t chain_genesis;
 extern uint64_t instance_nonce;
 
 /* net.c */

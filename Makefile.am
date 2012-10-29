@@ -15,6 +15,7 @@ libccoin_a_SOURCES=	\
 	bignum.c	\
 	blkdb.c blkdb.h	\
 	buffer.h	\
+	buint.c buint.h	\
 	core.c core.h	\
 	coredefs.c	\
 	coredefs.h	\
