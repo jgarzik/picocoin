@@ -40,7 +40,7 @@ bool decode_hex(void *p, size_t max_len, const char *hexstr, size_t *out_len_)
 	unsigned char *buf = p;
 	size_t out_len = 0;
 
-	while (hexstr) {
+	while (*hexstr) {
 		unsigned char c1 = (unsigned char) hexstr[0];
 		unsigned char c2 = (unsigned char) hexstr[1];
 

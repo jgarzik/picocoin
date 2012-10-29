@@ -91,6 +91,7 @@ AC_CONFIG_FILES([
 	include/ccoin/Makefile
 	lib/Makefile
 	src/Makefile
+	test/Makefile
 	])
 AC_OUTPUT
 
