@@ -125,6 +125,60 @@ static struct blkinfo *blkdb_lookup(struct blkdb *db, const BIGNUM *hash)
 	return bi;
 }
 
+static bool blkdb_connect(struct blkdb *db, struct blkinfo *bi)
+{
+	bool rc = false;
+	BIGNUM cur_work;
+	BN_init(&cur_work);
+
+	u256_from_compact(&cur_work, bi->hdr.nBits);
+
+	bool best_chain = false;
+
+	/* verify genesis block matches first record */
+	if (g_hash_table_size(db->blocks) == 0) {
+		if (BN_cmp(&bi->hdr.sha256, db->block0) != 0)
+			goto out;
+
+		bi->height = 0;
+
+		BN_copy(&bi->work, &cur_work);
+
+		best_chain = true;
+	}
+	
+	/* lookup and verify previous block */
+	else {
+		struct blkinfo *prev = blkdb_lookup(db, &bi->hdr.hashPrevBlock);
+		if (!prev)
+			goto out;
+
+		bi->height = prev->height + 1;
+
+		if (!BN_add(&bi->work, &cur_work, &prev->work))
+			goto out;
+
+		if (BN_cmp(&bi->work, &db->bnBestChainWork) > 0)
+			best_chain = true;
+	}
+
+	/* if new best chain found, update pointers */
+	if (best_chain) {
+		BN_copy(&db->hashBestChain, &bi->hdr.sha256);
+		BN_copy(&db->bnBestChainWork, &cur_work);
+		db->nBestHeight = bi->height;
+	}
+
+	/* add to block map */
+	g_hash_table_insert(db->blocks, bi->ser_hash, bi);
+
+	rc = true;
+
+out:
+	BN_clear_free(&cur_work);
+	return rc;
+}
+
 static bool blkdb_read_rec(struct blkdb *db, const struct p2p_message *msg)
 {
 	struct blkinfo *bi;
@@ -134,10 +188,11 @@ static bool blkdb_read_rec(struct blkdb *db, const struct p2p_message *msg)
 		return false;
 
 	bi = bi_new();
+	if (!bi)
+		return false;
 
-	BIGNUM blkhash, cur_work;
+	BIGNUM blkhash;
 	BN_init(&blkhash);
-	BN_init(&cur_work);
 
 	/* deserialize record */
 	if (!deser_u256(&blkhash, &buf))
@@ -155,54 +210,15 @@ static bool blkdb_read_rec(struct blkdb *db, const struct p2p_message *msg)
 	/* copy serialized block hash, to be used as hash table index */
 	memcpy(&bi->ser_hash[0], msg->data, sizeof(bi->ser_hash));
 
-	u256_from_compact(&cur_work, bi->hdr.nBits);
+	/* verify block may be added to chain, then add it */
+	if (!blkdb_connect(db, bi))
+		goto err_out;
 
-	bool best_chain = false;
-
-	/* verify genesis block matches first record */
-	if (g_hash_table_size(db->blocks) == 0) {
-		if (BN_cmp(&blkhash, db->block0) != 0)
-			goto err_out;
-
-		bi->height = 0;
-
-		BN_copy(&bi->work, &cur_work);
-
-		best_chain = true;
-	}
-	
-	/* lookup and verify previous block */
-	else {
-		struct blkinfo *prev = blkdb_lookup(db, &bi->hdr.hashPrevBlock);
-		if (!prev)
-			goto err_out;
-
-		bi->height = prev->height + 1;
-
-		if (!BN_add(&bi->work, &cur_work, &prev->work))
-			goto err_out;
-
-		if (BN_cmp(&bi->work, &db->bnBestChainWork) > 0)
-			best_chain = true;
-	}
-
-	/* if new best chain found, update pointers */
-	if (best_chain) {
-		BN_copy(&db->hashBestChain, &bi->hdr.sha256);
-		BN_copy(&db->bnBestChainWork, &cur_work);
-		db->nBestHeight = bi->height;
-	}
-
-	/* add to block map */
-	g_hash_table_insert(db->blocks, bi->ser_hash, bi);
-
-	BN_clear_free(&cur_work);
 	BN_clear_free(&blkhash);
 	return true;
 
 err_out:
 	bi_free(bi);
-	BN_clear_free(&cur_work);
 	BN_clear_free(&blkhash);
 	return false;
 }
@@ -272,10 +288,8 @@ bool blkdb_add(struct blkdb *db, struct blkinfo *bi)
 			return false;
 	}
 
-	/* add to block map */
-	g_hash_table_insert(db->blocks, bi->ser_hash, bi);
-
-	return true;
+	/* verify block may be added to chain, then add it */
+	return blkdb_connect(db, bi);
 }
 
 void blkdb_free(struct blkdb *db)
