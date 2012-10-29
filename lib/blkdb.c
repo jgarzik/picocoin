@@ -236,6 +236,10 @@ bool blkdb_read(struct blkdb *db, const char *idx_fn)
 	if (fd < 0)
 		return false;
 
+#if _XOPEN_SOURCE >= 600 || _POSIX_C_SOURCE >= 200112L
+	posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
+#endif
+
 	struct p2p_message msg;
 	memset(&msg, 0, sizeof(msg));
 	bool read_ok = true;
