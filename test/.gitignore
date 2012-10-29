@@ -1,4 +1,7 @@
 
+libtest.a
+
+base58
 fileio
 hex
 

@@ -43,26 +43,11 @@ dnl AC_TYPE_PID_T
 dnl -----------------------------
 dnl Checks for required libraries
 dnl -----------------------------
-dnl AC_CHECK_LIB(gssrpc, gssrpc_svc_register, GSSRPC_LIBS=-lgssrpc, exit 1)
-
-dnl AC_CHECK_LIB(db-4.3, db_create, DB4_LIBS=-ldb-4.3)
-dnl AC_CHECK_LIB(db-4.4, db_create, DB4_LIBS=-ldb-4.4)
-dnl AC_CHECK_LIB(db-4.5, db_create, DB4_LIBS=-ldb-4.5)
-dnl AC_CHECK_LIB(db-4.6, db_create, DB4_LIBS=-ldb-4.6)
-dnl AC_CHECK_LIB(db-4.7, db_create, DB4_LIBS=-ldb-4.7)
-dnl AC_CHECK_LIB(db-4.8, db_create, DB4_LIBS=-ldb-4.8)
-dnl AC_CHECK_LIB(db-4.9, db_create, DB4_LIBS=-ldb-4.9)
-dnl AC_CHECK_LIB(db-5.0, db_create, DB4_LIBS=-ldb-5.0)
-dnl AC_CHECK_LIB(db-5.1, db_create, DB4_LIBS=-ldb-5.1)
-dnl AC_CHECK_LIB(db-5.2, db_create, DB4_LIBS=-ldb-5.2)
-
-dnl if test "x$DB4_LIBS" = x; then
-dnl 	AC_MSG_ERROR([Missing required libdb 4.x])
-dnl fi
 
 AC_CHECK_LIB(crypto, MD5_Init, CRYPTO_LIBS=-lcrypto)
 AC_CHECK_LIB(event, event_base_new, EVENT_LIBS=-levent,
   [AC_MSG_ERROR([Missing required libevent])])
+AC_CHECK_LIB(jansson, json_loads, JANSSON_LIBS=-ljansson)
 
 dnl -------------------------------------
 dnl Checks for optional library functions
@@ -79,11 +64,9 @@ dnl --------------------------
 
 AM_PATH_GLIB_2_0(2.0.0, , exit 1)
 
-dnl AC_SUBST(GSSRPC_LIBS)
-dnl AC_SUBST(DB4_LIBS)
-AC_SUBST(EVENT_LIBS)
 AC_SUBST(CRYPTO_LIBS)
-dnl AC_SUBST(ARGP_LIBS)
+AC_SUBST(EVENT_LIBS)
+AC_SUBST(JANSSON_LIBS)
 
 AC_CONFIG_FILES([
 	Makefile
