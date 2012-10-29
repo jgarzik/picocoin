@@ -192,8 +192,10 @@ static GString *ser_wallet(struct wallet *wlt)
 bool store_wallet(struct wallet *wlt)
 {
 	char *passphrase = getenv("PICOCOIN_PASSPHRASE");
-	if (!passphrase)
+	if (!passphrase) {
+		fprintf(stderr, "wallet: Missing PICOCOIN_PASSPHRASE for AES crypto\n");
 		return false;
+	}
 
 	char *filename = wallet_filename();
 	if (!filename)
@@ -318,7 +320,7 @@ void wallet_create(void)
 	cur_wallet_update(wlt);
 
 	if (!store_wallet(wlt)) {
-		fprintf(stderr, "wallet: failed to store\n");
+		fprintf(stderr, "wallet: failed to store %s\n", filename);
 		return;
 	}
 }
