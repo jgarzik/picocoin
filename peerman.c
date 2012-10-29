@@ -53,7 +53,10 @@ static void __peerman_add(struct peer_manager *peers, struct bp_address *addr,
 	else
 		peers->addrlist = g_list_append(peers->addrlist, addr);
 
-	g_hash_table_insert(peers->map_addr, addr->ip, GUINT_TO_POINTER(1));
+	/* when using GHashTable as a set, key=value enables some
+	 * unspecified GLib optimizations
+	 */
+	g_hash_table_insert(peers->map_addr, addr->ip, addr->ip);
 }
 
 static bool peerman_read_rec(struct peer_manager *peers,struct p2p_message *msg)
