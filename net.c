@@ -24,6 +24,7 @@
 #include "message.h"
 #include "picocoin.h"
 #include "peerman.h"
+#include "blkdb.h"
 
 struct net_engine {
 	bool		running;
@@ -761,6 +762,9 @@ static void nc_pipe_evt(int fd, short events, void *priv)
 
 static void network_child(int read_fd, int write_fd)
 {
+	/*
+	 * read network peers
+	 */
 	struct peer_manager *peers;
 
 	peers = peerman_read();
@@ -769,6 +773,30 @@ static void network_child(int read_fd, int write_fd)
 		peerman_write(peers);
 	}
 
+	/*
+	 * read block database
+	 */
+	struct blkdb db;
+	if (!blkdb_init(&db, chain->netmagic, chain->genesis_hash))
+		exit(1);
+
+	char *blkdb_fn = setting("blkdb");
+	if (!blkdb_fn)
+		exit(1);
+	if ((access(blkdb_fn, F_OK) == 0) &&
+	    (!blkdb_read(&db, blkdb_fn)))
+		exit(1);
+
+	/*
+	 * prep block database for new records
+	 */
+	db.fd = open(blkdb_fn, O_WRONLY | O_APPEND | O_CREAT, 0666);
+	if (db.fd < 0)
+		exit(1);
+	
+	/*
+	 * set up libevent dispatch
+	 */
 	struct net_child_info nci = { read_fd, write_fd, peers };
 	nci.conns = g_ptr_array_sized_new(8);
 
@@ -781,9 +809,12 @@ static void network_child(int read_fd, int write_fd)
 
 	nc_conns_open(&nci);		/* start opening P2P connections */
 
-	event_base_dispatch(nci.eb);	/* main loop */
+	/* main loop */
+	event_base_dispatch(nci.eb);
 
+	/* cleanup: just the minimum for file I/O correctness */
 	peerman_write(peers);
+	blkdb_free(&db);
 	exit(0);
 }
 
