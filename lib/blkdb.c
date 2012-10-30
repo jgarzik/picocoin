@@ -13,49 +13,7 @@
 #include <ccoin/message.h>
 #include <ccoin/serialize.h>
 #include <ccoin/buint.h>
-
-static bool fread_message(int fd, struct p2p_message *msg, bool *read_ok)
-{
-	*read_ok = false;
-
-	if (msg->data) {
-		free(msg->data);
-		msg->data = NULL;
-	}
-
-	unsigned char hdrbuf[P2P_HDR_SZ];
-
-	ssize_t rrc = read(fd, hdrbuf, sizeof(hdrbuf));
-	if (rrc != sizeof(hdrbuf)) {
-		if (rrc == 0)
-			*read_ok = true;
-		return false;
-	}
-
-	parse_message_hdr(&msg->hdr, hdrbuf);
-
-	unsigned int data_len = msg->hdr.data_len;
-	if (data_len > (100 * 1024 * 1024))
-		return false;
-	
-	msg->data = malloc(data_len);
-
-	rrc = read(fd, msg->data, data_len);
-	if (rrc != data_len)
-		goto err_out_data;
-
-	if (!message_valid(msg))
-		goto err_out_data;
-
-	*read_ok = true;
-	return true;
-
-err_out_data:
-	free(msg->data);
-	msg->data = NULL;
-
-	return false;
-}
+#include <ccoin/mbr.h>
 
 static struct blkinfo *bi_new(void)
 {
