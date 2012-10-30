@@ -2,7 +2,9 @@
 libtest.a
 
 base58
+block
 fileio
 hex
+tx
 util
 
