@@ -11,6 +11,13 @@ enum service_bits {
 	NODE_NETWORK	= (1 << 0),
 };
 
+static inline bool bp_valid_value(int64_t nValue)
+{
+	if (nValue < 0 || nValue > 21000000ULL * 100000000ULL)
+		return false;
+	return true;
+}
+
 struct bp_address {
 	uint32_t	nTime;
 	uint64_t	nServices;
@@ -79,9 +86,10 @@ extern void bp_txout_init(struct bp_txout *txout);
 extern bool deser_bp_txout(struct bp_txout *txout, struct buffer *buf);
 extern void ser_bp_txout(GString *s, const struct bp_txout *txout);
 extern void bp_txout_free(struct bp_txout *txout);
+
 static inline bool bp_txout_valid(const struct bp_txout *txout)
 {
-	if (txout->nValue < 0 || txout->nValue > 21000000ULL * 100000000ULL)
+	if (!bp_valid_value(txout->nValue))
 		return false;
 	return true;
 }
@@ -104,6 +112,7 @@ extern void ser_bp_tx(GString *s, const struct bp_tx *tx);
 extern void bp_tx_free(struct bp_tx *tx);
 extern bool bp_tx_valid(const struct bp_tx *tx);
 extern void bp_tx_calc_sha256(struct bp_tx *tx);
+extern unsigned int bp_tx_ser_size(const struct bp_tx *tx);
 
 static inline bool bp_tx_coinbase(const struct bp_tx *tx)
 {
@@ -139,5 +148,6 @@ extern void bp_block_free(struct bp_block *block);
 extern void bp_block_calc_sha256(struct bp_block *block);
 extern void bp_block_merkle(bu256_t *vo, const struct bp_block *block);
 extern bool bp_block_valid(struct bp_block *block);
+extern unsigned int bp_block_ser_size(const struct bp_block *block);
 
 #endif /* __LIBCCOIN_CORE_H__ */

@@ -2,7 +2,9 @@
 #define __LIBCCOIN_COREDEFS_H__
 
 enum {
-	CADDR_TIME_VERSION	= 31402
+	CADDR_TIME_VERSION	= 31402,
+
+	MAX_BLOCK_SIZE		= 1000000,
 };
 
 enum chains {

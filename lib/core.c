@@ -2,6 +2,7 @@
 #include "picocoin-config.h"
 
 #include <string.h>
+#include <time.h>
 #include <openssl/sha.h>
 #include <ccoin/core.h>
 #include <ccoin/util.h>
@@ -310,6 +311,8 @@ void bp_tx_calc_sha256(struct bp_tx *tx)
 	if (tx->sha256_valid)
 		return;
 
+	/* TODO: introduce hashing-only serialization mode */
+
 	GString *s = g_string_sized_new(512);
 	ser_bp_tx(s, tx);
 
@@ -319,11 +322,35 @@ void bp_tx_calc_sha256(struct bp_tx *tx)
 	g_string_free(s, TRUE);
 }
 
+unsigned int bp_tx_ser_size(const struct bp_tx *tx)
+{
+	unsigned int tx_ser_size;
+
+	/* TODO: introduce a counting-only serialization mode */
+
+	GString *s = g_string_sized_new(512);
+	ser_bp_tx(s, tx);
+
+	tx_ser_size = s->len;
+
+	g_string_free(s, TRUE);
+
+	return tx_ser_size;
+}
+
 bool bp_tx_valid(const struct bp_tx *tx)
 {
 	unsigned int i;
 
-	if (!bp_tx_coinbase(tx) && tx->vin) {
+	if (!tx->vin || !tx->vin->len)
+		return false;
+	if (!tx->vout || !tx->vout->len)
+		return false;
+
+	if (bp_tx_ser_size(tx) > MAX_BLOCK_SIZE)
+		return false;
+
+	if (!bp_tx_coinbase(tx)) {
 		for (i = 0; i < tx->vin->len; i++) {
 			struct bp_txin *txin;
 
@@ -333,15 +360,19 @@ bool bp_tx_valid(const struct bp_tx *tx)
 		}
 	}
 
-	if (tx->vout) {
-		for (i = 0; i < tx->vout->len; i++) {
-			struct bp_txout *txout;
+	int64_t value_total = 0;
+	for (i = 0; i < tx->vout->len; i++) {
+		struct bp_txout *txout;
 
-			txout = g_ptr_array_index(tx->vout, i);
-			if (!bp_txout_valid(txout))
-				return false;
-		}
+		txout = g_ptr_array_index(tx->vout, i);
+		if (!bp_txout_valid(txout))
+			return false;
+
+		value_total += txout->nValue;
 	}
+
+	if (!bp_valid_value(value_total))
+		return false;
 
 	return true;
 }
@@ -440,6 +471,8 @@ void bp_block_calc_sha256(struct bp_block *block)
 	if (block->sha256_valid)
 		return;
 
+	/* TODO: introduce hashing-only serialization mode */
+
 	GString *s = g_string_sized_new(10 * 1024);
 	ser_bp_block_hdr(s, block);
 
@@ -529,6 +562,22 @@ static bool bp_block_valid_merkle(struct bp_block *block)
 	return bu256_equal(&merkle, &block->hashMerkleRoot);
 }
 
+unsigned int bp_block_ser_size(const struct bp_block *block)
+{
+	unsigned int block_ser_size;
+
+	/* TODO: introduce a counting-only serialization mode */
+
+	GString *s = g_string_sized_new(200 * 1024);
+	ser_bp_block(s, block);
+
+	block_ser_size = s->len;
+
+	g_string_free(s, TRUE);
+
+	return block_ser_size;
+}
+
 bool bp_block_valid(struct bp_block *block)
 {
 	bp_block_calc_sha256(block);
@@ -536,7 +585,15 @@ bool bp_block_valid(struct bp_block *block)
 	if (!block->vtx || !block->vtx->len)
 		return false;
 
+	if (bp_block_ser_size(block) > MAX_BLOCK_SIZE)
+		return false;
+
 	if (!bp_block_valid_target(block)) return false;
+
+	time_t now = time(NULL);
+	if (block->nTime > (now + (2 * 60 * 60)))
+		return false;
+
 	if (!bp_block_valid_merkle(block)) return false;
 
 	unsigned int i;
@@ -547,10 +604,19 @@ bool bp_block_valid(struct bp_block *block)
 		if (!bp_tx_valid(tx))
 			return false;
 
+		/* special coinbase rules */
 		if (i == 0) {
 			if (!bp_tx_coinbase(tx))
 				return false;
-		} else {
+
+			struct bp_txin *txin = g_ptr_array_index(tx->vin, 0);
+			if (txin->scriptSig->len < 2 ||
+			    txin->scriptSig->len > 100)
+				return false;
+		}
+		
+		/* rules for non-coinbase transactions */
+		else {
 			if (bp_tx_coinbase(tx))
 				return false;
 		}
