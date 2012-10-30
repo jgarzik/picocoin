@@ -245,6 +245,8 @@ void ser_bp_tx(GString *s, const struct bp_tx *tx)
 {
 	ser_u32(s, tx->nVersion);
 
+	ser_varlen(s, tx->vin ? tx->vin->len : 0);
+
 	unsigned int i;
 	if (tx->vin) {
 		for (i = 0; i < tx->vin->len; i++) {
@@ -254,6 +256,8 @@ void ser_bp_tx(GString *s, const struct bp_tx *tx)
 			ser_bp_txin(s, txin);
 		}
 	}
+
+	ser_varlen(s, tx->vout ? tx->vout->len : 0);
 
 	if (tx->vout) {
 		for (i = 0; i < tx->vout->len; i++) {
