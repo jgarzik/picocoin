@@ -48,6 +48,5 @@ static inline bool deser_s64(int64_t *vo, struct buffer *buf)
 }
 
 extern void u256_from_compact(BIGNUM *vo, uint32_t c);
-extern void bp_hash(bu256_t *vo, void *data, size_t data_len);
 
 #endif /* __LIBCCOIN_SERIALIZE_H__ */

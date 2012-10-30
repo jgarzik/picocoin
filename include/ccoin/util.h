@@ -14,6 +14,9 @@ extern void bn_setvch(BIGNUM *vo, const void *data_, size_t data_len);
 
 extern void bu_reverse_copy(unsigned char *dst, const unsigned char *src, size_t len);
 extern void bu_Hash(unsigned char *md256, const void *data, size_t data_len);
+extern void bu_Hash_(unsigned char *md256,
+		     const void *data1, size_t data_len1,
+		     const void *data2, size_t data_len2);
 extern void bu_Hash4(unsigned char *md32, const void *data, size_t data_len);
 extern void bu_Hash160(unsigned char *md160, const void *data, size_t data_len);
 extern bool bu_read_file(const char *filename, void **data_, size_t *data_len_,

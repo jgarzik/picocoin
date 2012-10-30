@@ -217,17 +217,3 @@ void u256_from_compact(BIGNUM *vo, uint32_t c)
 	BN_lshift(vo, vo, (8 * (nbytes - 3)));
 }
 
-void bp_hash(bu256_t *vo, void *data, size_t data_len)
-{
-	unsigned char md256[SHA256_DIGEST_LENGTH];
-
-	bu_Hash(md256, data, data_len);
-
-	bu256_t *v_be = (bu256_t *) md256;
-
-	/* bitcoin considers sha256 results big endian; swap
-	 * to little endian, for serialized format
-	 */
-	bu256_copy_swap(vo, v_be);
-}
-

@@ -29,6 +29,21 @@ void bu_Hash(unsigned char *md256, const void *data, size_t data_len)
 	SHA256(md1, SHA256_DIGEST_LENGTH, md256);
 }
 
+void bu_Hash_(unsigned char *md256,
+		     const void *data1, size_t data_len1,
+		     const void *data2, size_t data_len2)
+{
+	SHA256_CTX ctx;
+	unsigned char md1[SHA256_DIGEST_LENGTH];
+
+	SHA256_Init(&ctx);
+	SHA256_Update(&ctx, data1, data_len1);
+	SHA256_Update(&ctx, data2, data_len2);
+	SHA256_Final(md1, &ctx);
+
+	SHA256(md1, SHA256_DIGEST_LENGTH, md256);
+}
+
 void bu_Hash4(unsigned char *md32, const void *data, size_t data_len)
 {
 	unsigned char md256[SHA256_DIGEST_LENGTH];

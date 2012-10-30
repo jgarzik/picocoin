@@ -44,7 +44,7 @@ void bu256_hex(char *hexstr, const bu256_t *v)
 	for (i = 7; i >= 0; i--) {		/* endian: high to low */
 		char tmp[8 + 1];
 
-		sprintf(tmp, "%08x", GUINT32_FROM_BE(v->dword[i]));
+		sprintf(tmp, "%08x", GUINT32_FROM_LE(v->dword[i]));
 		strcat(hexstr, tmp);
 	}
 }

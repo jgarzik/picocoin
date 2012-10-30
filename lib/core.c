@@ -4,6 +4,7 @@
 #include <string.h>
 #include <openssl/sha.h>
 #include <ccoin/core.h>
+#include <ccoin/util.h>
 #include <ccoin/coredefs.h>
 #include <ccoin/serialize.h>
 
@@ -312,7 +313,7 @@ void bp_tx_calc_sha256(struct bp_tx *tx)
 	GString *s = g_string_sized_new(512);
 	ser_bp_tx(s, tx);
 
-	bp_hash(&tx->sha256, s->str, s->len);
+	bu_Hash((unsigned char *) &tx->sha256, s->str, s->len);
 	tx->sha256_valid = true;
 
 	g_string_free(s, TRUE);
@@ -442,74 +443,61 @@ void bp_block_calc_sha256(struct bp_block *block)
 	GString *s = g_string_sized_new(10 * 1024);
 	ser_bp_block_hdr(s, block);
 
-	bp_hash(&block->sha256, s->str, s->len);
+	bu_Hash((unsigned char *)&block->sha256, s->str, s->len);
 	block->sha256_valid = true;
 
 	g_string_free(s, TRUE);
 }
 
-bool bp_block_merkle(bu256_t *vo, const struct bp_block *block)
+static GArray *bp_block_merkle_tree(const struct bp_block *block)
 {
 	if (!block->vtx || !block->vtx->len)
-		return false;
+		return NULL;
+	
+	GArray *arr = g_array_new(FALSE, TRUE, sizeof(bu256_t));
 
-	GList *hashes = NULL;
 	unsigned int i;
-
 	for (i = 0; i < block->vtx->len; i++) {
 		struct bp_tx *tx;
 
 		tx = g_ptr_array_index(block->vtx, i);
 		bp_tx_calc_sha256(tx);
 
-		GString *s256 = g_string_sized_new(32);
-		ser_u256(s256, &tx->sha256);
-
-		hashes = g_list_append(hashes,
-				       g_string_free(s256, FALSE));
+		g_array_append_val(arr, tx->sha256);
 	}
 
-	while (g_list_length(hashes) > 1) {
-		GList *newhashes;
+	unsigned int j = 0, nSize;
+	for (nSize = block->vtx->len; nSize > 1; nSize = (nSize + 1) / 2) {
+		for (i = 0; i < nSize; i += 2) {
+			unsigned int i2 = MIN(i+1, nSize-1);
+			bu256_t hash;
+			bu_Hash_((unsigned char *) &hash,
+			   &g_array_index(arr, bu256_t, j+i), sizeof(bu256_t),
+			   &g_array_index(arr, bu256_t, j+i2),sizeof(bu256_t));
 
-		newhashes = NULL;
-
-		for (i = 0; i < g_list_length(hashes); i += 2) {
-			unsigned int i2;
-
-			i2 = MIN(i + 1, g_list_length(hashes) - 1);
-
-			void *data1 = g_list_nth(hashes, i);
-			void *data2 = g_list_nth(hashes, i2);
-
-			unsigned char md1[SHA256_DIGEST_LENGTH];
-			unsigned char md2[SHA256_DIGEST_LENGTH], *md2_p;
-			SHA256_CTX ctx;
-
-			SHA256_Init(&ctx);
-			SHA256_Update(&ctx, data1, 32);
-			SHA256_Update(&ctx, data2, 32);
-			SHA256_Final(md1, &ctx);
-			SHA256(md1, SHA256_DIGEST_LENGTH, md2);
-
-			md2_p = g_memdup(md2, SHA256_DIGEST_LENGTH);
-
-			newhashes = g_list_append(newhashes, md2_p);
+			g_array_append_val(arr, hash);
 		}
 
-		GList *del_tmp;
-
-		del_tmp = hashes;
-		hashes = newhashes;
-
-		g_list_free_full(del_tmp, g_free);
+		j += nSize;
 	}
 
-	struct buffer buf = { hashes->data, SHA256_DIGEST_LENGTH };
+	return arr;
+}
 
-	deser_u256(vo, &buf);
+void bp_block_merkle(bu256_t *vo, const struct bp_block *block)
+{
+	memset(vo, 0, sizeof(*vo));
 
-	return true;
+	if (!block->vtx || !block->vtx->len)
+		return;
+
+	GArray *arr = bp_block_merkle_tree(block);
+	if (!arr)
+		return;
+
+	*vo = g_array_index(arr, bu256_t, arr->len - 1);
+
+	g_array_free(arr, TRUE);
 }
 
 bool bp_block_valid_target(struct bp_block *block)
@@ -536,12 +524,9 @@ bool bp_block_valid_merkle(struct bp_block *block)
 {
 	bu256_t merkle;
 
-	bool merkle_rc = bp_block_merkle(&merkle, block);
+	bp_block_merkle(&merkle, block);
 
-	if (merkle_rc)
-		return bu256_equal(&merkle, &block->hashMerkleRoot);
-
-	return false;
+	return bu256_equal(&merkle, &block->hashMerkleRoot);
 }
 
 bool bp_block_valid(struct bp_block *block)

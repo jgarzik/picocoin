@@ -66,6 +66,9 @@ static void runtest(const char *json_fn_base, const char *ser_fn_base)
 		assert(!strcmp(hexstr, hashstr));
 	}
 
+	rc = bp_block_valid(&block);
+	assert(rc);
+
 	bp_block_free(&block);
 	g_string_free(gs, TRUE);
 	free(msg.data);
