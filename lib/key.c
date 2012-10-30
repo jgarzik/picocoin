@@ -37,6 +37,8 @@ bool bp_key_generate(struct bp_key *key)
 	if (!EC_KEY_check_key(key->k))
 		return false;
 
+	EC_KEY_set_conv_form(key->k, POINT_CONVERSION_COMPRESSED);
+
 	return true;
 }
 
