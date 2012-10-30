@@ -22,9 +22,14 @@ extern void bu256_copy_swap(bu256_t *vo, const bu256_t *vi);
 
 static inline bool bu256_is_zero(const bu256_t *v)
 {
-	return memcmp(v,
-	     "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",
-	     32);
+	return	v->dword[0] == 0 &&
+		v->dword[1] == 0 &&
+		v->dword[2] == 0 &&
+		v->dword[3] == 0 &&
+		v->dword[4] == 0 &&
+		v->dword[5] == 0 &&
+		v->dword[6] == 0 &&
+		v->dword[7] == 0;
 }
 
 static inline void bu256_zero(bu256_t *v)

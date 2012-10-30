@@ -500,7 +500,7 @@ void bp_block_merkle(bu256_t *vo, const struct bp_block *block)
 	g_array_free(arr, TRUE);
 }
 
-bool bp_block_valid_target(struct bp_block *block)
+static bool bp_block_valid_target(struct bp_block *block)
 {
 	BIGNUM target, sha256;
 	BN_init(&target);
@@ -520,7 +520,7 @@ bool bp_block_valid_target(struct bp_block *block)
 	return true;
 }
 
-bool bp_block_valid_merkle(struct bp_block *block)
+static bool bp_block_valid_merkle(struct bp_block *block)
 {
 	bu256_t merkle;
 
@@ -533,8 +533,28 @@ bool bp_block_valid(struct bp_block *block)
 {
 	bp_block_calc_sha256(block);
 
+	if (!block->vtx || !block->vtx->len)
+		return false;
+
 	if (!bp_block_valid_target(block)) return false;
 	if (!bp_block_valid_merkle(block)) return false;
+
+	unsigned int i;
+	for (i = 0; i < block->vtx->len; i++) {
+		struct bp_tx *tx;
+
+		tx = g_ptr_array_index(block->vtx, i);
+		if (!bp_tx_valid(tx))
+			return false;
+
+		if (i == 0) {
+			if (!bp_tx_coinbase(tx))
+				return false;
+		} else {
+			if (bp_tx_coinbase(tx))
+				return false;
+		}
+	}
 
 	return true;
 
