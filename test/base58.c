@@ -23,6 +23,8 @@ static void test_encdec(const char *hexstr, const char *enc)
 			s->str, enc);
 		assert(!strcmp(s->str, enc));
 	}
+
+	g_string_free(s, TRUE);
 }
 
 int main (int argc, char *argv[])
