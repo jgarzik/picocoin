@@ -38,6 +38,17 @@ bool hex_bu256(bu256_t *vo, const char *hexstr)
 	return true;
 }
 
+void bu256_hex(char *hexstr, const bu256_t *v)
+{
+	int i;
+	for (i = 7; i >= 0; i--) {		/* endian: high to low */
+		char tmp[8 + 1];
+
+		sprintf(tmp, "%08x", GUINT32_FROM_BE(v->dword[i]));
+		strcat(hexstr, tmp);
+	}
+}
+
 void bu256_swap(bu256_t *v)
 {
 	unsigned int i;
