@@ -122,7 +122,7 @@ bool write_aes_file(const char *filename, void *key, size_t key_len,
 		    const void *plaintext, size_t pt_len)
 {
 	EVP_CIPHER_CTX en, de;
-	unsigned int salt[] = { 4185398345, 2729682459 };
+	unsigned int salt[] = { 4185398345U, 2729682459U };
 
 	if (!aes_init(key, key_len, (unsigned char *) &salt, &en, &de))
 		return false;
@@ -151,7 +151,7 @@ int main(int argc, char **argv)
 	   compiled in salt. We just read the bit pattern created by these two 4 byte
 	   integers on the stack as 64 bits of contigous salt material -
 	   ofcourse this only works if sizeof(int) >= 4 */
-	unsigned int salt[] = { 12345, 54321 };
+	unsigned int salt[] = { 12345U, 54321U };
 	unsigned char *key_data;
 	int key_data_len, i;
 	char *input[] =
