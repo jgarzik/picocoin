@@ -163,7 +163,6 @@ enum opcodetype
 };
 
 struct bscript_parser {
-	struct buffer	*orig_buf;	/* original ptr/len */
 	struct buffer	*buf;		/* current parse offset */
 
 	bool		error;		/* parse error in stream? */
@@ -194,7 +193,6 @@ static inline void bsp_push_op(GString *s, enum opcodetype op)
 
 static inline void bsp_start(struct bscript_parser *bp, struct buffer *buf)
 {
-	bp->orig_buf = buf;
 	bp->buf = buf;
 	bp->error = false;
 }
