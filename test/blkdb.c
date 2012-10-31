@@ -57,6 +57,14 @@ int main (int argc, char *argv[])
 
 	read_headers(&db);
 
+	assert(db.nBestHeight == 193000);
+
+	bu256_t block193k;
+	rc = hex_bu256(&block193k,
+	    "000000000000059f452a5f7340de6682a977387c17010ff6e6c3bd83ca8b1317");
+
+	assert(bu256_equal(&db.hashBestChain, &block193k));
+
 	blkdb_free(&db);
 
 	return 0;
