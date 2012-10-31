@@ -8,6 +8,8 @@
 #include <ccoin/util.h>
 #include <ccoin/hexcode.h>
 
+#include "libtest.h"
+
 #define RANDOM_DATA_SHA1SUM "18833691a6d0ad9c481dcbc6d0da0d3245d7c627"
 
 void *data = NULL;
@@ -36,9 +38,7 @@ static void test_read(const char *filename)
 
 int main (int argc, char *argv[])
 {
-	char filename[512];
-
-	sprintf(filename, "%s/random.data", TEST_SRCDIR);
+	char *filename = test_filename("random.data");
 
 	test_read(filename);
 

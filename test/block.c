@@ -13,11 +13,11 @@
 
 static void runtest(const char *json_fn_base, const char *ser_fn_base)
 {
-	char *fn = g_strdup_printf("%s/%s", TEST_SRCDIR, json_fn_base);
+	char *fn = test_filename(json_fn_base);
 	json_t *meta = read_json(fn);
 	assert(json_is_object(meta));
 
-	char *ser_fn = g_strdup_printf("%s/%s", TEST_SRCDIR, ser_fn_base);
+	char *ser_fn = test_filename(ser_fn_base);
 	int fd = open(ser_fn, O_RDONLY);
 	if (fd < 0) {
 		perror(ser_fn);

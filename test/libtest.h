@@ -4,5 +4,6 @@
 #include <jansson.h>
 
 extern json_t *read_json(const char *filename);
+extern char *test_filename(const char *basename);
 
 #endif /* __LIBTEST_H__ */

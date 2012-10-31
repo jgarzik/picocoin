@@ -15,7 +15,7 @@
 #include <ccoin/buint.h>
 #include <ccoin/mbr.h>
 
-static struct blkinfo *bi_new(void)
+struct blkinfo *bi_new(void)
 {
 	struct blkinfo *bi;
 
@@ -23,15 +23,19 @@ static struct blkinfo *bi_new(void)
 	BN_init(&bi->work);
 	bi->height = -1;
 
+	bp_block_init(&bi->hdr);
+
 	return bi;
 }
 
-static void bi_free(struct blkinfo *bi)
+void bi_free(struct blkinfo *bi)
 {
 	if (!bi)
 		return;
 	
 	BN_clear_free(&bi->work);
+
+	bp_block_free(&bi->hdr);
 
 	memset(bi, 0, sizeof(*bi));
 	free(bi);

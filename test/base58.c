@@ -31,7 +31,7 @@ int main (int argc, char *argv[])
 {
 	char *fn = NULL;
 
-	fn = g_strdup_printf("%s/base58_encode_decode.json", TEST_SRCDIR);
+	fn = test_filename("base58_encode_decode.json");
 	json_t *data = read_json(fn);
 	assert(json_is_array(data));
 

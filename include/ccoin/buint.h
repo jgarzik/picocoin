@@ -18,7 +18,10 @@ extern void bu256_bn(BIGNUM *vo, const bu256_t *vi);
 extern bool hex_bu256(bu256_t *vo, const char *hexstr);
 extern void bu256_hex(char *hexstr, const bu256_t *v);
 extern void bu256_swap(bu256_t *v);
+extern void bu256_swap_dwords(bu256_t *v);
 extern void bu256_copy_swap(bu256_t *vo, const bu256_t *vi);
+extern void bu256_copy_swap_dwords(bu256_t *vo, const bu256_t *vi);
+extern void bu256_swap_dwords(bu256_t *v);
 
 static inline bool bu256_is_zero(const bu256_t *v)
 {

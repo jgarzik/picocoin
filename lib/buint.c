@@ -28,12 +28,16 @@ void bu256_bn(BIGNUM *vo, const bu256_t *vi)
 bool hex_bu256(bu256_t *vo, const char *hexstr)
 {
 	size_t out_len = 0;
+	bu256_t tmpv, tmpv2;
 
-	if (!decode_hex(vo, sizeof(bu256_t), hexstr, &out_len))
+	if (!decode_hex(&tmpv, sizeof(bu256_t), hexstr, &out_len))
 		return false;
 	
 	if (out_len != sizeof(bu256_t))
 		return false;
+
+	bu256_copy_swap(&tmpv2, &tmpv);
+	bu256_copy_swap_dwords(vo, &tmpv2);
 	
 	return true;
 }
@@ -61,5 +65,25 @@ void bu256_copy_swap(bu256_t *vo, const bu256_t *vi)
 	unsigned int i;
 	for (i = 0; i < 8; i++)
 		vo->dword[i] = GUINT32_SWAP_LE_BE(vi->dword[i]);
+}
+
+void bu256_copy_swap_dwords(bu256_t *vo, const bu256_t *vi)
+{
+	vo->dword[0] = vi->dword[7];
+	vo->dword[1] = vi->dword[6];
+	vo->dword[2] = vi->dword[5];
+	vo->dword[3] = vi->dword[4];
+	vo->dword[4] = vi->dword[3];
+	vo->dword[5] = vi->dword[2];
+	vo->dword[6] = vi->dword[1];
+	vo->dword[7] = vi->dword[0];
+}
+
+void bu256_swap_dwords(bu256_t *v)
+{
+	bu256_t tmpv;
+
+	bu256_copy_swap_dwords(&tmpv, v);
+	memcpy(v, &tmpv, sizeof(*v));
 }
 

@@ -29,6 +29,9 @@ struct blkdb {
 	int		nBestHeight;
 };
 
+extern struct blkinfo *bi_new(void);
+extern void bi_free(struct blkinfo *bi);
+
 extern bool blkdb_init(struct blkdb *db, const unsigned char *netmagic,
 		       const bu256_t *genesis_block);
 extern void blkdb_free(struct blkdb *db);
