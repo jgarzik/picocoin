@@ -44,10 +44,12 @@ dnl -----------------------------
 dnl Checks for required libraries
 dnl -----------------------------
 
-AC_CHECK_LIB(crypto, MD5_Init, CRYPTO_LIBS=-lcrypto)
+AC_CHECK_LIB(crypto, MD5_Init, CRYPTO_LIBS=-lcrypto,
+  [AC_MSG_ERROR([Missing required libcrypto])])
 AC_CHECK_LIB(event, event_base_new, EVENT_LIBS=-levent,
   [AC_MSG_ERROR([Missing required libevent])])
-AC_CHECK_LIB(jansson, json_loads, JANSSON_LIBS=-ljansson)
+AC_CHECK_LIB(jansson, json_loads, JANSSON_LIBS=-ljansson,
+  [AC_MSG_ERROR([Missing required libjansson])])
 
 dnl -------------------------------------
 dnl Checks for optional library functions
