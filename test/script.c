@@ -22,7 +22,6 @@ static void test_txout(const struct bp_txout *txout)
 	 * parse script
 	 */
 
-	bsp_init(&bsp);
 	bsp_start(&bsp, &buf);
 
 	while (bsp_getop(&op, &bsp)) {
@@ -33,8 +32,6 @@ static void test_txout(const struct bp_txout *txout)
 	}
 
 	assert(!bsp.error);
-
-	bsp_free(&bsp);
 
 	/*
 	 * build script

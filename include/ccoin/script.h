@@ -192,20 +192,11 @@ static inline void bsp_push_op(GString *s, enum opcodetype op)
 	g_string_append_len(s, (gchar *) &c, sizeof(c));
 }
 
-static inline void bsp_init(struct bscript_parser *bp)
-{
-	memset(bp, 0, sizeof(*bp));
-}
-
 static inline void bsp_start(struct bscript_parser *bp, struct buffer *buf)
 {
 	bp->orig_buf = buf;
 	bp->buf = buf;
 	bp->error = false;
-}
-
-static inline void bsp_free(struct bscript_parser *bp)
-{
 }
 
 #endif /* __LIBCCOIN_SCRIPT_H__ */
