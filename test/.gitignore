@@ -6,6 +6,7 @@ block
 blkdb
 fileio
 hex
+script
 tx
 util
 
