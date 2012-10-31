@@ -94,7 +94,7 @@ GString *read_aes_file(const char *filename, void *key, size_t key_len,
 		       size_t max_file_len)
 {
 	EVP_CIPHER_CTX en, de;
-	unsigned int salt[] = { 4185398345, 2729682459 };
+	unsigned int salt[] = { 4185398345U, 2729682459U };
 	void *ciphertext = NULL;
 	size_t ct_len = 0;
 	GString *rs = NULL;
