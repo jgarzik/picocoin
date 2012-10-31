@@ -2,7 +2,9 @@
 #define __LIBCCOIN_SCRIPT_H__
 
 #include <string.h>
+#include <stdint.h>
 #include <stdbool.h>
+#include <glib.h>
 #include <ccoin/buffer.h>
 
 /** Signature hash types/flags */
@@ -176,10 +178,18 @@ struct bscript_op {
 extern const char *GetOpName(enum opcodetype opcode);
 
 extern bool bsp_getop(struct bscript_op *op, struct bscript_parser *bp);
+extern void bsp_push_data(GString *s, const void *data, size_t data_len);
 
-static inline bool bsp_pushdata_op(enum opcodetype op)
+static inline bool is_bsp_pushdata(enum opcodetype op)
 {
 	return (op <= OP_PUSHDATA4);
+}
+
+static inline void bsp_push_op(GString *s, enum opcodetype op)
+{
+	uint8_t c = (uint8_t) op;
+
+	g_string_append_len(s, (gchar *) &c, sizeof(c));
 }
 
 static inline void bsp_init(struct bscript_parser *bp)

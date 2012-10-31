@@ -16,17 +16,51 @@ static void test_txout(const struct bp_txout *txout)
 
 	struct bscript_parser bsp;
 	struct bscript_op op;
+	GList *ops = NULL;
+
+	/*
+	 * parse script
+	 */
 
 	bsp_init(&bsp);
 	bsp_start(&bsp, &buf);
 
 	while (bsp_getop(&op, &bsp)) {
-		/* do nothing */
+		struct bscript_op *op_p;
+
+		op_p = g_memdup(&op, sizeof(op));
+		ops = g_list_append(ops, op_p);
 	}
 
 	assert(!bsp.error);
 
 	bsp_free(&bsp);
+
+	/*
+	 * build script
+	 */
+
+	GList *tmp = ops;
+	GString *s = g_string_sized_new(256);
+	while (tmp) {
+		struct bscript_op *op_p;
+
+		op_p = tmp->data;
+		tmp = tmp->next;
+
+		if (is_bsp_pushdata(op_p->op)) {
+			bsp_push_data(s, op_p->data.p, op_p->data.len);
+		} else {
+			bsp_push_op(s, op_p->op);
+		}
+	}
+
+	g_list_free_full(ops, g_free);
+
+	/* byte-compare original and newly created scripts */
+	assert(g_string_equal(s, txout->scriptPubKey));
+
+	g_string_free(s, TRUE);
 }
 
 static void runtest(const char *ser_fn_base)

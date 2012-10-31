@@ -14,7 +14,7 @@ bool bsp_getop(struct bscript_op *op, struct bscript_parser *bp)
 		goto err_out;
 	op->op = opcode;
 
-	if (!bsp_pushdata_op(opcode)) {
+	if (!is_bsp_pushdata(opcode)) {
 		op->data.p = NULL;
 		op->data.len = 0;
 		return true;
@@ -55,5 +55,40 @@ bool bsp_getop(struct bscript_op *op, struct bscript_parser *bp)
 err_out:
 	bp->error = true;
 	return false;
+}
+
+void bsp_push_data(GString *s, const void *data, size_t data_len)
+{
+	if (data_len < OP_PUSHDATA1) {
+		uint8_t c = (uint8_t) data_len;
+
+		g_string_append_len(s, (gchar *) &c, sizeof(c));
+	}
+
+	else if (data_len <= 0xff) {
+		uint8_t opcode = OP_PUSHDATA1;
+		uint8_t v8 = (uint8_t) data_len;
+
+		g_string_append_len(s, (gchar *) &opcode, sizeof(opcode));
+		g_string_append_len(s, (gchar *) &v8, sizeof(v8));
+	}
+
+	else if (data_len <= 0xffff) {
+		uint8_t opcode = OP_PUSHDATA2;
+		uint16_t v16_le = GUINT16_TO_LE((uint16_t) data_len);
+
+		g_string_append_len(s, (gchar *) &opcode, sizeof(opcode));
+		g_string_append_len(s, (gchar *) &v16_le, sizeof(v16_le));
+	}
+
+	else {
+		uint8_t opcode = OP_PUSHDATA4;
+		uint32_t v32_le = GUINT32_TO_LE((uint32_t) data_len);
+
+		g_string_append_len(s, (gchar *) &opcode, sizeof(opcode));
+		g_string_append_len(s, (gchar *) &v32_le, sizeof(v32_le));
+	}
+
+	g_string_append_len(s, data, data_len);
 }
 
