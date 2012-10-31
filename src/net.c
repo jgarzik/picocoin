@@ -255,7 +255,7 @@ static bool nc_conn_send(struct nc_conn *conn, const char *command,
 		}
 
 		conn->write_q = g_list_append(conn->write_q, buf);
-		return true;
+		goto out_wrstart;
 	}
 
 	/* message fully sent */
@@ -269,6 +269,7 @@ static bool nc_conn_send(struct nc_conn *conn, const char *command,
 	conn->write_q = g_list_append(conn->write_q, buf);
 	conn->write_partial = wrc;
 
+out_wrstart:
 	nc_conn_read_disable(conn);
 	nc_conn_write_enable(conn);
 	return true;
@@ -392,14 +393,14 @@ static bool nc_conn_message(struct nc_conn *conn)
 }
 
 static bool nc_conn_ip_active(struct net_child_info *nci,
-			      struct nc_conn *conn_new)
+			      const unsigned char *ip)
 {
 	unsigned int i;
 	for (i = 0; i < nci->conns->len; i++) {
 		struct nc_conn *conn;
 
 		conn = g_ptr_array_index(nci->conns, i);
-		if (!memcmp(conn->addr.ip, conn_new->addr.ip, 16))
+		if (!memcmp(conn->addr.ip, ip, 16))
 			return true;
 	}
 
@@ -551,7 +552,7 @@ err_out:
 	nc_conn_free(conn);
 }
 
-static void nc_conn_evt(int fd, short events, void *priv)
+static void nc_conn_read_evt(int fd, short events, void *priv)
 {
 	struct nc_conn *conn = priv;
 
@@ -597,7 +598,7 @@ static bool nc_conn_read_enable(struct nc_conn *conn)
 		return true;
 
 	conn->ev = event_new(conn->nci->eb, conn->fd, EV_READ | EV_PERSIST,
-			     nc_conn_evt, conn);
+			     nc_conn_read_evt, conn);
 	if (!conn->ev)
 		return false;
 
@@ -716,7 +717,7 @@ static void nc_conns_open(struct net_child_info *nci)
 		free(addr);
 
 		/* are we already connected to this IP? */
-		if (nc_conn_ip_active(nci, conn))
+		if (nc_conn_ip_active(nci, conn->addr.ip))
 			goto err_loop;
 
 		/* initiate non-blocking connect(2) */
