@@ -43,7 +43,7 @@ static void runtest(const char *json_fn_base, const char *ser_fn_base)
 	struct bp_block block;
 	bp_block_init(&block);
 
-	struct buffer buf = { msg.data, msg.hdr.data_len };
+	struct const_buffer buf = { msg.data, msg.hdr.data_len };
 
 	rc = deser_bp_block(&block, &buf);
 	assert(rc);

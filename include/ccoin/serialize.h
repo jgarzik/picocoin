@@ -27,22 +27,22 @@ static inline void ser_s64(GString *s, int64_t v_)
 	ser_u64(s, (uint64_t) v_);
 }
 
-extern bool deser_skip(struct buffer *buf, size_t len);
-extern bool deser_bytes(void *po, struct buffer *buf, size_t len);
-extern bool deser_u16(uint16_t *vo, struct buffer *buf);
-extern bool deser_u32(uint32_t *vo, struct buffer *buf);
-extern bool deser_u64(uint64_t *vo, struct buffer *buf);
+extern bool deser_skip(struct const_buffer *buf, size_t len);
+extern bool deser_bytes(void *po, struct const_buffer *buf, size_t len);
+extern bool deser_u16(uint16_t *vo, struct const_buffer *buf);
+extern bool deser_u32(uint32_t *vo, struct const_buffer *buf);
+extern bool deser_u64(uint64_t *vo, struct const_buffer *buf);
 
-static inline bool deser_u256(bu256_t *vo, struct buffer *buf)
+static inline bool deser_u256(bu256_t *vo, struct const_buffer *buf)
 {
 	return deser_bytes(vo, buf, sizeof(bu256_t));
 }
 
-extern bool deser_varlen(uint32_t *lo, struct buffer *buf);
-extern bool deser_str(char *so, struct buffer *buf, size_t maxlen);
-extern bool deser_varstr(GString **so, struct buffer *buf);
+extern bool deser_varlen(uint32_t *lo, struct const_buffer *buf);
+extern bool deser_str(char *so, struct const_buffer *buf, size_t maxlen);
+extern bool deser_varstr(GString **so, struct const_buffer *buf);
 
-static inline bool deser_s64(int64_t *vo, struct buffer *buf)
+static inline bool deser_s64(int64_t *vo, struct const_buffer *buf)
 {
 	return deser_u64((uint64_t *) vo, buf);
 }

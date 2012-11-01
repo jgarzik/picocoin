@@ -75,7 +75,7 @@ void ser_varstr(GString *s, GString *s_in)
 	ser_bytes(s, s_in->str, s_in->len);
 }
 
-bool deser_skip(struct buffer *buf, size_t len)
+bool deser_skip(struct const_buffer *buf, size_t len)
 {
 	if (buf->len < len)
 		return false;
@@ -86,7 +86,7 @@ bool deser_skip(struct buffer *buf, size_t len)
 	return true;
 }
 
-bool deser_bytes(void *po, struct buffer *buf, size_t len)
+bool deser_bytes(void *po, struct const_buffer *buf, size_t len)
 {
 	if (buf->len < len)
 		return false;
@@ -98,7 +98,7 @@ bool deser_bytes(void *po, struct buffer *buf, size_t len)
 	return true;
 }
 
-bool deser_u16(uint16_t *vo, struct buffer *buf)
+bool deser_u16(uint16_t *vo, struct const_buffer *buf)
 {
 	uint16_t v;
 
@@ -109,7 +109,7 @@ bool deser_u16(uint16_t *vo, struct buffer *buf)
 	return true;
 }
 
-bool deser_u32(uint32_t *vo, struct buffer *buf)
+bool deser_u32(uint32_t *vo, struct const_buffer *buf)
 {
 	uint32_t v;
 
@@ -120,7 +120,7 @@ bool deser_u32(uint32_t *vo, struct buffer *buf)
 	return true;
 }
 
-bool deser_u64(uint64_t *vo, struct buffer *buf)
+bool deser_u64(uint64_t *vo, struct const_buffer *buf)
 {
 	uint64_t v;
 
@@ -131,7 +131,7 @@ bool deser_u64(uint64_t *vo, struct buffer *buf)
 	return true;
 }
 
-bool deser_varlen(uint32_t *lo, struct buffer *buf)
+bool deser_varlen(uint32_t *lo, struct const_buffer *buf)
 {
 	uint32_t len;
 
@@ -160,7 +160,7 @@ bool deser_varlen(uint32_t *lo, struct buffer *buf)
 	return true;
 }
 
-bool deser_str(char *so, struct buffer *buf, size_t maxlen)
+bool deser_str(char *so, struct const_buffer *buf, size_t maxlen)
 {
 	uint32_t len;
 	if (!deser_varlen(&len, buf)) return false;
@@ -184,7 +184,7 @@ bool deser_str(char *so, struct buffer *buf, size_t maxlen)
 	return true;
 }
 
-bool deser_varstr(GString **so, struct buffer *buf)
+bool deser_varstr(GString **so, struct const_buffer *buf)
 {
 	if (*so) {
 		g_string_free(*so, TRUE);

@@ -26,7 +26,7 @@ struct bp_address {
 };
 
 extern bool deser_bp_addr(unsigned int protover,
-		struct bp_address *addr, struct buffer *buf);
+		struct bp_address *addr, struct const_buffer *buf);
 extern void ser_bp_addr(GString *s, unsigned int protover, const struct bp_address *addr);
 static inline void bp_addr_free(struct bp_address *addr) {}
 
@@ -36,7 +36,7 @@ struct bp_inv {
 };
 
 extern void bp_inv_init(struct bp_inv *inv);
-extern bool deser_bp_inv(struct bp_inv *inv, struct buffer *buf);
+extern bool deser_bp_inv(struct bp_inv *inv, struct const_buffer *buf);
 extern void ser_bp_inv(GString *s, const struct bp_inv *inv);
 static inline void bp_inv_free(struct bp_inv *inv) {}
 
@@ -46,7 +46,7 @@ struct bp_locator {
 };
 
 extern void bp_locator_init(struct bp_locator *locator);
-extern bool deser_bp_locator(struct bp_locator *locator, struct buffer *buf);
+extern bool deser_bp_locator(struct bp_locator *locator, struct const_buffer *buf);
 extern void ser_bp_locator(GString *s, const struct bp_locator *locator);
 extern void bp_locator_free(struct bp_locator *locator);
 
@@ -56,7 +56,7 @@ struct bp_outpt {
 };
 
 extern void bp_outpt_init(struct bp_outpt *outpt);
-extern bool deser_bp_outpt(struct bp_outpt *outpt, struct buffer *buf);
+extern bool deser_bp_outpt(struct bp_outpt *outpt, struct const_buffer *buf);
 extern void ser_bp_outpt(GString *s, const struct bp_outpt *outpt);
 static inline void bp_outpt_free(struct bp_outpt *outpt) {}
 
@@ -72,7 +72,7 @@ struct bp_txin {
 };
 
 extern void bp_txin_init(struct bp_txin *txin);
-extern bool deser_bp_txin(struct bp_txin *txin, struct buffer *buf);
+extern bool deser_bp_txin(struct bp_txin *txin, struct const_buffer *buf);
 extern void ser_bp_txin(GString *s, const struct bp_txin *txin);
 extern void bp_txin_free(struct bp_txin *txin);
 static inline bool bp_txin_valid(const struct bp_txin *txin) { return true; }
@@ -83,7 +83,7 @@ struct bp_txout {
 };
 
 extern void bp_txout_init(struct bp_txout *txout);
-extern bool deser_bp_txout(struct bp_txout *txout, struct buffer *buf);
+extern bool deser_bp_txout(struct bp_txout *txout, struct const_buffer *buf);
 extern void ser_bp_txout(GString *s, const struct bp_txout *txout);
 extern void bp_txout_free(struct bp_txout *txout);
 
@@ -107,7 +107,7 @@ struct bp_tx {
 };
 
 extern void bp_tx_init(struct bp_tx *tx);
-extern bool deser_bp_tx(struct bp_tx *tx, struct buffer *buf);
+extern bool deser_bp_tx(struct bp_tx *tx, struct const_buffer *buf);
 extern void ser_bp_tx(GString *s, const struct bp_tx *tx);
 extern void bp_tx_free(struct bp_tx *tx);
 extern bool bp_tx_valid(const struct bp_tx *tx);
@@ -142,7 +142,7 @@ struct bp_block {
 };
 
 extern void bp_block_init(struct bp_block *block);
-extern bool deser_bp_block(struct bp_block *block, struct buffer *buf);
+extern bool deser_bp_block(struct bp_block *block, struct const_buffer *buf);
 extern void ser_bp_block(GString *s, const struct bp_block *block);
 extern void bp_block_free(struct bp_block *block);
 extern void bp_block_calc_sha256(struct bp_block *block);

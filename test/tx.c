@@ -35,7 +35,7 @@ static void runtest(const char *json_fn_base, const char *ser_fn_base)
 	struct bp_tx tx;
 	bp_tx_init(&tx);
 
-	struct buffer buf = { data, data_len };
+	struct const_buffer buf = { data, data_len };
 
 	rc = deser_bp_tx(&tx, &buf);
 	assert(rc);

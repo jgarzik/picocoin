@@ -64,13 +64,14 @@ static bool peerman_has_addr(struct peer_manager *peers,const unsigned char *ip)
 	return g_hash_table_lookup_extended(peers->map_addr, ip, NULL, NULL);
 }
 
-static bool peerman_read_rec(struct peer_manager *peers,struct p2p_message *msg)
+static bool peerman_read_rec(struct peer_manager *peers,
+			     const struct p2p_message *msg)
 {
 	if (strncmp(msg->hdr.command, "CAddress", sizeof(msg->hdr.command)) ||
 	    (msg->hdr.data_len != sizeof(struct bp_address)))
 		return false;
 
-	struct buffer buf = { msg->data, msg->hdr.data_len };
+	struct const_buffer buf = { msg->data, msg->hdr.data_len };
 	struct bp_address *addr;
 
 	addr = calloc(1, sizeof(*addr));
@@ -106,7 +107,7 @@ struct peer_manager *peerman_read(void)
 
 	peers = peerman_new();
 
-	struct buffer buf = { data, data_len };
+	struct const_buffer buf = { data, data_len };
 	struct mbuf_reader mbr;
 
 	mbr_init(&mbr, &buf);

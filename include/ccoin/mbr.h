@@ -6,14 +6,14 @@
 #include <ccoin/message.h>
 
 struct mbuf_reader {
-	struct buffer		*buf;
+	struct const_buffer	*buf;
 	bool			error;
 	bool			eof;
 
 	struct p2p_message	msg;
 };
 
-extern void mbr_init(struct mbuf_reader *mbr, struct buffer *buf);
+extern void mbr_init(struct mbuf_reader *mbr, struct const_buffer *buf);
 extern bool mbr_read(struct mbuf_reader *mbr);
 static inline void mbr_free(struct mbuf_reader *mbr) {}
 extern bool fread_message(int fd, struct p2p_message *msg, bool *read_ok);

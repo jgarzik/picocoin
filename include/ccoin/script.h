@@ -163,14 +163,14 @@ enum opcodetype
 };
 
 struct bscript_parser {
-	struct buffer	*buf;		/* current parse offset */
+	struct const_buffer	*buf;		/* current parse offset */
 
-	bool		error;		/* parse error in stream? */
+	bool			error;		/* parse error in stream? */
 };
 
 struct bscript_op {
-	enum opcodetype	op;		/* opcode found */
-	struct buffer	data;		/* associated data, if any */
+	enum opcodetype		op;		/* opcode found */
+	struct const_buffer	data;		/* associated data, if any */
 				
 };
 
@@ -188,7 +188,8 @@ static inline bool is_bsp_pushdata(enum opcodetype op)
 	return (op <= OP_PUSHDATA4);
 }
 
-static inline void bsp_start(struct bscript_parser *bp, struct buffer *buf)
+static inline void bsp_start(struct bscript_parser *bp,
+			     struct const_buffer *buf)
 {
 	bp->buf = buf;
 	bp->error = false;

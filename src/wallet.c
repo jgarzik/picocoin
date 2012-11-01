@@ -24,7 +24,7 @@ static char *wallet_filename(void)
 	return filename;
 }
 
-static bool deser_wallet_root(struct wallet *wlt, struct buffer *buf)
+static bool deser_wallet_root(struct wallet *wlt, struct const_buffer *buf)
 {
 	if (!deser_u32(&wlt->version, buf)) return false;
 	if (!deser_bytes(&wlt->netmagic[0], buf, 4)) return false;
@@ -63,9 +63,9 @@ err_out:
 	return false;
 }
 
-static bool load_rec_root(struct wallet *wlt, void *data, size_t data_len)
+static bool load_rec_root(struct wallet *wlt, const void *data, size_t data_len)
 {
-	struct buffer buf = { data, data_len };
+	struct const_buffer buf = { data, data_len };
 
 	if (!deser_wallet_root(wlt, &buf)) return false;
 
@@ -83,7 +83,7 @@ static bool load_rec_root(struct wallet *wlt, void *data, size_t data_len)
 	return true;
 }
 
-static bool load_record(struct wallet *wlt, struct p2p_message *msg)
+static bool load_record(struct wallet *wlt, const struct p2p_message *msg)
 {
 	if (!strncmp(msg->hdr.command, "privkey", sizeof(msg->hdr.command)))
 		return load_rec_privkey(wlt, msg->data, msg->hdr.data_len);
@@ -121,7 +121,7 @@ struct wallet *load_wallet(void)
 
 	wlt->keys = g_ptr_array_new_full(1000, g_free);
 
-	struct buffer buf = { data->str, data->len };
+	struct const_buffer buf = { data->str, data->len };
 	struct mbuf_reader mbr;
 
 	mbr_init(&mbr, &buf);

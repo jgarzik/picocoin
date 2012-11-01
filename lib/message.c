@@ -15,7 +15,7 @@ void parse_message_hdr(struct p2p_message_hdr *hdr, const unsigned char *data)
 	hdr->data_len = GUINT32_FROM_LE(hdr->data_len);
 }
 
-bool message_valid(struct p2p_message *msg)
+bool message_valid(const struct p2p_message *msg)
 {
 	if (!msg || !msg->data)
 		return false;
@@ -60,7 +60,7 @@ GString *message_str(const unsigned char netmagic[4],
 	return s;
 }
 
-bool deser_msg_version(struct msg_version *mv, struct buffer *buf)
+bool deser_msg_version(struct msg_version *mv, struct const_buffer *buf)
 {
 	memset(mv, 0, sizeof(*mv));
 
@@ -102,7 +102,7 @@ GString *ser_msg_version(const struct msg_version *mv)
 }
 
 bool deser_msg_addr(unsigned int protover, struct msg_addr *ma,
-		    struct buffer *buf)
+		    struct const_buffer *buf)
 {
 	memset(ma, 0, sizeof(*ma));
 

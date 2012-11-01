@@ -6,7 +6,7 @@
 #include <ccoin/mbr.h>
 #include <ccoin/message.h>
 
-void mbr_init(struct mbuf_reader *mbr, struct buffer *buf)
+void mbr_init(struct mbuf_reader *mbr, struct const_buffer *buf)
 {
 	memset(mbr, 0, sizeof(*mbr));
 
@@ -15,7 +15,7 @@ void mbr_init(struct mbuf_reader *mbr, struct buffer *buf)
 
 bool mbr_read(struct mbuf_reader *mbr)
 {
-	struct buffer *buf = mbr->buf;
+	struct const_buffer *buf = mbr->buf;
 
 	if (buf->len == 0) {
 		mbr->eof = true;
@@ -36,7 +36,7 @@ bool mbr_read(struct mbuf_reader *mbr)
 		return false;
 	}
 
-	mbr->msg.data = buf->p;
+	mbr->msg.data = (void *) buf->p;
 	buf->p += data_len;
 	buf->len -= data_len;
 

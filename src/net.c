@@ -281,7 +281,7 @@ static bool nc_msg_version(struct nc_conn *conn)
 		return false;
 	conn->seen_version = true;
 
-	struct buffer buf = { conn->msg.data, conn->msg.hdr.data_len };
+	struct const_buffer buf = { conn->msg.data, conn->msg.hdr.data_len };
 	struct msg_version mv;
 	bool rc = false;
 
@@ -310,7 +310,7 @@ out:
 
 static bool nc_msg_addr(struct nc_conn *conn)
 {
-	struct buffer buf = { conn->msg.data, conn->msg.hdr.data_len };
+	struct const_buffer buf = { conn->msg.data, conn->msg.hdr.data_len };
 	struct msg_addr ma;
 	bool rc = false;
 

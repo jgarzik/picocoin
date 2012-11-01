@@ -14,7 +14,7 @@
 
 static void add_header(struct blkdb *db, char *raw)
 {
-	struct buffer buf = { raw, 80 };
+	struct const_buffer buf = { raw, 80 };
 
 	struct blkinfo *bi = bi_new();
 	assert(bi != NULL);

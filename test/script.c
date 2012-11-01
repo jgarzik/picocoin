@@ -17,8 +17,8 @@
 
 static void test_txout(const struct bp_txout *txout)
 {
-	struct buffer buf = { txout->scriptPubKey->str,
-			      txout->scriptPubKey->len };
+	struct const_buffer buf = { txout->scriptPubKey->str,
+				    txout->scriptPubKey->len };
 
 	struct bscript_parser bsp;
 	struct bscript_op op;
@@ -87,7 +87,7 @@ static void runtest(const char *ser_fn_base)
 	struct bp_block block;
 	bp_block_init(&block);
 
-	struct buffer buf = { msg.data, msg.hdr.data_len };
+	struct const_buffer buf = { msg.data, msg.hdr.data_len };
 
 	rc = deser_bp_block(&block, &buf);
 	assert(rc);

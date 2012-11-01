@@ -10,7 +10,7 @@
 #include <ccoin/serialize.h>
 
 bool deser_bp_addr(unsigned int protover,
-		struct bp_address *addr, struct buffer *buf)
+		struct bp_address *addr, struct const_buffer *buf)
 {
 	if (protover >= CADDR_TIME_VERSION)
 		if (!deser_u32(&addr->nTime, buf)) return false;
@@ -34,7 +34,7 @@ void bp_inv_init(struct bp_inv *inv)
 	memset(inv, 0, sizeof(*inv));
 }
 
-bool deser_bp_inv(struct bp_inv *inv, struct buffer *buf)
+bool deser_bp_inv(struct bp_inv *inv, struct const_buffer *buf)
 {
 	if (!deser_u32(&inv->type, buf)) return false;
 	if (!deser_u256(&inv->hash, buf)) return false;
@@ -52,7 +52,7 @@ void bp_locator_init(struct bp_locator *locator)
 	memset(locator, 0, sizeof(*locator));
 }
 
-bool deser_bp_locator(struct bp_locator *locator, struct buffer *buf)
+bool deser_bp_locator(struct bp_locator *locator, struct const_buffer *buf)
 {
 	if (!deser_u32(&locator->nVersion, buf)) return false;
 
@@ -121,7 +121,7 @@ void bp_outpt_init(struct bp_outpt *outpt)
 	memset(outpt, 0, sizeof(*outpt));
 }
 
-bool deser_bp_outpt(struct bp_outpt *outpt, struct buffer *buf)
+bool deser_bp_outpt(struct bp_outpt *outpt, struct const_buffer *buf)
 {
 	if (!deser_u256(&outpt->hash, buf)) return false;
 	if (!deser_u32(&outpt->n, buf)) return false;
@@ -140,7 +140,7 @@ void bp_txin_init(struct bp_txin *txin)
 	bp_outpt_init(&txin->prevout);
 }
 
-bool deser_bp_txin(struct bp_txin *txin, struct buffer *buf)
+bool deser_bp_txin(struct bp_txin *txin, struct const_buffer *buf)
 {
 	if (!deser_bp_outpt(&txin->prevout, buf)) return false;
 	if (!deser_varstr(&txin->scriptSig, buf)) return false;
@@ -170,7 +170,7 @@ void bp_txout_init(struct bp_txout *txout)
 	memset(txout, 0, sizeof(*txout));
 }
 
-bool deser_bp_txout(struct bp_txout *txout, struct buffer *buf)
+bool deser_bp_txout(struct bp_txout *txout, struct const_buffer *buf)
 {
 	if (!deser_s64(&txout->nValue, buf)) return false;
 	if (!deser_varstr(&txout->scriptPubKey, buf)) return false;
@@ -196,7 +196,7 @@ void bp_tx_init(struct bp_tx *tx)
 	memset(tx, 0, sizeof(*tx));
 }
 
-bool deser_bp_tx(struct bp_tx *tx, struct buffer *buf)
+bool deser_bp_tx(struct bp_tx *tx, struct const_buffer *buf)
 {
 	tx->vin = g_ptr_array_new_full(8, g_free);
 	tx->vout = g_ptr_array_new_full(8, g_free);
@@ -382,7 +382,7 @@ void bp_block_init(struct bp_block *block)
 	memset(block, 0, sizeof(*block));
 }
 
-bool deser_bp_block(struct bp_block *block, struct buffer *buf)
+bool deser_bp_block(struct bp_block *block, struct const_buffer *buf)
 {
 	block->vtx = g_ptr_array_new_full(512, g_free);
 

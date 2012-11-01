@@ -137,7 +137,7 @@ out:
 static bool blkdb_read_rec(struct blkdb *db, const struct p2p_message *msg)
 {
 	struct blkinfo *bi;
-	struct buffer buf = { msg->data, msg->hdr.data_len };
+	struct const_buffer buf = { msg->data, msg->hdr.data_len };
 
 	if (strncmp(msg->hdr.command, "rec", 12))
 		return false;

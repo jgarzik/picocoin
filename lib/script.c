@@ -74,7 +74,7 @@ err_out:
 
 GPtrArray *bsp_parse_all(const void *data_, size_t data_len)
 {
-	struct buffer buf = { (void *) data_, data_len };
+	struct const_buffer buf = { data_, data_len };
 	struct bscript_parser bp;
 	struct bscript_op op;
 	GPtrArray *arr = g_ptr_array_new_full(16, g_free);

@@ -23,7 +23,7 @@ struct p2p_message {
 };
 
 extern void parse_message_hdr(struct p2p_message_hdr *hdr, const unsigned char *data);
-extern bool message_valid(struct p2p_message *msg);
+extern bool message_valid(const struct p2p_message *msg);
 extern GString *message_str(const unsigned char netmagic[4],
 		     const char *command_,
 		     const void *data, uint32_t data_len);
@@ -44,7 +44,7 @@ static inline void msg_version_init(struct msg_version *mv)
 	memset(mv, 0, sizeof(*mv));
 }
 
-extern bool deser_msg_version(struct msg_version *mv, struct buffer *buf);
+extern bool deser_msg_version(struct msg_version *mv, struct const_buffer *buf);
 extern GString *ser_msg_version(const struct msg_version *mv);
 static inline void msg_version_free(struct msg_version *mv) {}
 
@@ -57,7 +57,8 @@ static inline void msg_addr_init(struct msg_addr *ma)
 	memset(ma, 0, sizeof(*ma));
 }
 
-extern bool deser_msg_addr(unsigned int protover, struct msg_addr *ma, struct buffer *buf);
+extern bool deser_msg_addr(unsigned int protover, struct msg_addr *ma,
+			   struct const_buffer *buf);
 extern GString *ser_msg_addr(unsigned int protover, const struct msg_addr *ma);
 extern void msg_addr_free(struct msg_addr *ma);
 
