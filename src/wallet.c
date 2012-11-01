@@ -6,7 +6,6 @@
 #include <string.h>
 #include <openssl/ripemd.h>
 #include <glib.h>
-#include <jansson.h>
 #include <ccoin/coredefs.h>
 #include "picocoin.h"
 #include "wallet.h"
@@ -332,7 +331,7 @@ void wallet_addresses(void)
 		return;
 	struct wallet *wlt = cur_wallet;
 
-	json_t *arr = json_array();
+	printf("[\n");
 
 	if (!wlt->keys)
 		goto out;
@@ -346,15 +345,15 @@ void wallet_addresses(void)
 
 		btc_addr = bp_pubkey_get_address(key, 0);
 
-		json_array_append_new(arr, json_string(btc_addr->str));
+		printf("  \"%s\"%s\n",
+		       btc_addr->str,
+		       i == (wlt->keys->len - 1) ? "" : ",");
 
 		g_string_free(btc_addr, TRUE);
 	}
 
 out:
-	json_dumpf(arr, stdout, JSON_INDENT(2) | JSON_SORT_KEYS);
-	putc('\n', stdout);
-	json_decref(arr);
+	printf("]\n");
 }
 
 void wallet_info(void)
@@ -363,22 +362,16 @@ void wallet_info(void)
 		return;
 	struct wallet *wlt = cur_wallet;
 
-	json_t *obj = json_object();
+	printf("{\n");
 
-	json_object_set_new(obj, "version", json_integer(wlt->version));
-	json_object_set_new(obj, "n_privkeys",
-		json_integer(wlt->keys ? wlt->keys->len : 0));
-
-	char nmstr[32];
-	sprintf(nmstr, "%02x%02x%02x%02x",
+	printf("  \"version\": %u,\n", wlt->version);
+	printf("  \"n_privkeys\": %u,\n", wlt->keys ? wlt->keys->len : 0U);
+	printf("  \"netmagic\": %02x%02x%02x%02x\n",
 	       wlt->netmagic[0],
 	       wlt->netmagic[1],
 	       wlt->netmagic[2],
 	       wlt->netmagic[3]);
-	json_object_set_new(obj, "netmagic", json_string(nmstr));
 
-	json_dumpf(obj, stdout, JSON_INDENT(2) | JSON_SORT_KEYS);
-	putc('\n', stdout);
-	json_decref(obj);
+	printf("}\n");
 }
 
