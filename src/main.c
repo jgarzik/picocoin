@@ -13,6 +13,7 @@
 #include <glib.h>
 #include <openssl/bn.h>
 #include <openssl/rand.h>
+#include <jansson.h>
 #include "picocoin.h"
 #include <ccoin/coredefs.h>
 #include "wallet.h"
@@ -123,26 +124,31 @@ static bool preload_settings(void)
 	return true;
 }
 
-static void list_setting_iter(gpointer key_, gpointer value_, gpointer dummy)
+static void list_setting_iter(gpointer key_, gpointer value_, gpointer obj_)
 {
 	char *key = key_;
 	char *value = value_;
+	json_t *obj = obj_;
 
-	printf("%s=%s\n", key, value);
+	json_object_set_new(obj, key, json_string(value));
 }
 
 static void list_settings(void)
 {
-	printf("=SETTINGS\n");
-	g_hash_table_foreach(settings, list_setting_iter, NULL);
-	printf("=END_SETTINGS\n");
+	json_t *obj = json_object();
+	g_hash_table_foreach(settings, list_setting_iter, obj);
+
+	json_dumpf(obj, stdout, JSON_INDENT(2) | JSON_SORT_KEYS);
+	putc('\n', stdout);
+
+	json_decref(obj);
 }
 
 static void list_dns_seeds(void)
 {
 	GList *tmp, *addrlist = bu_dns_seed_addrs();
 
-	printf("=DNS_SEEDS\n");
+	json_t *arr = json_array();
 
 	for (tmp = addrlist; tmp != NULL; tmp = tmp->next) {
 		struct bp_address *addr = tmp->data;
@@ -171,16 +177,22 @@ static void list_dns_seeds(void)
 				    NULL, 0, NI_NUMERICHOST);
 		}
 
-		printf("v%c %s %u %llu\n",
-		       is_ipv4 ? '4' : '6',
-		       host,
-		       addr->port,
-		       (unsigned long long) addr->nServices);
+		json_t *inner = json_array();
+		json_array_append_new(inner,
+			is_ipv4 ? json_true() : json_false());
+		json_array_append_new(inner, json_string(host));
+		json_array_append_new(inner, json_integer(addr->port));
+		json_array_append_new(inner, json_integer(addr->nServices));
+
+		json_array_append_new(arr, inner);
 	}
 
 	g_list_free_full(addrlist, g_free);
 
-	printf("=END_DNS_SEEDS\n");
+	json_dumpf(arr, stdout, JSON_INDENT(2) | JSON_SORT_KEYS);
+	putc('\n', stdout);
+
+	json_decref(arr);
 }
 
 static void chain_set(void)

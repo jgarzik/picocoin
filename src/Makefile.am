@@ -12,5 +12,6 @@ picocoin_SOURCES=	\
 	picocoin.h	\
 	wallet.c wallet.h
 
-picocoin_LDADD	= ../lib/libccoin.a @GLIB_LIBS@ @CRYPTO_LIBS@ @EVENT_LIBS@
+picocoin_LDADD	= ../lib/libccoin.a \
+		  @GLIB_LIBS@ @CRYPTO_LIBS@ @EVENT_LIBS@ @JANSSON_LIBS@
 
