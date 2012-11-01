@@ -47,6 +47,11 @@ bool bp_privkey_set(struct bp_key *key, const void *privkey_, size_t pk_len)
 	const unsigned char *privkey = privkey_;
 	if (!d2i_ECPrivateKey(&key->k, &privkey, pk_len))
 		return false;
+	if (!EC_KEY_check_key(key->k))
+		return false;
+
+	EC_KEY_set_conv_form(key->k, POINT_CONVERSION_COMPRESSED);
+
 	return true;
 }
 
