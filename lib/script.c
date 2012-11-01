@@ -4,6 +4,21 @@
 #include <ccoin/script.h>
 #include <ccoin/serialize.h>
 
+static const unsigned char stdscr_pubkey[] = {
+	OP_PUBKEY, OP_CHECKSIG,
+};
+static const unsigned char stdscr_pubkeyhash[] = {
+	OP_DUP, OP_HASH160, OP_PUBKEYHASH, OP_EQUALVERIFY, OP_CHECKSIG,
+};
+
+static const struct {
+	size_t			len;
+	const unsigned char	*script;
+} std_scripts[] = {
+	{ sizeof(stdscr_pubkey), stdscr_pubkey, },
+	{ sizeof(stdscr_pubkeyhash), stdscr_pubkeyhash, },
+};
+
 bool bsp_getop(struct bscript_op *op, struct bscript_parser *bp)
 {
 	if (bp->buf->len == 0)
@@ -55,6 +70,27 @@ bool bsp_getop(struct bscript_op *op, struct bscript_parser *bp)
 err_out:
 	bp->error = true;
 	return false;
+}
+
+GPtrArray *bsp_parse_all(const void *data_, size_t data_len)
+{
+	struct buffer buf = { (void *) data_, data_len };
+	struct bscript_parser bp;
+	struct bscript_op op;
+	GPtrArray *arr = g_ptr_array_new_full(16, g_free);
+
+	bsp_start(&bp, &buf);
+
+	while (bsp_getop(&op, &bp))
+		g_ptr_array_add(arr, g_memdup(&op, sizeof(op)));
+	if (bp.error)
+		goto err_out;
+
+	return arr;
+
+err_out:
+	g_ptr_array_free(arr, TRUE);
+	return NULL;
 }
 
 void bsp_push_data(GString *s, const void *data, size_t data_len)

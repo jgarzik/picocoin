@@ -176,25 +176,35 @@ struct bscript_op {
 
 extern const char *GetOpName(enum opcodetype opcode);
 
+/*
+ * script parsing
+ */
+
 extern bool bsp_getop(struct bscript_op *op, struct bscript_parser *bp);
-extern void bsp_push_data(GString *s, const void *data, size_t data_len);
+extern GPtrArray *bsp_parse_all(const void *data_, size_t data_len);
 
 static inline bool is_bsp_pushdata(enum opcodetype op)
 {
 	return (op <= OP_PUSHDATA4);
 }
 
+static inline void bsp_start(struct bscript_parser *bp, struct buffer *buf)
+{
+	bp->buf = buf;
+	bp->error = false;
+}
+
+/*
+ * script building
+ */
+
+extern void bsp_push_data(GString *s, const void *data, size_t data_len);
+
 static inline void bsp_push_op(GString *s, enum opcodetype op)
 {
 	uint8_t c = (uint8_t) op;
 
 	g_string_append_len(s, (gchar *) &c, sizeof(c));
-}
-
-static inline void bsp_start(struct bscript_parser *bp, struct buffer *buf)
-{
-	bp->buf = buf;
-	bp->error = false;
 }
 
 #endif /* __LIBCCOIN_SCRIPT_H__ */
