@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <assert.h>
 #include <jansson.h>
 #include <glib.h>
@@ -30,6 +31,8 @@ static void runtest(const char *json_fn_base, const char *ser_fn_base)
 	assert(rc);
 	assert(read_ok);
 	assert(!strncmp(msg.hdr.command, "block", 12));
+
+	close(fd);
 
 	const char *hashstr = json_string_value(json_object_get(meta, "hash"));
 	assert(hashstr != NULL);

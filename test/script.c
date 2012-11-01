@@ -1,12 +1,18 @@
 
 #include "picocoin-config.h"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <string.h>
 #include <assert.h>
+#include <unistd.h>
 #include <glib.h>
 #include <ccoin/util.h>
 #include <ccoin/script.h>
 #include <ccoin/core.h>
+#include <ccoin/mbr.h>
+#include <ccoin/message.h>
 #include "libtest.h"
 
 static void test_txout(const struct bp_txout *txout)
@@ -63,31 +69,43 @@ static void test_txout(const struct bp_txout *txout)
 static void runtest(const char *ser_fn_base)
 {
 	char *ser_fn = test_filename(ser_fn_base);
-
-	void *data = NULL;
-	size_t data_len = 0;
-
-	bool rc = bu_read_file(ser_fn, &data, &data_len, 100 * 1024 * 1024);
-	assert(rc);
-
-	struct bp_tx tx;
-	bp_tx_init(&tx);
-
-	struct buffer buf = { data, data_len };
-
-	rc = deser_bp_tx(&tx, &buf);
-	assert(rc);
-
-	unsigned int n_out;
-	for (n_out = 0; n_out < tx.vout->len; n_out++) {
-		struct bp_txout *txout;
-
-		txout = g_ptr_array_index(tx.vout, n_out);
-		test_txout(txout);
+	int fd = open(ser_fn, O_RDONLY);
+	if (fd < 0) {
+		perror(ser_fn);
+		exit(1);
 	}
 
-	bp_tx_free(&tx);
-	free(data);
+	struct p2p_message msg = {};
+	bool read_ok = false;
+	bool rc = fread_message(fd, &msg, &read_ok);
+	assert(rc);
+	assert(read_ok);
+	assert(!strncmp(msg.hdr.command, "block", 12));
+
+	close(fd);
+
+	struct bp_block block;
+	bp_block_init(&block);
+
+	struct buffer buf = { msg.data, msg.hdr.data_len };
+
+	rc = deser_bp_block(&block, &buf);
+	assert(rc);
+
+	unsigned int n_tx, n_out;
+	for (n_tx = 0; n_tx < block.vtx->len; n_tx++) {
+		struct bp_tx *tx = g_ptr_array_index(block.vtx, n_tx);
+
+		for (n_out = 0; n_out < tx->vout->len; n_out++) {
+			struct bp_txout *txout;
+
+			txout = g_ptr_array_index(tx->vout, n_out);
+			test_txout(txout);
+		}
+	}
+
+	bp_block_free(&block);
+	free(msg.data);
 	free(ser_fn);
 }
 
@@ -99,7 +117,7 @@ int main (int argc, char *argv[])
 	opn = GetOpName(OP_INVALIDOPCODE);
 	assert(!strcmp(opn, "<unknown>"));
 
-	runtest("tx3e0dc3da.ser");
+	runtest("blk120383.ser");
 
 	return 0;
 }
