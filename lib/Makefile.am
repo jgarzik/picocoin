@@ -8,12 +8,14 @@ libccoin_a_SOURCES=	\
 	base58.c	\
 	bignum.c	\
 	blkdb.c		\
+	buffer.c	\
 	buint.c		\
 	core.c		\
 	coredefs.c	\
 	dns.c		\
 	hexcode.c	\
 	key.c		\
+	keyset.c	\
 	mbr.c		\
 	message.c	\
 	script.c	\
