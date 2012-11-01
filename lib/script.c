@@ -3,6 +3,8 @@
 
 #include <ccoin/script.h>
 #include <ccoin/serialize.h>
+#include <ccoin/util.h>
+#include <ccoin/buffer.h>
 
 static const unsigned char stdscr_pubkey[] = {
 	OP_PUBKEY, OP_CHECKSIG,
@@ -12,11 +14,12 @@ static const unsigned char stdscr_pubkeyhash[] = {
 };
 
 static const struct {
+	enum txnouttype		txtype;
 	size_t			len;
 	const unsigned char	*script;
 } std_scripts[] = {
-	{ sizeof(stdscr_pubkey), stdscr_pubkey, },
-	{ sizeof(stdscr_pubkeyhash), stdscr_pubkeyhash, },
+	{ TX_PUBKEY, sizeof(stdscr_pubkey), stdscr_pubkey, },
+	{ TX_PUBKEYHASH, sizeof(stdscr_pubkeyhash), stdscr_pubkeyhash, },
 };
 
 bool bsp_getop(struct bscript_op *op, struct bscript_parser *bp)
@@ -91,6 +94,103 @@ GPtrArray *bsp_parse_all(const void *data_, size_t data_len)
 err_out:
 	g_ptr_array_free(arr, TRUE);
 	return NULL;
+}
+
+static bool bsp_match_op(const struct bscript_op *op, unsigned char template)
+{
+	switch (template) {
+
+	case OP_PUBKEY:
+		if (!is_bsp_pushdata(op->op))
+			return false;
+		if (op->data.len < 33 || op->data.len > 120)
+			return false;
+		return true;
+
+	case OP_PUBKEYHASH:
+		if (!is_bsp_pushdata(op->op))
+			return false;
+		if (op->data.len != 20)
+			return false;
+		return true;
+
+	default:
+		if (is_bsp_pushdata(op->op))
+			return false;
+
+		return (op->op == template);
+	}
+}
+
+enum txnouttype bsp_classify(GPtrArray *ops)
+{
+	unsigned int n_scr;
+
+	for (n_scr = 0; n_scr < ARRAY_SIZE(std_scripts); n_scr++) {
+		const unsigned char *script = std_scripts[n_scr].script;
+		size_t slen = std_scripts[n_scr].len;
+
+		/* easy check: varying script length */
+		if (ops->len != slen)
+			continue;
+
+		/* verify each op matches template character's op */
+		unsigned int i;
+		bool match = true;
+		for (i = 0; i < slen; i++) {
+			struct bscript_op *op;
+
+			op = g_ptr_array_index(ops, i);
+
+			match = bsp_match_op(op, script[i]);
+			if (!match)
+				break;
+		}
+
+		if (!match)
+			continue;
+
+		return std_scripts[n_scr].txtype;
+	}
+
+	return TX_NONSTANDARD;
+}
+
+bool bsp_parse_addr(struct bscript_addr *addr,
+		    const void *data, size_t data_len)
+{
+	memset(addr, 0, sizeof(*addr));
+
+	GPtrArray *ops = bsp_parse_all(data, data_len);
+	if (!ops)
+		return false;
+
+	enum txnouttype txtype = bsp_classify(ops);
+	switch (txtype) {
+
+	case TX_PUBKEY: {
+		struct bscript_op *op = g_ptr_array_index(ops, 0);
+		struct buffer *buf = buffer_copy(op->data.p, op->data.len);
+		addr->pub = g_list_append(addr->pub, buf);
+		break;
+	}
+
+	case TX_PUBKEYHASH: {
+		struct bscript_op *op = g_ptr_array_index(ops, 2);
+		struct buffer *buf = buffer_copy(op->data.p, op->data.len);
+		addr->pubhash = g_list_append(addr->pub, buf);
+		break;
+	}
+	
+	default:
+		/* do nothing */
+		break;
+	}
+
+	addr->txtype = txtype;
+
+	g_ptr_array_free(ops, TRUE);
+	return true;
 }
 
 void bsp_push_data(GString *s, const void *data, size_t data_len)

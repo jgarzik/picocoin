@@ -16,6 +16,16 @@ enum
 	SIGHASH_ANYONECANPAY = 0x80,
 };
 
+enum txnouttype
+{
+	TX_NONSTANDARD,
+	// 'standard' transaction types:
+	TX_PUBKEY,
+	TX_PUBKEYHASH,
+	TX_SCRIPTHASH,
+	TX_MULTISIG,
+};
+
 /** Script opcodes */
 enum opcodetype
 {
@@ -174,6 +184,12 @@ struct bscript_op {
 				
 };
 
+struct bscript_addr {
+	enum txnouttype		txtype;
+	GList			*pub;		/* of struct buffer */
+	GList			*pubhash;	/* of struct buffer */
+};
+
 extern const char *GetOpName(enum opcodetype opcode);
 
 /*
@@ -182,6 +198,9 @@ extern const char *GetOpName(enum opcodetype opcode);
 
 extern bool bsp_getop(struct bscript_op *op, struct bscript_parser *bp);
 extern GPtrArray *bsp_parse_all(const void *data_, size_t data_len);
+extern enum txnouttype bsp_classify(GPtrArray *ops);
+extern bool bsp_parse_addr(struct bscript_addr *addr,
+		    const void *data, size_t data_len);
 
 static inline bool is_bsp_pushdata(enum opcodetype op)
 {
