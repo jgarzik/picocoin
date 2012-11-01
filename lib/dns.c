@@ -37,6 +37,7 @@ static GList *add_seed_addr(GList *l, const struct addrinfo *ai)
 		goto err_out;
 
 	addr->port = 8333;
+	addr->nServices = NODE_NETWORK;
 
 	l = g_list_append(l, addr);
 
