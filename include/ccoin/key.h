@@ -28,7 +28,7 @@ struct bp_keyset {
 
 extern void bpks_init(struct bp_keyset *ks);
 extern bool bpks_add(struct bp_keyset *ks, struct bp_key *key);
-extern bool bpks_lookup(struct bp_keyset *ks, const void *data, size_t data_len,
+extern bool bpks_lookup(const struct bp_keyset *ks, const void *data, size_t data_len,
 		 bool is_pubkeyhash);
 extern void bpks_free(struct bp_keyset *ks);
 

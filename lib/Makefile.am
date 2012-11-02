@@ -5,6 +5,7 @@ noinst_LIBRARIES= libccoin.a
 
 libccoin_a_SOURCES=	\
 	address.c	\
+	addr_match.c	\
 	base58.c	\
 	bignum.c	\
 	blkdb.c		\

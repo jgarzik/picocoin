@@ -1,6 +1,7 @@
 
 EXTRA_DIST = \
 	address.h	\
+	addr_match.h	\
 	base58.h	\
 	blkdb.h		\
 	buffer.h	\

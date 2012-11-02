@@ -41,7 +41,7 @@ bool bpks_add(struct bp_keyset *ks, struct bp_key *key)
 	return true;
 }
 
-bool bpks_lookup(struct bp_keyset *ks, const void *data, size_t data_len,
+bool bpks_lookup(const struct bp_keyset *ks, const void *data, size_t data_len,
 		 bool is_pubkeyhash)
 {
 	struct const_buffer buf = { data, data_len };
