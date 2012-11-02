@@ -41,6 +41,9 @@ static void runtest (void)
 	assert(bloom.vData->len == bloom2.vData->len);
 	assert(memcmp(bloom.vData->str, bloom2.vData->str, bloom2.vData->len) == 0);
 
+	assert(bloom_contains(&bloom2, md1, sizeof(md1)) == true);
+	assert(bloom_contains(&bloom2, md2, sizeof(md2)) == false);
+
 	bloom_free(&bloom2);
 
 	bloom_free(&bloom);
