@@ -27,24 +27,21 @@ static void runtest (void)
 	assert(bloom_contains(&bloom, md1, sizeof(md1)) == true);
 	assert(bloom_contains(&bloom, md2, sizeof(md2)) == false);
 
-#if 0
-	// FIXME
 	GString *ser = g_string_sized_new(1024);
 	ser_bloom(ser, &bloom);
 
 	struct bloom bloom2;
-	__bloom_init(&bloom);
+	__bloom_init(&bloom2);
 
 	struct const_buffer buf = { ser->str, ser->len };
 
-	assert(deser_bloom(&bloom, &buf) == true);
+	assert(deser_bloom(&bloom2, &buf) == true);
 
+	assert(bloom.nHashFuncs == bloom2.nHashFuncs);
 	assert(bloom.vData->len == bloom2.vData->len);
 	assert(memcmp(bloom.vData->str, bloom2.vData->str, bloom2.vData->len) == 0);
-	assert(bloom.nHashFuncs == bloom2.nHashFuncs);
 
 	bloom_free(&bloom2);
-#endif
 
 	bloom_free(&bloom);
 }
