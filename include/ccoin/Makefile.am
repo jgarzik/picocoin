@@ -4,6 +4,7 @@ EXTRA_DIST = \
 	addr_match.h	\
 	base58.h	\
 	blkdb.h		\
+	bloom.h		\
 	buffer.h	\
 	buint.h		\
 	coredefs.h	\
