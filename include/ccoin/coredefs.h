@@ -1,5 +1,9 @@
 #ifndef __LIBCCOIN_COREDEFS_H__
 #define __LIBCCOIN_COREDEFS_H__
+/* Copyright 2012 exMULTI, Inc.
+ * Distributed under the MIT/X11 software license, see the accompanying
+ * file COPYING or http://www.opensource.org/licenses/mit-license.php.
+ */
 
 enum {
 	CADDR_TIME_VERSION	= 31402,
