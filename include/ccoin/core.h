@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include <glib.h>
 #include <ccoin/buffer.h>
 #include <ccoin/buint.h>
@@ -28,6 +29,11 @@ struct bp_address {
 	unsigned char	ip[16];
 	uint16_t	port;
 };
+
+static inline void bp_addr_init(struct bp_address *addr)
+{
+	memset(addr, 0, sizeof(*addr));
+}
 
 extern bool deser_bp_addr(unsigned int protover,
 		struct bp_address *addr, struct const_buffer *buf);
