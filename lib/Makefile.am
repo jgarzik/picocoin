@@ -9,6 +9,7 @@ libccoin_a_SOURCES=	\
 	base58.c	\
 	bignum.c	\
 	blkdb.c		\
+	block.c		\
 	bloom.c		\
 	buffer.c	\
 	buint.c		\
