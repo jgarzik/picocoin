@@ -19,6 +19,7 @@ struct wallet {
 extern void wallet_new_address(void);
 extern void wallet_create(void);
 extern void wallet_info(void);
+extern void wallet_dump(void);
 extern void wallet_addresses(void);
 extern void cur_wallet_free(void);
 

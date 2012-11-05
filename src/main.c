@@ -237,6 +237,7 @@ static bool is_command(const char *s)
 		!strcmp(s, "netsync") ||
 		!strcmp(s, "version") ||
 		!strcmp(s, "wallet-addr") ||
+		!strcmp(s, "wallet-dump") ||
 		!strcmp(s, "wallet-info")
 		;
 }
@@ -269,6 +270,9 @@ static bool do_command(const char *s)
 
 	else if (!strcmp(s, "wallet-info"))
 		wallet_info();
+
+	else if (!strcmp(s, "wallet-dump"))
+		wallet_dump();
 
 	return true;
 }

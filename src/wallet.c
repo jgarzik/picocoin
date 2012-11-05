@@ -18,6 +18,7 @@
 #include <ccoin/key.h>
 #include <ccoin/util.h>
 #include <ccoin/mbr.h>
+#include <ccoin/hexcode.h>
 
 static struct wallet *wallet_new(void)
 {
@@ -358,7 +359,7 @@ void wallet_addresses(void)
 
 		key = g_ptr_array_index(wlt->keys, i);
 
-		btc_addr = bp_pubkey_get_address(key, 0);
+		btc_addr = bp_pubkey_get_address(key, chain->addr_pubkey);
 
 		printf("  \"%s\"%s\n",
 		       btc_addr->str,
@@ -386,6 +387,79 @@ void wallet_info(void)
 	       wlt->netmagic[1],
 	       wlt->netmagic[2],
 	       wlt->netmagic[3]);
+
+	printf("}\n");
+}
+
+static void wallet_dump_keys(struct wallet *wlt)
+{
+	if (!wlt->keys)
+		return;
+
+	unsigned int i;
+	for (i = 0; i < wlt->keys->len; i++) {
+		struct bp_key *key;
+		GString *btc_addr;
+
+		key = g_ptr_array_index(wlt->keys, i);
+
+		void *privkey = NULL, *pubkey = NULL;
+		char *privkey_str = NULL, *pubkey_str = NULL;
+		size_t priv_len = 0, pub_len = 0;
+
+		if (!bp_privkey_get(key, &privkey, &priv_len)) {
+			free(privkey);
+			privkey = NULL;
+			priv_len = 0;
+		}
+
+		if (!bp_pubkey_get(key, &pubkey, &pub_len)) {
+			free(privkey);
+			continue;
+		}
+
+		privkey_str = calloc(1, (priv_len * 2) + 1);
+		if (priv_len)
+			encode_hex(privkey_str, privkey, priv_len);
+		pubkey_str = calloc(1, (pub_len * 2) + 1);
+		encode_hex(pubkey_str, pubkey, pub_len);
+
+		btc_addr = bp_pubkey_get_address(key, chain->addr_pubkey);
+
+		printf("  [ \"%s\", \"%s\", \"%s\" ]%s\n",
+		       btc_addr->str,
+		       pubkey_str,
+		       privkey_str,
+		       (i == (wlt->keys->len - 1)) ? "" : ",");
+
+		free(privkey);
+		free(privkey_str);
+		free(pubkey);
+		free(pubkey_str);
+		g_string_free(btc_addr, TRUE);
+	}
+}
+
+void wallet_dump(void)
+{
+	if (!cur_wallet_load())
+		return;
+	struct wallet *wlt = cur_wallet;
+
+	printf("{\n");
+
+	printf("  \"version\": %u,\n", wlt->version);
+	printf("  \"netmagic\": %02x%02x%02x%02x,\n",
+	       wlt->netmagic[0],
+	       wlt->netmagic[1],
+	       wlt->netmagic[2],
+	       wlt->netmagic[3]);
+
+	printf("  \"keys\": [\n");
+
+	wallet_dump_keys(wlt);
+
+	printf("  ]\n");
 
 	printf("}\n");
 }
