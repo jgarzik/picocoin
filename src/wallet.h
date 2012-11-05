@@ -16,9 +16,6 @@ struct wallet {
 	GPtrArray	*keys;
 };
 
-extern struct wallet *load_wallet(void);
-extern bool store_wallet(struct wallet *);
-extern void wallet_free(struct wallet *);
 extern void wallet_new_address(void);
 extern void wallet_create(void);
 extern void wallet_info(void);

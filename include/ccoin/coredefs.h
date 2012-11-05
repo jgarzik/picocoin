@@ -11,6 +11,13 @@ enum {
 	MAX_BLOCK_SIZE		= 1000000,
 };
 
+enum bp_address_type {
+	PUBKEY_ADDRESS = 0,
+	SCRIPT_ADDRESS = 5,
+	PUBKEY_ADDRESS_TEST = 111,
+	SCRIPT_ADDRESS_TEST = 196,
+};
+
 enum chains {
 	CHAIN_BITCOIN,
 	CHAIN_TESTNET3,
@@ -21,6 +28,10 @@ enum chains {
 struct chain_info {
 	enum chains		chain_id;
 	const char		*name;		/* "bitcoin", "testnet3" */
+
+	unsigned char		addr_pubkey;
+	unsigned char		addr_script;
+
 	unsigned char		netmagic[4];
 	const char		*genesis_hash;	/* hex string */
 };

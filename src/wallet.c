@@ -19,6 +19,38 @@
 #include <ccoin/util.h>
 #include <ccoin/mbr.h>
 
+static struct wallet *wallet_new(void)
+{
+	struct wallet *wlt;
+
+	wlt = calloc(1, sizeof(*wlt));
+	wlt->keys = g_ptr_array_new_full(1000, g_free);
+
+	return wlt;
+}
+
+static void wallet_free(struct wallet *wlt)
+{
+	if (!wlt)
+		return;
+
+	if (wlt->keys) {
+		unsigned int i;
+		for (i = 0; i < wlt->keys->len; i++) {
+			struct bp_key *key;
+
+			key = g_ptr_array_index(wlt->keys, i);
+			bp_key_free(key);
+		}
+
+		g_ptr_array_free(wlt->keys, TRUE);
+		wlt->keys = NULL;
+	}
+
+	memset(wlt, 0, sizeof(*wlt));
+	free(wlt);
+}
+
 static char *wallet_filename(void)
 {
 	char *filename = setting("wallet");
@@ -97,7 +129,7 @@ static bool load_record(struct wallet *wlt, const struct p2p_message *msg)
 	return true;	/* ignore unknown records */
 }
 
-struct wallet *load_wallet(void)
+static struct wallet *load_wallet(void)
 {
 	char *passphrase = getenv("PICOCOIN_PASSPHRASE");
 	if (!passphrase) {
@@ -120,9 +152,7 @@ struct wallet *load_wallet(void)
 
 	struct wallet *wlt;
 
-	wlt = calloc(1, sizeof(*wlt));
-
-	wlt->keys = g_ptr_array_new_full(1000, g_free);
+	wlt = wallet_new();
 
 	struct const_buffer buf = { data->str, data->len };
 	struct mbuf_reader mbr;
@@ -145,8 +175,7 @@ struct wallet *load_wallet(void)
 
 err_out:
 	fprintf(stderr, "wallet: invalid data found\n");
-	g_ptr_array_free(wlt->keys, TRUE);
-	free(wlt);
+	wallet_free(wlt);
 	g_string_free(data, TRUE);
 	return NULL;
 }
@@ -192,7 +221,7 @@ static GString *ser_wallet(struct wallet *wlt)
 	return rs;
 }
 
-bool store_wallet(struct wallet *wlt)
+static bool store_wallet(struct wallet *wlt)
 {
 	char *passphrase = getenv("PICOCOIN_PASSPHRASE");
 	if (!passphrase) {
@@ -215,23 +244,6 @@ bool store_wallet(struct wallet *wlt)
 	g_string_free(plaintext, TRUE);
 
 	return rc;
-}
-
-void wallet_free(struct wallet *wlt)
-{
-	unsigned int i;
-
-	if (wlt->keys) {
-		for (i = 0; i < wlt->keys->len; i++) {
-			struct bp_key *key;
-
-			key = g_ptr_array_index(wlt->keys, i);
-			bp_key_free(key);
-		}
-
-		g_ptr_array_free(wlt->keys, TRUE);
-		wlt->keys = NULL;
-	}
 }
 
 static bool cur_wallet_load(void)
@@ -270,7 +282,7 @@ void wallet_new_address(void)
 
 	store_wallet(wlt);
 
-	GString *btc_addr = bp_pubkey_get_address(key, 0);
+	GString *btc_addr = bp_pubkey_get_address(key, chain->addr_pubkey);
 
 	printf("%s\n", btc_addr->str);
 
@@ -316,7 +328,7 @@ void wallet_create(void)
 
 	struct wallet *wlt;
 
-	wlt = calloc(1, sizeof(*wlt));
+	wlt = wallet_new();
 	wlt->version = 1;
 	memcpy(wlt->netmagic, chain->netmagic, sizeof(wlt->netmagic));
 
