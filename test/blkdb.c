@@ -31,9 +31,9 @@ static void add_header(struct blkdb *db, char *raw)
 	assert(blkdb_add(db, bi) == true);
 }
 
-static void read_headers(struct blkdb *db)
+static void read_headers(const char *ser_base_fn, struct blkdb *db)
 {
-	char *filename = test_filename("hdr193000.ser");
+	char *filename = test_filename(ser_base_fn);
 	int fd = open(filename, O_RDONLY);
 	assert(fd >= 0);
 
@@ -46,29 +46,37 @@ static void read_headers(struct blkdb *db)
 	close(fd);
 }
 
-int main (int argc, char *argv[])
+static void runtest(const char *ser_base_fn, const struct chain_info *chain,
+		    unsigned int check_height, const char *check_hash)
 {
 	struct blkdb db;
 
 	bu256_t block0;
-	bool rc = hex_bu256(&block0,
-			    chain_metadata[CHAIN_BITCOIN].genesis_hash);
+	bool rc = hex_bu256(&block0, chain->genesis_hash);
 	assert(rc);
 
-	rc = blkdb_init(&db, chain_metadata[CHAIN_BITCOIN].netmagic, &block0);
+	rc = blkdb_init(&db, chain->netmagic, &block0);
 	assert(rc);
 
-	read_headers(&db);
+	read_headers(ser_base_fn, &db);
 
-	assert(db.nBestHeight == 193000);
+	assert(db.nBestHeight == check_height);
 
-	bu256_t block193k;
-	rc = hex_bu256(&block193k,
-	    "000000000000059f452a5f7340de6682a977387c17010ff6e6c3bd83ca8b1317");
+	bu256_t best_block;
+	rc = hex_bu256(&best_block, check_hash);
 
-	assert(bu256_equal(&db.hashBestChain, &block193k));
+	assert(bu256_equal(&db.hashBestChain, &best_block));
 
 	blkdb_free(&db);
+}
+
+int main (int argc, char *argv[])
+{
+	runtest("hdr193000.ser", &chain_metadata[CHAIN_BITCOIN], 193000,
+	    "000000000000059f452a5f7340de6682a977387c17010ff6e6c3bd83ca8b1317");
+	runtest("tn_hdr35141.ser", &chain_metadata[CHAIN_TESTNET3], 35141,
+	    "0000000000dde6ce4b9ad1e2a5be59f1b7ace6ef8d077d846263b0bfbc984f7f");
 
 	return 0;
 }
+

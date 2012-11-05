@@ -7,7 +7,7 @@ EXTRA_DIST	= \
 	random.data			\
 	blk0.json  blk120383.json  tx3e0dc3da.json \
 	blk0.ser  blk120383.ser  tx3e0dc3da.ser \
-	hdr193000.ser
+	hdr193000.ser tn_hdr35141.ser
 
 noinst_LIBRARIES= libtest.a
 
