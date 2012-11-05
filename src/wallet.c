@@ -9,6 +9,7 @@
 #include <string.h>
 #include <openssl/ripemd.h>
 #include <glib.h>
+#include <jansson.h>
 #include <ccoin/coredefs.h>
 #include "picocoin.h"
 #include "wallet.h"
@@ -391,7 +392,7 @@ void wallet_info(void)
 	printf("}\n");
 }
 
-static void wallet_dump_keys(struct wallet *wlt)
+static void wallet_dump_keys(json_t *keys_a, struct wallet *wlt)
 {
 	if (!wlt->keys)
 		return;
@@ -399,13 +400,12 @@ static void wallet_dump_keys(struct wallet *wlt)
 	unsigned int i;
 	for (i = 0; i < wlt->keys->len; i++) {
 		struct bp_key *key;
-		GString *btc_addr;
 
 		key = g_ptr_array_index(wlt->keys, i);
 
 		void *privkey = NULL, *pubkey = NULL;
-		char *privkey_str = NULL, *pubkey_str = NULL;
 		size_t priv_len = 0, pub_len = 0;
+		json_t *o = json_object();
 
 		if (!bp_privkey_get(key, &privkey, &priv_len)) {
 			free(privkey);
@@ -413,30 +413,34 @@ static void wallet_dump_keys(struct wallet *wlt)
 			priv_len = 0;
 		}
 
-		if (!bp_pubkey_get(key, &pubkey, &pub_len)) {
+		if (priv_len) {
+			char *privkey_str = calloc(1, (priv_len * 2) + 1);
+			encode_hex(privkey_str, privkey, priv_len);
+			json_object_set_new(o, "privkey", json_string(privkey_str));
+			free(privkey_str);
 			free(privkey);
+		}
+
+		if (!bp_pubkey_get(key, &pubkey, &pub_len)) {
+			json_decref(o);
 			continue;
 		}
 
-		privkey_str = calloc(1, (priv_len * 2) + 1);
-		if (priv_len)
-			encode_hex(privkey_str, privkey, priv_len);
-		pubkey_str = calloc(1, (pub_len * 2) + 1);
-		encode_hex(pubkey_str, pubkey, pub_len);
+		if (pub_len) {
+			char *pubkey_str = calloc(1, (pub_len * 2) + 1);
+			encode_hex(pubkey_str, pubkey, pub_len);
+			json_object_set_new(o, "pubkey", json_string(pubkey_str));
+			free(pubkey_str);
 
-		btc_addr = bp_pubkey_get_address(key, chain->addr_pubkey);
+			GString *btc_addr = bp_pubkey_get_address(key, chain->addr_pubkey);
+			json_object_set_new(o, "address", json_string(btc_addr->str));
 
-		printf("  [ \"%s\", \"%s\", \"%s\" ]%s\n",
-		       btc_addr->str,
-		       pubkey_str,
-		       privkey_str,
-		       (i == (wlt->keys->len - 1)) ? "" : ",");
+			g_string_free(btc_addr, TRUE);
 
-		free(privkey);
-		free(privkey_str);
-		free(pubkey);
-		free(pubkey_str);
-		g_string_free(btc_addr, TRUE);
+			free(pubkey);
+		}
+
+		json_array_append_new(keys_a, o);
 	}
 }
 
@@ -445,22 +449,28 @@ void wallet_dump(void)
 	if (!cur_wallet_load())
 		return;
 	struct wallet *wlt = cur_wallet;
+	json_t *o = json_object();
 
-	printf("{\n");
+	json_object_set_new(o, "version", json_integer(wlt->version));
 
-	printf("  \"version\": %u,\n", wlt->version);
-	printf("  \"netmagic\": %02x%02x%02x%02x,\n",
+	char nmstr[32];
+	sprintf(nmstr, "%02x%02x%02x%02x",
 	       wlt->netmagic[0],
 	       wlt->netmagic[1],
 	       wlt->netmagic[2],
 	       wlt->netmagic[3]);
 
-	printf("  \"keys\": [\n");
+	json_object_set_new(o, "netmagic", json_string(nmstr));
 
-	wallet_dump_keys(wlt);
+	json_t *keys_a = json_array();
 
-	printf("  ]\n");
+	wallet_dump_keys(keys_a, wlt);
 
-	printf("}\n");
+	json_object_set_new(o, "keys", keys_a);
+
+	json_dumpf(o, stdout, JSON_INDENT(2) | JSON_SORT_KEYS);
+	json_decref(o);
+
+	printf("\n");
 }
 
