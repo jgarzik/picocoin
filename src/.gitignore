@@ -1,5 +1,5 @@
 
 picocoin
 picocoin.peers
-picocoin.wallet
+*.wallet
 

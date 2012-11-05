@@ -98,6 +98,28 @@ bool bp_pubkey_get(struct bp_key *key, void **pubkey, size_t *pk_len)
 	return true;
 }
 
+bool bp_key_secret_get(void *p, size_t len, const struct bp_key *key)
+{
+	if (!p || len < 32 || !key)
+		return false;
+
+	/* zero buffer */
+	memset(p, 0, len);
+
+	/* get bignum secret */
+	const BIGNUM *bn = EC_KEY_get0_private_key(key->k);
+	if (!bn)
+		return false;
+	int nBytes = BN_num_bytes(bn);
+
+	/* store secret at end of buffer */
+	int n = BN_bn2bin(bn, p + (len - nBytes));
+	if (n != nBytes)
+		return false;
+	
+	return true;
+}
+
 bool bp_sign(struct bp_key *key, const void *data, size_t data_len,
 	     void **sig_, size_t *sig_len_)
 {
