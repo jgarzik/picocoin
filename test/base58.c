@@ -110,8 +110,8 @@ static void test_privkey_valid_enc(const char *base58_str,
 	if (compress)
 		g_string_append_c(pl, 1);
 
-	GString *b58 = base58_address_encode(
-		is_testnet ? PRIVKEY_ADDRESS_TEST : PRIVKEY_ADDRESS,
+	GString *b58 = base58_encode_check(
+		is_testnet ? PRIVKEY_ADDRESS_TEST : PRIVKEY_ADDRESS, true,
 		pl->str, pl->len);
 	assert(b58 != NULL);
 	if (strcmp(b58->str, base58_str)) {
@@ -149,8 +149,8 @@ static void test_pubkey_valid_enc(const char *base58_str,
 			addrtype = SCRIPT_ADDRESS;
 	}
 
-	GString *b58 = base58_address_encode(
-		addrtype,
+	GString *b58 = base58_encode_check(
+		addrtype, true,
 		payload->str, payload->len);
 	if (strcmp(b58->str, base58_str)) {
 		fprintf(stderr, "base58: have %s, expected %s\n",

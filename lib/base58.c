@@ -78,12 +78,13 @@ err_out:
 	goto out;
 }
 
-GString *base58_address_encode(unsigned char addrtype, const void *data,
-			       size_t data_len)
+GString *base58_encode_check(unsigned char addrtype, bool have_addrtype,
+			     const void *data, size_t data_len)
 {
 	GString *s = g_string_sized_new(data_len + 1 + 4);
 
-	g_string_append_c(s, addrtype);
+	if (have_addrtype)
+		g_string_append_c(s, addrtype);
 	g_string_append_len(s, data, data_len);
 
 	unsigned char md32[4];
