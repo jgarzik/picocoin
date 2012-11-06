@@ -18,6 +18,7 @@ extern void bp_key_free(struct bp_key *key);
 extern bool bp_key_generate(struct bp_key *key);
 extern bool bp_privkey_set(struct bp_key *key, const void *privkey, size_t pk_len);
 extern bool bp_pubkey_set(struct bp_key *key, const void *pubkey, size_t pk_len);
+extern bool bp_key_secret_set(struct bp_key *key, const void *privkey_, size_t pk_len);
 extern bool bp_privkey_get(struct bp_key *key, void **privkey, size_t *pk_len);
 extern bool bp_pubkey_get(struct bp_key *key, void **pubkey, size_t *pk_len);
 extern bool bp_key_secret_get(void *p, size_t len, const struct bp_key *key);
