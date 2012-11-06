@@ -14,8 +14,10 @@ enum {
 enum bp_address_type {
 	PUBKEY_ADDRESS = 0,
 	SCRIPT_ADDRESS = 5,
+	PRIVKEY_ADDRESS = 128,
 	PUBKEY_ADDRESS_TEST = 111,
 	SCRIPT_ADDRESS_TEST = 196,
+	PRIVKEY_ADDRESS_TEST = 239,
 };
 
 enum chains {

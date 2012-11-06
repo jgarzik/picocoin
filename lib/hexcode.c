@@ -6,6 +6,7 @@
 
 #include <string.h>
 #include <stdbool.h>
+#include <glib.h>
 #include <ccoin/hexcode.h>
 
 static const unsigned char hexdigit_val[256] = {
@@ -35,6 +36,8 @@ static const unsigned char hexdigit_val[256] = {
 
 bool decode_hex(void *p, size_t max_len, const char *hexstr, size_t *out_len_)
 {
+	if (!p || !hexstr)
+		return false;
 	if (!strncmp(hexstr, "0x", 2))
 		hexstr += 2;
 	if (strlen(hexstr) > (max_len * 2))
@@ -65,6 +68,27 @@ bool decode_hex(void *p, size_t max_len, const char *hexstr, size_t *out_len_)
 	if (out_len_)
 		*out_len_ = out_len;
 	return true;
+}
+
+GString *hex2str(const char *hexstr)
+{
+	if (!hexstr || !*hexstr)
+		return NULL;
+
+	size_t slen = strlen(hexstr) / 2;
+	GString *s = g_string_sized_new(slen);
+	g_string_set_size(s, slen);
+	memset(s->str, 0, slen);
+
+	size_t outlen = 0;
+	bool rc = decode_hex(s->str, slen, hexstr, &outlen);
+
+	if (!rc || (slen != outlen)) {
+		g_string_free(s, TRUE);
+		return NULL;
+	}
+
+	return s;
 }
 
 static const char hexdigit[] = "0123456789abcdef";

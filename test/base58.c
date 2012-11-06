@@ -11,14 +11,21 @@
 #include "libtest.h"
 #include <ccoin/base58.h>
 #include <ccoin/hexcode.h>
+#include <ccoin/key.h>
+#include <ccoin/coredefs.h>
 
 static void test_encdec(const char *hexstr, const char *enc)
 {
-	unsigned char raw[strlen(hexstr)];
+	size_t hs_len = strlen(hexstr) / 2;
+	unsigned char *raw = calloc(1, hs_len);
 	size_t out_len;
 
-	bool rc = decode_hex(raw, sizeof(raw), hexstr, &out_len);
-	assert(rc);
+	bool rc = decode_hex(raw, hs_len, hexstr, &out_len);
+	if (!rc) {
+		fprintf(stderr, "raw %p, sizeof(raw) %lu, hexstr %p %s\n",
+			raw, hs_len, hexstr, hexstr);
+		assert(rc);
+	}
 
 	GString *s = base58_encode(raw, out_len);
 	if (strcmp(s->str, enc)) {
@@ -27,14 +34,15 @@ static void test_encdec(const char *hexstr, const char *enc)
 		assert(!strcmp(s->str, enc));
 	}
 
+	free(raw);
 	g_string_free(s, TRUE);
 }
 
-int main (int argc, char *argv[])
+static void runtest_encdec(const char *base_fn)
 {
 	char *fn = NULL;
 
-	fn = test_filename("base58_encode_decode.json");
+	fn = test_filename(base_fn);
 	json_t *data = read_json(fn);
 	assert(json_is_array(data));
 
@@ -55,7 +63,125 @@ int main (int argc, char *argv[])
 		test_encdec(json_string_value(j_raw),
 			    json_string_value(j_enc));
 	}
+}
 
+static void test_privkey_valid_enc(const char *base58_str,
+				GString *payload,
+				bool compress, bool is_testnet)
+{
+	assert(payload != NULL);
+
+	GString *pl = g_string_sized_new(payload->len + 1);
+	g_string_append_len(pl, payload->str, payload->len);
+	if (compress)
+		g_string_append_c(pl, 1);
+
+	GString *b58 = base58_address_encode(
+		is_testnet ? PRIVKEY_ADDRESS_TEST : PRIVKEY_ADDRESS,
+		pl->str, pl->len);
+	assert(b58 != NULL);
+	if (strcmp(b58->str, base58_str)) {
+		fprintf(stderr, "base58: have %s, expected %s\n",
+			b58->str, base58_str);
+		assert(!strcmp(b58->str, base58_str));
+	}
+
+	g_string_free(b58, TRUE);
+	g_string_free(pl, TRUE);
+	g_string_free(payload, TRUE);
+}
+
+static void test_pubkey_valid_enc(const char *base58_str,
+				GString *payload,
+				const char *addrtype_str,
+				bool is_testnet)
+{
+	assert(payload != NULL);
+
+	bool addrtype_pubkey = (strcmp(addrtype_str, "pubkey") == 0);
+	bool addrtype_script = (strcmp(addrtype_str, "script") == 0);
+	assert(addrtype_pubkey || addrtype_script);
+
+	enum bp_address_type addrtype;
+	if (addrtype_pubkey) {
+		if (is_testnet)
+			addrtype = PUBKEY_ADDRESS_TEST;
+		else
+			addrtype = PUBKEY_ADDRESS;
+	} else {
+		if (is_testnet)
+			addrtype = SCRIPT_ADDRESS_TEST;
+		else
+			addrtype = SCRIPT_ADDRESS;
+	}
+
+	GString *b58 = base58_address_encode(
+		addrtype,
+		payload->str, payload->len);
+	if (strcmp(b58->str, base58_str)) {
+		fprintf(stderr, "base58: have %s, expected %s\n",
+			b58->str, base58_str);
+		assert(!strcmp(b58->str, base58_str));
+	}
+
+	g_string_free(b58, TRUE);
+	g_string_free(payload, TRUE);
+}
+
+static void runtest_keys_valid(const char *base_fn)
+{
+	char *fn = NULL;
+
+	fn = test_filename(base_fn);
+	json_t *data = read_json(fn);
+	assert(json_is_array(data));
+
+	size_t n_tests = json_array_size(data);
+	unsigned int i;
+
+	for (i = 0; i < n_tests; i++) {
+		json_t *inner;
+
+		inner = json_array_get(data, i);
+		assert(json_is_array(inner));
+
+		json_t *j_base58 = json_array_get(inner, 0);
+		json_t *j_payload = json_array_get(inner, 1);
+		assert(json_is_string(j_base58));
+		assert(json_is_string(j_payload));
+
+		json_t *j_meta = json_array_get(inner, 2);
+		assert(json_is_object(j_meta));
+
+		json_t *j_addrtype = json_object_get(j_meta, "addrType");
+		assert(!j_addrtype || json_is_string(j_addrtype));
+
+		json_t *j_compress = json_object_get(j_meta, "isCompressed");
+		assert(!j_compress || json_is_true(j_compress) ||
+		       json_is_false(j_compress));
+
+		bool is_privkey = json_is_true(json_object_get(j_meta, "isPrivkey"));
+		bool is_testnet = json_is_true(json_object_get(j_meta, "isTestnet"));
+
+		if (is_privkey)
+			test_privkey_valid_enc(
+				json_string_value(j_base58),
+				hex2str(json_string_value(j_payload)),
+				json_is_true(j_compress),
+				is_testnet);
+		else
+			test_pubkey_valid_enc(
+				json_string_value(j_base58),
+				hex2str(json_string_value(j_payload)),
+				json_string_value(j_addrtype),
+				is_testnet);
+	}
+}
+
+int main (int argc, char *argv[])
+{
+	runtest_encdec("base58_encode_decode.json");
+	runtest_keys_valid("base58_keys_valid.json");
 	return 0;
 }
 

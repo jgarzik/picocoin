@@ -60,12 +60,23 @@ static void test_decode(void)
 	assert((unsigned char)decode_buf[out_len] == 0xef);
 }
 
+static void test_decode2(void)
+{
+	GString *s = hex2str(hexstr);
+	assert(s != NULL);
+	assert(s->len == data_len);
+	assert(memcmp(s->str, data, data_len) == 0);
+
+	g_string_free(s, TRUE);
+}
+
 int main (int argc, char *argv[])
 {
 	data_len = strlen(data);
 	test_encode1();
 	test_encode2();
 	test_decode();
+	test_decode2();
 	return 0;
 }
 
