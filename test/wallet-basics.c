@@ -95,7 +95,20 @@ static void runtest(const char *json_base_fn, const char *ser_in_fn,
 	BN_lshift(&tmp_mask, &tmp_mask, 1);
 	assert(BN_cmp(&tmp_mask, &match->mask) == 0);
 
+	/* build merkle tree, tx's branch */
+	GArray *mtree = bp_block_merkle_tree(&block_in);
+	assert(mtree != NULL);
+	GArray *mbranch = bp_block_merkle_branch(&block_in, mtree, match->n);
+	assert(mbranch != NULL);
+
+	/* verify merkle branch for tx matches expected */
+	bu256_t mrk_check;
+	bp_check_merkle_branch(&mrk_check, &tx->sha256, mbranch, match->n);
+	assert(bu256_equal(&mrk_check, &block_in.hashMerkleRoot) == true);
+
 	/* release resources */
+	g_array_free(mtree, TRUE);
+	g_array_free(mbranch, TRUE);
 	BN_clear_free(&tmp_mask);
 	g_ptr_array_free(matches, TRUE);
 	bpks_free(&ks);

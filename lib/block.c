@@ -51,7 +51,7 @@ bool bp_tx_valid(const struct bp_tx *tx)
 	return true;
 }
 
-static GArray *bp_block_merkle_tree(const struct bp_block *block)
+GArray *bp_block_merkle_tree(const struct bp_block *block)
 {
 	if (!block->vtx || !block->vtx->len)
 		return NULL;
@@ -100,6 +100,47 @@ void bp_block_merkle(bu256_t *vo, const struct bp_block *block)
 	*vo = g_array_index(arr, bu256_t, arr->len - 1);
 
 	g_array_free(arr, TRUE);
+}
+
+GArray *bp_block_merkle_branch(const struct bp_block *block,
+			       const GArray *mrktree,
+			       unsigned int txidx)
+{
+	if (!block || !block->vtx || !mrktree || (txidx >= block->vtx->len))
+		return NULL;
+	
+	GArray *ret = g_array_new(FALSE, TRUE, sizeof(bu256_t));
+
+	unsigned int j = 0, nSize;
+	for (nSize = block->vtx->len; nSize > 1; nSize = (nSize + 1) / 2) {
+		unsigned int i = MIN(txidx ^ 1, nSize - 1);
+		g_array_append_val(ret, g_array_index(mrktree, bu256_t, j+i));
+		txidx >>= 1;
+		j += nSize;
+	}
+
+	return ret;
+}
+
+void bp_check_merkle_branch(bu256_t *hash, const bu256_t *txhash_in,
+			    const GArray *mrkbranch, unsigned int txidx)
+{
+	bu256_copy(hash, txhash_in);
+
+	unsigned int i;
+	for (i = 0; i < mrkbranch->len; i++) {
+		const bu256_t *otherside = &g_array_index(mrkbranch, bu256_t,i);
+		if (txidx & 1)
+			bu_Hash_((unsigned char *)hash,
+				 otherside, sizeof(bu256_t),
+				 hash, sizeof(bu256_t));
+		else
+			bu_Hash_((unsigned char *)hash,
+				 hash, sizeof(bu256_t),
+				 otherside, sizeof(bu256_t));
+
+		txidx >>= 1;
+	}
 }
 
 static bool bp_block_valid_target(struct bp_block *block)
