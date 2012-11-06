@@ -47,6 +47,8 @@ bool hex_bu256(bu256_t *vo, const char *hexstr)
 
 void bu256_hex(char *hexstr, const bu256_t *v)
 {
+	*hexstr = 0;
+
 	int i;
 	for (i = 7; i >= 0; i--) {		/* endian: high to low */
 		char tmp[8 + 1];
