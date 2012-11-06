@@ -9,7 +9,7 @@ EXTRA_DIST	= \
 	blk0.json  blk120383.json  tx3e0dc3da.json \
 	blk0.ser  blk120383.ser  tx3e0dc3da.ser \
 	hdr193000.ser tn_hdr35141.ser \
-	tn_blk35138.ser wallet-basics.json
+	tn_blk35133.ser wallet-basics.json
 
 noinst_LIBRARIES= libtest.a
 

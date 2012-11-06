@@ -70,17 +70,14 @@ static void runtest(const char *json_base_fn, const char *ser_in_fn,
 
 	assert(bpks_add(&ks, &key) == true);
 
-#if 0
-	// FIXME
-
 	/* find key matches in block */
 	GPtrArray *matches;
 	matches = bp_block_match(&block_in, &ks);
 	assert(matches != NULL);
 	assert(matches->len == 1);
-#endif
 
 	/* release resources */
+	g_ptr_array_free(matches, TRUE);
 	bpks_free(&ks);
 	bp_key_free(&key);
 	bp_block_free(&block_in);
@@ -89,8 +86,8 @@ static void runtest(const char *json_base_fn, const char *ser_in_fn,
 
 int main (int argc, char *argv[])
 {
-	runtest("wallet-basics.json", "tn_blk35138.ser",
-	    "0000000001b6c0b0f67e951787840bd6ce4b67bf41f96f7f9f2d3e7ca2680616");
+	runtest("wallet-basics.json", "tn_blk35133.ser",
+	    "00000000003bf8f8f24e0c5f592a38bb7c18352745ef7192f1a576d855fd6b2d");
 
 	return 0;
 }
