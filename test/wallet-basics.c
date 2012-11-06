@@ -32,7 +32,7 @@ static void load_json_key(json_t *wallet, struct bp_key *key)
 }
 
 static void runtest(const char *json_base_fn, const char *ser_in_fn,
-		    const char *block_in_hash)
+		    const char *block_in_hash, const char *tx_in_hash)
 {
 	/* read wallet data */
 	char *json_fn = test_filename(json_base_fn);
@@ -76,7 +76,27 @@ static void runtest(const char *json_base_fn, const char *ser_in_fn,
 	assert(matches != NULL);
 	assert(matches->len == 1);
 
+	struct bp_block_match *match = g_ptr_array_index(matches, 0);
+	assert(match->n == 1);			/* match 2nd tx, index 1 */
+
+	/* get matching transaction */
+	struct bp_tx *tx = g_ptr_array_index(block_in.vtx, match->n);
+	bp_tx_calc_sha256(tx);
+
+	/* verify txid matches expected */
+	char tx_hexstr[(32 * 2) + 1];
+	bu256_hex(tx_hexstr, &tx->sha256);
+	assert(strcmp(tx_hexstr, tx_in_hash) == 0);
+
+	/* verify mask matches 2nd txout (1 << 1) */
+	BIGNUM tmp_mask;
+	BN_init(&tmp_mask);
+	BN_one(&tmp_mask);
+	BN_lshift(&tmp_mask, &tmp_mask, 1);
+	assert(BN_cmp(&tmp_mask, &match->mask) == 0);
+
 	/* release resources */
+	BN_clear_free(&tmp_mask);
 	g_ptr_array_free(matches, TRUE);
 	bpks_free(&ks);
 	bp_key_free(&key);
@@ -87,7 +107,8 @@ static void runtest(const char *json_base_fn, const char *ser_in_fn,
 int main (int argc, char *argv[])
 {
 	runtest("wallet-basics.json", "tn_blk35133.ser",
-	    "00000000003bf8f8f24e0c5f592a38bb7c18352745ef7192f1a576d855fd6b2d");
+	    "00000000003bf8f8f24e0c5f592a38bb7c18352745ef7192f1a576d855fd6b2d",
+	    "bf1938abc33cc0b4cde7d94002412b17e35e3c657689e1be7ff588f3fda8d463");
 
 	return 0;
 }
