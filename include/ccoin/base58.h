@@ -10,6 +10,8 @@
 extern GString *base58_encode(const void *data_, size_t data_len);
 extern GString *base58_address_encode(unsigned char addrtype, const void *data,
 			       size_t data_len);
+
 extern GString *base58_decode(const char *s_in);
+extern GString *base58_decode_check(unsigned char *addrtype, const char *s_in);
 
 #endif /* __LIBCCOIN_BASE58_H__ */

@@ -5,6 +5,7 @@
 #include "picocoin-config.h"
 
 #include <ctype.h>
+#include <string.h>
 #include <openssl/bn.h>
 #include <glib.h>
 #include <ccoin/util.h>
@@ -163,5 +164,36 @@ out:
 	BN_clear_free(&bnChar);
 	BN_CTX_free(ctx);
 	return ret;
+}
+
+GString *base58_decode_check(unsigned char *addrtype, const char *s_in)
+{
+	/* decode base58 string */
+	GString *s = base58_decode(s_in);
+	if (!s)
+		return NULL;
+	if (s->len < 4)
+		goto err_out;
+
+	/* validate with trailing hash, then remove hash */
+	unsigned char md32[4];
+	bu_Hash4(md32, s->str, s->len - 4);
+
+	if (memcmp(md32, &s->str[s->len - 4], 4))
+		goto err_out;
+
+	g_string_set_size(s, s->len - 4);
+
+	/* if addrtype requested, remove from front of data string */
+	if (addrtype) {
+		*addrtype = (unsigned char) s->str[0];
+		g_string_erase(s, 0, 1);
+	}
+
+	return s;
+
+err_out:
+	g_string_free(s, TRUE);
+	return NULL;
 }
 

@@ -162,6 +162,77 @@ static void test_pubkey_valid_enc(const char *base58_str,
 	g_string_free(payload, TRUE);
 }
 
+static void test_privkey_valid_dec(const char *base58_str,
+				GString *payload,
+				bool compress, bool is_testnet)
+{
+	assert(payload != NULL);
+
+	GString *pl = g_string_sized_new(payload->len + 1);
+	g_string_append_len(pl, payload->str, payload->len);
+	if (compress)
+		g_string_append_c(pl, 1);
+
+	unsigned char addrtype;
+	GString *dec = base58_decode_check(&addrtype, base58_str);
+	assert(dec != NULL);
+
+	if (is_testnet)
+		assert(addrtype == PRIVKEY_ADDRESS_TEST);
+	else
+		assert(addrtype == PRIVKEY_ADDRESS);
+
+	if (compress) {
+		assert(dec->len == 33);
+		assert(dec->str[32] == 1);
+	} else
+		assert(dec->len == 32);
+
+	assert(dec->len == pl->len);
+	assert(memcmp(dec->str, pl->str, pl->len) == 0);
+
+	g_string_free(dec, TRUE);
+	g_string_free(pl, TRUE);
+	g_string_free(payload, TRUE);
+}
+
+static void test_pubkey_valid_dec(const char *base58_str,
+				GString *payload,
+				const char *addrtype_str,
+				bool is_testnet)
+{
+	assert(payload != NULL);
+
+	bool addrtype_pubkey = (strcmp(addrtype_str, "pubkey") == 0);
+	bool addrtype_script = (strcmp(addrtype_str, "script") == 0);
+	assert(addrtype_pubkey || addrtype_script);
+
+	enum bp_address_type addrtype;
+	if (addrtype_pubkey) {
+		if (is_testnet)
+			addrtype = PUBKEY_ADDRESS_TEST;
+		else
+			addrtype = PUBKEY_ADDRESS;
+	} else {
+		if (is_testnet)
+			addrtype = SCRIPT_ADDRESS_TEST;
+		else
+			addrtype = SCRIPT_ADDRESS;
+	}
+
+	unsigned char addrtype_dec;
+	GString *dec = base58_decode_check(&addrtype_dec, base58_str);
+	assert(dec != NULL);
+
+	assert(addrtype == addrtype_dec);
+	assert(dec->len == 20);
+	assert(payload->len == dec->len);
+	assert(memcmp(payload->str, dec->str, dec->len) == 0);
+
+	g_string_free(dec, TRUE);
+	g_string_free(payload, TRUE);
+}
+
 static void runtest_keys_valid(const char *base_fn)
 {
 	char *fn = NULL;
@@ -197,18 +268,29 @@ static void runtest_keys_valid(const char *base_fn)
 		bool is_privkey = json_is_true(json_object_get(j_meta, "isPrivkey"));
 		bool is_testnet = json_is_true(json_object_get(j_meta, "isTestnet"));
 
-		if (is_privkey)
+		if (is_privkey) {
 			test_privkey_valid_enc(
 				json_string_value(j_base58),
 				hex2str(json_string_value(j_payload)),
 				json_is_true(j_compress),
 				is_testnet);
-		else
+			test_privkey_valid_dec(
+				json_string_value(j_base58),
+				hex2str(json_string_value(j_payload)),
+				json_is_true(j_compress),
+				is_testnet);
+		} else {
 			test_pubkey_valid_enc(
 				json_string_value(j_base58),
 				hex2str(json_string_value(j_payload)),
 				json_string_value(j_addrtype),
 				is_testnet);
+			test_pubkey_valid_dec(
+				json_string_value(j_base58),
+				hex2str(json_string_value(j_payload)),
+				json_string_value(j_addrtype),
+				is_testnet);
+		}
 	}
 }
 
