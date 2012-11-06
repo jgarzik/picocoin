@@ -7,17 +7,18 @@ EXTRA_DIST	= \
 	random.data			\
 	blk0.json  blk120383.json  tx3e0dc3da.json \
 	blk0.ser  blk120383.ser  tx3e0dc3da.ser \
-	hdr193000.ser tn_hdr35141.ser
+	hdr193000.ser tn_hdr35141.ser \
+	tn_blk35138.ser wallet-basics.json
 
 noinst_LIBRARIES= libtest.a
 
 libtest_a_SOURCES= libtest.h libtest.c
 
 noinst_PROGRAMS	= hex base58 fileio util keyset bloom \
-		  script tx block blkdb
+		  script tx block blkdb wallet-basics
 
 TESTS		= hex base58 fileio util keyset bloom \
-		  script tx block blkdb
+		  script tx block blkdb wallet-basics
 
 COMMON_LDADD	= libtest.a ../lib/libccoin.a \
 		  @GLIB_LIBS@ @CRYPTO_LIBS@ @JANSSON_LIBS@ @MATH_LIBS@
@@ -32,4 +33,5 @@ keyset_LDADD	= $(COMMON_LDADD)
 script_LDADD	= $(COMMON_LDADD)
 tx_LDADD	= $(COMMON_LDADD)
 util_LDADD	= $(COMMON_LDADD)
+wallet_basics_LDADD	= $(COMMON_LDADD)
 
