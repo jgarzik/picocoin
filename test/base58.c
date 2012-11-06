@@ -14,7 +14,7 @@
 #include <ccoin/key.h>
 #include <ccoin/coredefs.h>
 
-static void test_encdec(const char *hexstr, const char *enc)
+static void test_encode(const char *hexstr, const char *enc)
 {
 	size_t hs_len = strlen(hexstr) / 2;
 	unsigned char *raw = calloc(1, hs_len);
@@ -32,6 +32,38 @@ static void test_encdec(const char *hexstr, const char *enc)
 		fprintf(stderr, "base58 mismatch: '%s' vs expected '%s'\n",
 			s->str, enc);
 		assert(!strcmp(s->str, enc));
+	}
+
+	free(raw);
+	g_string_free(s, TRUE);
+}
+
+static void test_decode(const char *hexstr, const char *base58_str)
+{
+	size_t hs_len = strlen(hexstr) / 2;
+	unsigned char *raw = calloc(1, hs_len);
+	size_t out_len;
+
+	bool rc = decode_hex(raw, hs_len, hexstr, &out_len);
+	if (!rc) {
+		fprintf(stderr, "raw %p, sizeof(raw) %lu, hexstr %p %s\n",
+			raw, hs_len, hexstr, hexstr);
+		assert(rc);
+	}
+
+	GString *s = base58_decode(base58_str);
+	if (memcmp(s->str, raw, out_len < s->len ? out_len : s->len)) {
+		dumphex("decode have", s->str, s->len);
+		dumphex("decode want", raw, out_len);
+		assert(memcmp(s->str, raw, out_len) == 0);
+	}
+	if (s->len != out_len) {
+		fprintf(stderr, "decode len: have %u, want %u\n",
+			(unsigned int) s->len, 
+			(unsigned int) out_len);
+		dumphex("decode have", s->str, s->len);
+		dumphex("decode want", raw, out_len);
+		assert(s->len == out_len);
 	}
 
 	free(raw);
@@ -60,7 +92,9 @@ static void runtest_encdec(const char *base_fn)
 		assert(json_is_string(j_raw));
 		assert(json_is_string(j_enc));
 
-		test_encdec(json_string_value(j_raw),
+		test_encode(json_string_value(j_raw),
+			    json_string_value(j_enc));
+		test_decode(json_string_value(j_raw),
 			    json_string_value(j_enc));
 	}
 }

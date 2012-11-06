@@ -14,6 +14,7 @@
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 #endif
 
+extern GString *bn_getvch(const BIGNUM *v);
 extern void bn_setvch(BIGNUM *vo, const void *data_, size_t data_len);
 
 extern void bu_reverse_copy(unsigned char *dst, const unsigned char *src, size_t len);

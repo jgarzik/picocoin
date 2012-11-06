@@ -9,5 +9,6 @@
 
 extern json_t *read_json(const char *filename);
 extern char *test_filename(const char *basename);
+extern void dumphex(const char *prefix, const void *p_, size_t len);
 
 #endif /* __LIBTEST_H__ */

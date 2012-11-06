@@ -21,22 +21,6 @@ void bpks_init(struct bp_keyset *ks)
 					(GDestroyNotify) buffer_free, NULL);
 }
 
-#if 0
-void dumphex(const char *prefix, const void *p_, size_t len)
-{
-	if (prefix)
-		fprintf(stderr, "%s: ", prefix);
-
-	unsigned int i;
-	const unsigned char *p = p_;
-	for (i = 0; i < len; i++) {
-		fprintf(stderr, "%02x", p[i]);
-	}
-
-	fprintf(stderr, "\n");
-}
-#endif
-
 bool bpks_add(struct bp_keyset *ks, struct bp_key *key)
 {
 	void *pubkey = NULL;

@@ -22,3 +22,18 @@ char *test_filename(const char *basename)
 {
 	return g_strdup_printf("%s/%s", TEST_SRCDIR, basename);
 }
+
+void dumphex(const char *prefix, const void *p_, size_t len)
+{
+	if (prefix)
+		fprintf(stderr, "%s: ", prefix);
+
+	unsigned int i;
+	const unsigned char *p = p_;
+	for (i = 0; i < len; i++) {
+		fprintf(stderr, "%02x", p[i]);
+	}
+
+	fprintf(stderr, "\n");
+}
+
