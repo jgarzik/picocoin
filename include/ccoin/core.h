@@ -123,6 +123,7 @@ extern void bp_tx_free(struct bp_tx *tx);
 extern bool bp_tx_valid(const struct bp_tx *tx);
 extern void bp_tx_calc_sha256(struct bp_tx *tx);
 extern unsigned int bp_tx_ser_size(const struct bp_tx *tx);
+extern void bp_tx_copy(struct bp_tx *dest, const struct bp_tx *src);
 
 static inline bool bp_tx_coinbase(const struct bp_tx *tx)
 {

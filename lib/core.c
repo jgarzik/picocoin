@@ -341,6 +341,17 @@ unsigned int bp_tx_ser_size(const struct bp_tx *tx)
 	return tx_ser_size;
 }
 
+void bp_tx_copy(struct bp_tx *dest, const struct bp_tx *src)
+{
+	GString *s = g_string_sized_new(512);
+	ser_bp_tx(s, src);
+
+	struct const_buffer buf = { s->str, s->len };
+	deser_bp_tx(dest, &buf);
+
+	g_string_free(s, TRUE);
+}
+
 void bp_block_init(struct bp_block *block)
 {
 	memset(block, 0, sizeof(*block));

@@ -67,7 +67,15 @@ static void runtest(const char *json_fn_base, const char *ser_fn_base)
 	assert(tx.vin->len == 1);
 	assert(tx.vout->len == 2);
 
+	struct bp_tx tx_copy;
+	bp_tx_init(&tx_copy);
+
+	bp_tx_copy(&tx_copy, &tx);
+	bp_tx_calc_sha256(&tx_copy);
+	assert(bu256_equal(&tx_copy.sha256, &tx.sha256) == true);
+
 	bp_tx_free(&tx);
+	bp_tx_free(&tx_copy);
 	g_string_free(gs, TRUE);
 	free(data);
 	free(fn);
