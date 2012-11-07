@@ -22,6 +22,7 @@ libccoin_a_SOURCES=	\
 	mbr.c		\
 	message.c	\
 	script.c	\
+	script_eval.c	\
 	script_names.c	\
 	serialize.c	\
 	util.c

@@ -194,6 +194,14 @@ void bp_txout_free(struct bp_txout *txout)
 	}
 }
 
+void bp_txout_set_null(struct bp_txout *txout)
+{
+	bp_txout_free(txout);
+
+	txout->nValue = -1;
+	txout->scriptPubKey = g_string_new("");
+}
+
 void bp_tx_init(struct bp_tx *tx)
 {
 	memset(tx, 0, sizeof(*tx));
@@ -276,6 +284,24 @@ void ser_bp_tx(GString *s, const struct bp_tx *tx)
 	ser_u32(s, tx->nLockTime);
 }
 
+void bp_tx_free_vout(struct bp_tx *tx)
+{
+	if (!tx || !tx->vout)
+		return;
+
+	unsigned int i;
+	for (i = 0; i < tx->vout->len; i++) {
+		struct bp_txout *txout;
+
+		txout = g_ptr_array_index(tx->vout, i);
+		bp_txout_free(txout);
+	}
+
+	g_ptr_array_free(tx->vout, TRUE);
+
+	tx->vout = NULL;
+}
+
 void bp_tx_free(struct bp_tx *tx)
 {
 	unsigned int i;
@@ -293,18 +319,7 @@ void bp_tx_free(struct bp_tx *tx)
 		tx->vin = NULL;
 	}
 
-	if (tx->vout) {
-		for (i = 0; i < tx->vout->len; i++) {
-			struct bp_txout *txout;
-
-			txout = g_ptr_array_index(tx->vout, i);
-			bp_txout_free(txout);
-		}
-
-		g_ptr_array_free(tx->vout, TRUE);
-
-		tx->vout = NULL;
-	}
+	bp_tx_free_vout(tx);
 
 	tx->sha256_valid = false;
 }

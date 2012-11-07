@@ -96,6 +96,7 @@ extern void bp_txout_init(struct bp_txout *txout);
 extern bool deser_bp_txout(struct bp_txout *txout, struct const_buffer *buf);
 extern void ser_bp_txout(GString *s, const struct bp_txout *txout);
 extern void bp_txout_free(struct bp_txout *txout);
+extern void bp_txout_set_null(struct bp_txout *txout);
 
 static inline bool bp_txout_valid(const struct bp_txout *txout)
 {
@@ -119,6 +120,7 @@ struct bp_tx {
 extern void bp_tx_init(struct bp_tx *tx);
 extern bool deser_bp_tx(struct bp_tx *tx, struct const_buffer *buf);
 extern void ser_bp_tx(GString *s, const struct bp_tx *tx);
+extern void bp_tx_free_vout(struct bp_tx *tx);
 extern void bp_tx_free(struct bp_tx *tx);
 extern bool bp_tx_valid(const struct bp_tx *tx);
 extern void bp_tx_calc_sha256(struct bp_tx *tx);
