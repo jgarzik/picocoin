@@ -149,9 +149,23 @@ static bool CastToBool(const struct buffer *buf)
 	return false;
 }
 
+static void stack_insert(GPtrArray *stack, struct buffer *buf, int index_)
+{
+	int index = stack->len + index_;
+	g_ptr_array_add(stack, NULL);
+	memmove(&stack->pdata[index + 1], &stack->pdata[index],
+		sizeof(gpointer) * (stack->len - index - 1));
+	stack->pdata[index] = buf;
+}
+
 static void stack_push(GPtrArray *stack, const struct buffer *buf)
 {
 	g_ptr_array_add(stack, buffer_copy(buf->p, buf->len));
+}
+
+static void stack_push_nocopy(GPtrArray *stack, struct buffer *buf)
+{
+	g_ptr_array_add(stack, buf);
 }
 
 static void stack_push_char(GPtrArray *stack, unsigned char ch)
@@ -520,24 +534,26 @@ OP_NOP10:
 			break;
 		}
 
-#if 0 /* current work pointer; script ops below this point need work */
 		case OP_PICK:
 		case OP_ROLL: {
 			// (xn ... x2 x1 x0 n - xn ... x2 x1 x0 xn)
 			// (xn ... x2 x1 x0 n - ... x2 x1 x0 xn)
 			if (stack->len < 2)
 				goto out;
-			int n = CastToBigNum(stacktop(stack, -1)).getint();
+			int n = stackint(stack, -1);
 			popstack(stack);
 			if (n < 0 || n >= (int)stack->len)
 				goto out;
 			struct buffer *vch = stacktop(stack, -n-1);
-			if (opcode == OP_ROLL)
-				stack.erase(stack.end()-n-1);
-			stack_push(stack, vch);
+			if (opcode == OP_ROLL) {
+				vch = buffer_copy(vch->p, vch->len);
+				g_ptr_array_remove_index(stack,
+							 stack->len - n - 1);
+				stack_push_nocopy(stack, vch);
+			} else
+				stack_push(stack, vch);
 			break;
 		}
-#endif
 
 		case OP_ROT: {
 			// (x1 x2 x3 -- x2 x3 x1)
@@ -558,16 +574,14 @@ OP_NOP10:
 			break;
 		}
 
-#if 0
 		case OP_TUCK: {
 			// (x1 x2 -- x2 x1 x2)
 			if (stack->len < 2)
 				goto out;
 			struct buffer *vch = stacktop(stack, -1);
-			stack.insert(stack.end()-2, vch);
+			stack_insert(stack, vch, -2);
 			break;
 		}
-#endif
 
 		case OP_SIZE: {
 			// (in -- in size)
@@ -650,7 +664,6 @@ OP_NOP10:
 			break;
 		}
 
-#if 0
 		case OP_ADD:
 		case OP_SUB:
 		case OP_BOOLAND:
@@ -667,35 +680,81 @@ OP_NOP10:
 			// (x1 x2 -- out)
 			if (stack->len < 2)
 				goto out;
-			CBigNum bn1 = CastToBigNum(stacktop(stack, -2));
-			CBigNum bn2 = CastToBigNum(stacktop(stack, -1));
-			CBigNum bn;
+
+			BIGNUM bn1, bn2;
+			BN_init(&bn1);
+			BN_init(&bn2);
+			if (!CastToBigNum(&bn1, stacktop(stack, -2)) ||
+			    !CastToBigNum(&bn2, stacktop(stack, -1))) {
+				BN_clear_free(&bn1);
+				BN_clear_free(&bn2);
+				goto out;
+			}
+
 			switch (opcode)
 			{
 			case OP_ADD:
-				bn = bn1 + bn2;
+				BN_add(&bn, &bn1, &bn2);
 				break;
-
 			case OP_SUB:
-				bn = bn1 - bn2;
+				BN_sub(&bn, &bn1, &bn2);
 				break;
-
-			case OP_BOOLAND:			 bn = (bn1 != bnZero && bn2 != bnZero); break;
-			case OP_BOOLOR:			  bn = (bn1 != bnZero || bn2 != bnZero); break;
-			case OP_NUMEQUAL:			bn = (bn1 == bn2); break;
-			case OP_NUMEQUALVERIFY:	  bn = (bn1 == bn2); break;
-			case OP_NUMNOTEQUAL:		 bn = (bn1 != bn2); break;
-			case OP_LESSTHAN:			bn = (bn1 < bn2); break;
-			case OP_GREATERTHAN:		 bn = (bn1 > bn2); break;
-			case OP_LESSTHANOREQUAL:	 bn = (bn1 <= bn2); break;
-			case OP_GREATERTHANOREQUAL:  bn = (bn1 >= bn2); break;
-			case OP_MIN:		 bn = (bn1 < bn2 ? bn1 : bn2); break;
-			case OP_MAX:		 bn = (bn1 > bn2 ? bn1 : bn2); break;
-			default:			 assert(!"invalid opcode"); break;
+			case OP_BOOLAND:
+				BN_set_word(&bn,
+				    (!BN_is_zero(&bn1) && !BN_is_zero(&bn2)) ?
+				    1 : 0);
+				break;
+			case OP_BOOLOR:
+				BN_set_word(&bn,
+				    (!BN_is_zero(&bn1) || !BN_is_zero(&bn2)) ?
+				    1 : 0);
+				break;
+			case OP_NUMEQUAL:
+			case OP_NUMEQUALVERIFY:
+				BN_set_word(&bn,
+				    (BN_cmp(&bn1, &bn2) == 0) ?  1 : 0);
+				break;
+			case OP_NUMNOTEQUAL:
+				BN_set_word(&bn,
+				    (BN_cmp(&bn1, &bn2) != 0) ?  1 : 0);
+				break;
+			case OP_LESSTHAN:
+				BN_set_word(&bn,
+				    (BN_cmp(&bn1, &bn2) < 0) ?  1 : 0);
+				break;
+			case OP_GREATERTHAN:
+				BN_set_word(&bn,
+				    (BN_cmp(&bn1, &bn2) > 0) ?  1 : 0);
+				break;
+			case OP_LESSTHANOREQUAL:
+				BN_set_word(&bn,
+				    (BN_cmp(&bn1, &bn2) <= 0) ?  1 : 0);
+				break;
+			case OP_GREATERTHANOREQUAL:
+				BN_set_word(&bn,
+				    (BN_cmp(&bn1, &bn2) >= 0) ?  1 : 0);
+				break;
+			case OP_MIN:
+				if (BN_cmp(&bn1, &bn2) < 0)
+					BN_copy(&bn, &bn1);
+				else
+					BN_copy(&bn, &bn2);
+				break;
+			case OP_MAX:
+				if (BN_cmp(&bn1, &bn2) > 0)
+					BN_copy(&bn, &bn1);
+				else
+					BN_copy(&bn, &bn2);
+				break;
+			default:
+				// impossible
+				break;
 			}
 			popstack(stack);
 			popstack(stack);
-			stack_push(stack, bn.getvch());
+			stack_push_str(stack, bn_getvch(&bn));
+			BN_clear_free(&bn1);
+			BN_clear_free(&bn2);
 
 			if (opcode == OP_NUMEQUALVERIFY)
 			{
@@ -706,7 +765,6 @@ OP_NOP10:
 			}
 			break;
 		}
-#endif
 
 		case OP_WITHIN: {
 			// (x min max -- out)
