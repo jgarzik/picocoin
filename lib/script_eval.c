@@ -6,6 +6,7 @@
 #include <ccoin/script.h>
 #include <ccoin/script_eval.h>
 #include <ccoin/util.h>
+#include <ccoin/key.h>
 
 static const size_t nMaxNumSize = 4;
 
@@ -169,6 +170,30 @@ static struct buffer *stacktop(GPtrArray *stack, int index)
 	return stack->pdata[stack->len + index];
 }
 
+static int stackint(GPtrArray *stack, int index)
+{
+	struct buffer *buf = stacktop(stack, index);
+	BIGNUM bn;
+	BN_init(&bn);
+
+	int ret = -1;
+
+	if (!CastToBigNum(&bn, buf))
+		goto out;
+
+	if (!BN_is_negative(&bn))
+		ret = BN_get_word(&bn);
+	else {
+		BN_set_negative(&bn, 0);
+		ret = BN_get_word(&bn);
+		ret = -ret;
+	}
+
+out:
+	BN_clear_free(&bn);
+	return ret;
+}
+
 static struct buffer *stack_take(GPtrArray *stack, int index)
 {
 	struct buffer *ret = stack->pdata[stack->len + index];
@@ -209,6 +234,40 @@ static void bn_set_int(BIGNUM *n, int val)
 		BN_set_word(n, -val);
 		BN_set_negative(n, 1);
 	}
+}
+
+static bool bp_checksig(const struct buffer *vchSigHT,
+			const struct buffer *vchPubKey, GString *scriptCode,
+			const struct bp_tx *txTo, unsigned int nIn,
+			int nHashType)
+{
+	if (!vchSigHT || !vchPubKey || !scriptCode || !txTo ||
+	    !vchSigHT->len || !vchPubKey->len || !scriptCode->len)
+		return false;
+
+	/* examine hashtype at end of string, then remove it */
+	unsigned char *vch_back = vchSigHT->p + (vchSigHT->len - 1);
+	if (nHashType == 0)
+		nHashType = *vch_back;
+	else if (nHashType != *vch_back)
+		return false;
+	struct buffer vchSig = { vchSigHT->p, vchSigHT->len - 1 };
+
+	/* calculate signature hash of transaction */
+	bu256_t sighash;
+	if (!bp_tx_sighash(&sighash, scriptCode, txTo, nIn, nHashType))
+		return false;
+
+	/* verify signature hash */
+	struct bp_key key;
+	bp_key_init(&key);
+
+	bool rc = bp_pubkey_set(&key, vchPubKey->p, vchPubKey->len) &&
+		  bp_verify(&key, &sighash, sizeof(sighash),
+		  	    vchSig.p, vchSig.len);
+
+	bp_key_free(&key);
+	return rc;
 }
 
 bool bp_script_eval(GPtrArray *stack, const GString *script,
@@ -508,62 +567,6 @@ OP_NOP10:
 			stack.insert(stack.end()-2, vch);
 			break;
 		}
-
-
-		//
-		// Splice ops
-		//
-		case OP_CAT: {
-			// (x1 x2 -- out)
-			if (stack->len < 2)
-				goto out;
-			struct buffer *vch1 = stacktop(stack, -2);
-			struct buffer *vch2 = stacktop(stack, -1);
-			vch1.insert(vch1.end(), vch2.begin(), vch2.end());
-			popstack(stack);
-			if (stacktop(stack, -1).size() > 520)
-				goto out;
-			break;
-		}
-
-		case OP_SUBSTR: {
-			// (in begin size -- out)
-			if (stack->len < 3)
-				goto out;
-			struct buffer *vch = stacktop(stack, -3);
-			int nBegin = CastToBigNum(stacktop(stack, -2)).getint();
-			int nEnd = nBegin + CastToBigNum(stacktop(stack, -1)).getint();
-			if (nBegin < 0 || nEnd < nBegin)
-				goto out;
-			if (nBegin > (int)vch.size())
-				nBegin = vch.size();
-			if (nEnd > (int)vch.size())
-				nEnd = vch.size();
-			vch.erase(vch.begin() + nEnd, vch.end());
-			vch.erase(vch.begin(), vch.begin() + nBegin);
-			popstack(stack);
-			popstack(stack);
-			break;
-		}
-
-		case OP_LEFT:
-		case OP_RIGHT: {
-			// (in size -- out)
-			if (stack->len < 2)
-				goto out;
-			struct buffer *vch = stacktop(stack, -2);
-			int nSize = CastToBigNum(stacktop(stack, -1)).getint();
-			if (nSize < 0)
-				goto out;
-			if (nSize > (int)vch.size())
-				nSize = vch.size();
-			if (opcode == OP_LEFT)
-				vch.erase(vch.begin() + nSize, vch.end());
-			else
-				vch.erase(vch.begin(), vch.end() - nSize);
-			popstack(stack);
-			break;
-		}
 #endif
 
 		case OP_SIZE: {
@@ -576,56 +579,6 @@ OP_NOP10:
 			break;
 		}
 
-
-		//
-		// Bitwise logic
-		//
-		case OP_INVERT: {
-			// (in - out)
-			if (stack->len < 1)
-				goto out;
-			struct buffer *vch_ = stacktop(stack, -1);
-			unsigned char *vch = vch_->p;
-			unsigned int i;
-			for (i = 0; i < vch_->len; i++)
-				vch[i] = ~vch[i];
-			break;
-		}
-
-#if 0
-		//
-		// WARNING: These disabled opcodes exhibit unexpected behavior
-		// when used on signed integers due to a bug in MakeSameSize()
-		// [see definition of MakeSameSize() above].
-		//
-		case OP_AND:
-		case OP_OR:
-		case OP_XOR: {
-			// (x1 x2 - out)
-			if (stack->len < 2)
-				goto out;
-			struct buffer *vch1 = stacktop(stack, -2);
-			struct buffer *vch2 = stacktop(stack, -1);
-			MakeSameSize(vch1, vch2); // <-- NOT SAFE FOR SIGNED VALUES
-			if (opcode == OP_AND)
-			{
-				for (unsigned int i = 0; i < vch1.size(); i++)
-					vch1[i] &= vch2[i];
-			}
-			else if (opcode == OP_OR)
-			{
-				for (unsigned int i = 0; i < vch1.size(); i++)
-					vch1[i] |= vch2[i];
-			}
-			else if (opcode == OP_XOR)
-			{
-				for (unsigned int i = 0; i < vch1.size(); i++)
-					vch1[i] ^= vch2[i];
-			}
-			popstack(stack);
-			break;
-		}
-#endif
 
 		case OP_EQUAL:
 		case OP_EQUALVERIFY: {
@@ -658,8 +611,6 @@ OP_NOP10:
 		//
 		case OP_1ADD:
 		case OP_1SUB:
-		case OP_2MUL:
-		case OP_2DIV:
 		case OP_NEGATE:
 		case OP_ABS:
 		case OP_NOT:
@@ -676,12 +627,6 @@ OP_NOP10:
 				break;
 			case OP_1SUB:
 				BN_sub_word(&bn, 1);
-				break;
-			case OP_2MUL:
-				BN_lshift1(&bn, &bn);
-				break;
-			case OP_2DIV:
-				BN_rshift1(&bn, &bn);
 				break;
 			case OP_NEGATE:
 				BN_set_negative(&bn, !BN_is_negative(&bn));
@@ -708,11 +653,6 @@ OP_NOP10:
 #if 0
 		case OP_ADD:
 		case OP_SUB:
-		case OP_MUL:
-		case OP_DIV:
-		case OP_MOD:
-		case OP_LSHIFT:
-		case OP_RSHIFT:
 		case OP_BOOLAND:
 		case OP_BOOLOR:
 		case OP_NUMEQUAL:
@@ -738,33 +678,6 @@ OP_NOP10:
 
 			case OP_SUB:
 				bn = bn1 - bn2;
-				break;
-
-			case OP_MUL:
-				if (!BN_mul(&bn, &bn1, &bn2, pctx))
-					goto out;
-				break;
-
-			case OP_DIV:
-				if (!BN_div(&bn, NULL, &bn1, &bn2, pctx))
-					goto out;
-				break;
-
-			case OP_MOD:
-				if (!BN_mod(&bn, &bn1, &bn2, pctx))
-					goto out;
-				break;
-
-			case OP_LSHIFT:
-				if (bn2 < bnZero || bn2 > CBigNum(2048))
-					goto out;
-				bn = bn1 << bn2.getulong();
-				break;
-
-			case OP_RSHIFT:
-				if (bn2 < bnZero || bn2 > CBigNum(2048))
-					goto out;
-				bn = bn1 >> bn2.getulong();
 				break;
 
 			case OP_BOOLAND:			 bn = (bn1 != bnZero && bn2 != bnZero); break;
@@ -872,7 +785,6 @@ OP_NOP10:
 			memcpy(&pbegincodehash, &pc, sizeof(pc));
 			break;
 
-#if 0
 		case OP_CHECKSIG:
 		case OP_CHECKSIGVERIFY: {
 			// (sig pubkey -- bool)
@@ -887,18 +799,22 @@ OP_NOP10:
 			//PrintHex(vchPubKey.begin(), vchPubKey.end(), "pubkey: %s\n");
 
 			// Subset of script starting at the most recent codeseparator
-			CScript scriptCode(pbegincodehash, pend);
+			GString *scriptCode = g_string_sized_new(pbegincodehash.len);
+			g_string_append_len(scriptCode,
+					    pbegincodehash.p,
+					    pbegincodehash.len);
 
 			// Drop the signature, since there's no way for a signature to sign itself
-			scriptCode.FindAndDelete(CScript(vchSig));
+			// FIXME scriptCode.FindAndDelete(CScript(vchSig));
 
-			bool fSuccess = (!fStrictEncodings || (IsCanonicalSignature(vchSig) && IsCanonicalPubKey(vchPubKey)));
-			if (fSuccess)
-				fSuccess = CheckSig(vchSig, vchPubKey, scriptCode, txTo, nIn, nHashType);
+			bool fSuccess = bp_checksig(vchSig, vchPubKey,
+						    scriptCode,
+						    txTo, nIn, nHashType);
+			g_string_free(scriptCode, TRUE);
 
 			popstack(stack);
 			popstack(stack);
-			stack_push(stack, fSuccess ? vchTrue : vchFalse);
+			stack_push_char(stack, fSuccess ? 1 : 0);
 			if (opcode == OP_CHECKSIGVERIFY)
 			{
 				if (fSuccess)
@@ -917,7 +833,7 @@ OP_NOP10:
 			if ((int)stack->len < i)
 				goto out;
 
-			int nKeysCount = CastToBigNum(stacktop(stack, -i)).getint();
+			int nKeysCount = stackint(stack, -i);
 			if (nKeysCount < 0 || nKeysCount > 20)
 				goto out;
 			nOpCount += nKeysCount;
@@ -928,7 +844,7 @@ OP_NOP10:
 			if ((int)stack->len < i)
 				goto out;
 
-			int nSigsCount = CastToBigNum(stacktop(stack, -i)).getint();
+			int nSigsCount = stackint(stack, -i);
 			if (nSigsCount < 0 || nSigsCount > nKeysCount)
 				goto out;
 			int isig = ++i;
@@ -937,14 +853,19 @@ OP_NOP10:
 				goto out;
 
 			// Subset of script starting at the most recent codeseparator
-			CScript scriptCode(pbegincodehash, pend);
+			GString *scriptCode = g_string_sized_new(pbegincodehash.len);
+			g_string_append_len(scriptCode,
+					    pbegincodehash.p,
+					    pbegincodehash.len);
 
+#if 0	// FIXME
 			// Drop the signatures, since there's no way for a signature to sign itself
 			for (int k = 0; k < nSigsCount; k++)
 			{
 				struct buffer *vchSig = stacktop(stack, -isig-k);
 				scriptCode.FindAndDelete(CScript(vchSig));
 			}
+#endif
 
 			bool fSuccess = true;
 			while (fSuccess && nSigsCount > 0)
@@ -953,9 +874,9 @@ OP_NOP10:
 				struct buffer *vchPubKey = stacktop(stack, -ikey);
 
 				// Check signature
-				bool fOk = (!fStrictEncodings || (IsCanonicalSignature(vchSig) && IsCanonicalPubKey(vchPubKey)));
-				if (fOk)
-					fOk = CheckSig(vchSig, vchPubKey, scriptCode, txTo, nIn, nHashType);
+				bool fOk = bp_checksig(vchSig, vchPubKey,
+						       scriptCode, txTo, nIn,
+						       nHashType);
 
 				if (fOk) {
 					isig++;
@@ -970,9 +891,11 @@ OP_NOP10:
 					fSuccess = false;
 			}
 
+			g_string_free(scriptCode, TRUE);
+
 			while (i-- > 0)
 				popstack(stack);
-			stack_push(stack, fSuccess ? vchTrue : vchFalse);
+			stack_push_char(stack, fSuccess ? 1 : 0);
 
 			if (opcode == OP_CHECKMULTISIGVERIFY)
 			{
@@ -983,7 +906,6 @@ OP_NOP10:
 			}
 			break;
 		}
-#endif
 
 		default:
 			goto out;
