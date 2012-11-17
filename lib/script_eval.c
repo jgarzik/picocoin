@@ -1,6 +1,8 @@
 
 #include "picocoin-config.h"
 
+#include <openssl/sha.h>
+#include <openssl/ripemd.h>
 #include <ccoin/script.h>
 #include <ccoin/script_eval.h>
 #include <ccoin/util.h>
@@ -818,7 +820,6 @@ OP_NOP10:
 			break;
 		}
 
-#if 0
 		//
 		// Crypto
 		//
@@ -831,28 +832,40 @@ OP_NOP10:
 			if (stack->len < 1)
 				goto out;
 			struct buffer *vch = stacktop(stack, -1);
-			struct buffer *vchHash((opcode == OP_RIPEMD160 || opcode == OP_SHA1 || opcode == OP_HASH160) ? 20 : 32);
-			if (opcode == OP_RIPEMD160)
-				RIPEMD160(&vch[0], vch.size(), &vchHash[0]);
-			else if (opcode == OP_SHA1)
-				SHA1(&vch[0], vch.size(), &vchHash[0]);
-			else if (opcode == OP_SHA256)
-				SHA256(&vch[0], vch.size(), &vchHash[0]);
-			else if (opcode == OP_HASH160)
-			{
-				uint160 hash160 = Hash160(vch);
-				memcpy(&vchHash[0], &hash160, sizeof(hash160));
+			unsigned int hashlen;
+			unsigned char md[32];
+
+			switch (opcode) {
+			case OP_RIPEMD160:
+				hashlen = 20;
+				RIPEMD160(vch->p, vch->len, md);
+				break;
+			case OP_SHA1:
+				hashlen = 20;
+				SHA1(vch->p, vch->len, md);
+				break;
+			case OP_SHA256:
+				hashlen = 32;
+				SHA256(vch->p, vch->len, md);
+				break;
+			case OP_HASH160:
+				hashlen = 20;
+				bu_Hash160(md, vch->p, vch->len);
+				break;
+			case OP_HASH256:
+				hashlen = 32;
+				bu_Hash(md, vch->p, vch->len);
+				break;
+			default:
+				// impossible
+				goto out;
 			}
-			else if (opcode == OP_HASH256)
-			{
-				uint256 hash = Hash(vch.begin(), vch.end());
-				memcpy(&vchHash[0], &hash, sizeof(hash));
-			}
+
 			popstack(stack);
-			stack_push(stack, vchHash);
+			struct buffer buf = { md, hashlen };
+			stack_push(stack, &buf);
 			break;
 		}
-#endif
 
 		case OP_CODESEPARATOR:
 			// Hash starts after the code separator
