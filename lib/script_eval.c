@@ -5,6 +5,8 @@
 #include <ccoin/script_eval.h>
 #include <ccoin/util.h>
 
+static const size_t nMaxNumSize = 4;
+
 bool bp_tx_sighash(bu256_t *hash, GString *scriptCode,
 		   const struct bp_tx *txTo, unsigned int nIn,
 		   int nHashType)
@@ -106,6 +108,27 @@ static const unsigned char disabled_op[256] = {
 	[OP_LSHIFT] = 1,
 	[OP_RSHIFT] = 1,
 };
+
+static bool CastToBigNum(BIGNUM *vo, const struct buffer *buf)
+{
+	if (buf->len > nMaxNumSize)
+		return false;
+	
+	// Get rid of extra leading zeros:
+	// buf -> bn -> buf -> bn
+
+	BIGNUM bn;
+	BN_init(&bn);
+
+	bn_setvch(&bn, buf->p, buf->len);
+	GString *bn_s = bn_getvch(&bn);
+
+	bn_setvch(vo, bn_s->str, bn_s->len);
+
+	g_string_free(bn_s, TRUE);
+	BN_clear_free(&bn);
+	return true;
+}
 
 static bool CastToBool(const struct buffer *buf)
 {
@@ -628,7 +651,6 @@ OP_NOP10:
 			break;
 		}
 
-#if 0
 		//
 		// Numeric
 		//
@@ -643,24 +665,45 @@ OP_NOP10:
 			// (in -- out)
 			if (stack->len < 1)
 				goto out;
-			CBigNum bn = CastToBigNum(stacktop(stack, -1));
+			if (!CastToBigNum(&bn, stacktop(stack, -1)))
+				goto out;
 			switch (opcode)
 			{
-			case OP_1ADD:	   bn += bnOne; break;
-			case OP_1SUB:	   bn -= bnOne; break;
-			case OP_2MUL:	   bn <<= 1; break;
-			case OP_2DIV:	   bn >>= 1; break;
-			case OP_NEGATE:	 bn = -bn; break;
-			case OP_ABS:		if (bn < bnZero) bn = -bn; break;
-			case OP_NOT:		bn = (bn == bnZero); break;
-			case OP_0NOTEQUAL:  bn = (bn != bnZero); break;
-			default:			assert(!"invalid opcode"); break;
+			case OP_1ADD:
+				BN_add_word(&bn, 1);
+				break;
+			case OP_1SUB:
+				BN_sub_word(&bn, 1);
+				break;
+			case OP_2MUL:
+				BN_lshift1(&bn, &bn);
+				break;
+			case OP_2DIV:
+				BN_rshift1(&bn, &bn);
+				break;
+			case OP_NEGATE:
+				BN_set_negative(&bn, !BN_is_negative(&bn));
+				break;
+			case OP_ABS:
+				if (BN_is_negative(&bn))
+					BN_set_negative(&bn, 0);
+				break;
+			case OP_NOT:
+				BN_set_word(&bn, BN_is_zero(&bn) ? 1 : 0);
+				break;
+			case OP_0NOTEQUAL:
+				BN_set_word(&bn, BN_is_zero(&bn) ? 0 : 1);
+				break;
+			default:
+				// impossible
+				goto out;
 			}
 			popstack(stack);
-			stack_push(stack, bn.getvch());
+			stack_push_str(stack, bn_getvch(&bn));
 			break;
 		}
 
+#if 0
 		case OP_ADD:
 		case OP_SUB:
 		case OP_MUL:
@@ -748,23 +791,34 @@ OP_NOP10:
 			}
 			break;
 		}
+#endif
 
 		case OP_WITHIN: {
 			// (x min max -- out)
 			if (stack->len < 3)
 				goto out;
-			CBigNum bn1 = CastToBigNum(stacktop(stack, -3));
-			CBigNum bn2 = CastToBigNum(stacktop(stack, -2));
-			CBigNum bn3 = CastToBigNum(stacktop(stack, -1));
-			bool fValue = (bn2 <= bn1 && bn1 < bn3);
+			BIGNUM bn1, bn2, bn3;
+			BN_init(&bn1);
+			BN_init(&bn2);
+			BN_init(&bn3);
+			bool rc1 = CastToBigNum(&bn1, stacktop(stack, -3));
+			bool rc2 = CastToBigNum(&bn2, stacktop(stack, -2));
+			bool rc3 = CastToBigNum(&bn3, stacktop(stack, -1));
+			bool fValue = (BN_cmp(&bn2, &bn1) <= 0 &&
+				       BN_cmp(&bn1, &bn3) < 0);
 			popstack(stack);
 			popstack(stack);
 			popstack(stack);
-			stack_push(stack, fValue ? vchTrue : vchFalse);
+			stack_push_char(stack, fValue ? 1 : 0);
+			BN_clear_free(&bn1);
+			BN_clear_free(&bn2);
+			BN_clear_free(&bn3);
+			if (!rc1 || !rc2 || !rc3)
+				goto out;
 			break;
 		}
 
-
+#if 0
 		//
 		// Crypto
 		//
