@@ -1,9 +1,13 @@
 
 
 
-Tiny bitcoin utility and lightweight client
+Tiny bitcoin library, with lightweight client and utils
 
-Dependencies:
+libccoin library dependencies:
+	GLib 2.x (from the GTK project)
+	OpenSSL
+
+picocoin client dependencies:
 	GLib 2.x (from the GTK project)
 	OpenSSL
 	libevent
