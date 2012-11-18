@@ -284,9 +284,9 @@ static bool bp_checksig(const struct buffer *vchSigHT,
 	return rc;
 }
 
-bool bp_script_eval(GPtrArray *stack, const GString *script,
-		    const struct bp_tx *txTo, unsigned int nIn,
-		    int nHashType)
+static bool bp_script_eval(GPtrArray *stack, const GString *script,
+			   const struct bp_tx *txTo, unsigned int nIn,
+			   int nHashType)
 {
 	struct const_buffer pc = { script->str, script->len };
 	struct const_buffer pend = { script->str + script->len, 0 };
@@ -980,5 +980,51 @@ out:
 	g_ptr_array_free(altstack, TRUE);
 	g_byte_array_unref(vfExec);
 	return rc;
+}
+
+bool bp_script_verify(const GString *scriptSig, const GString *scriptPubKey,
+		      const struct bp_tx *txTo, unsigned int nIn,
+		      int nHashType)
+{
+	bool rc = false;
+	GPtrArray *stack = g_ptr_array_new_with_free_func(
+						(GDestroyNotify) buffer_free);
+
+	if (!bp_script_eval(stack, scriptSig, txTo, nIn, nHashType))
+		goto out;
+	if (!bp_script_eval(stack, scriptPubKey, txTo, nIn, nHashType))
+		goto out;
+	if (stack->len == 0)
+		goto out;
+
+	if (CastToBool(stacktop(stack, -1)) == false)
+		goto out;
+
+	// TODO: P2SH
+
+	rc = true;
+
+out:
+	g_ptr_array_free(stack, TRUE);
+	return rc;
+}
+
+bool bp_verify_sig(const struct bp_tx *txFrom, const struct bp_tx *txTo,
+		   unsigned int nIn, int nHashType)
+{
+	if (!txFrom || !txFrom->vout || !txFrom->vout->len ||
+	    !txTo || !txTo->vin || !txTo->vin->len ||
+	    (txTo->vin->len <= nIn))
+		return false;
+
+	struct bp_txin *txin = g_ptr_array_index(txTo->vin, nIn);
+	if (txin->prevout.n >= txFrom->vout->len)
+		return false;
+	
+	struct bp_txout *txout = g_ptr_array_index(txFrom->vout,
+						   txin->prevout.n);
+
+	return bp_script_verify(txin->scriptSig, txout->scriptPubKey,
+				txTo, nIn, nHashType);
 }
 
