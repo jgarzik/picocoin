@@ -5,6 +5,7 @@ base58
 block
 bloom
 blkdb
+chain-verf
 fileio
 hex
 keyset
