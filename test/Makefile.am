@@ -16,10 +16,10 @@ noinst_LIBRARIES= libtest.a
 libtest_a_SOURCES= libtest.h libtest.c
 
 noinst_PROGRAMS	= hex base58 fileio util keyset bloom \
-		  script tx block blkdb wallet-basics chain-verf
+		  script-parse tx block blkdb wallet-basics chain-verf
 
 TESTS		= hex base58 fileio util keyset bloom \
-		  script tx block blkdb wallet-basics chain-verf
+		  script-parse tx block blkdb wallet-basics chain-verf
 
 COMMON_LDADD	= libtest.a ../lib/libccoin.a \
 		  @GLIB_LIBS@ @CRYPTO_LIBS@ @JANSSON_LIBS@ @MATH_LIBS@
@@ -32,7 +32,7 @@ chain_verf_LDADD = $(COMMON_LDADD)
 fileio_LDADD	= $(COMMON_LDADD)
 hex_LDADD	= $(COMMON_LDADD)
 keyset_LDADD	= $(COMMON_LDADD)
-script_LDADD	= $(COMMON_LDADD)
+script_parse_LDADD = $(COMMON_LDADD)
 tx_LDADD	= $(COMMON_LDADD)
 util_LDADD	= $(COMMON_LDADD)
 wallet_basics_LDADD	= $(COMMON_LDADD)
