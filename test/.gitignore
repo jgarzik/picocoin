@@ -12,6 +12,7 @@ keyset
 script
 script-parse
 tx
+tx-valid
 util
 wallet-basics
 

@@ -10,7 +10,8 @@ EXTRA_DIST	= \
 	blk0.ser  blk120383.ser  tx3e0dc3da.ser \
 	hdr193000.ser tn_hdr35141.ser \
 	tn_blk35133.ser wallet-basics.json \
-	script_valid.json script_invalid.json
+	script_valid.json script_invalid.json \
+	tx_valid.json
 
 noinst_LIBRARIES= libtest.a
 
@@ -18,11 +19,11 @@ libtest_a_SOURCES= libtest.h libtest.c
 
 noinst_PROGRAMS	= hex base58 fileio util keyset bloom \
 		  script-parse tx block blkdb script \
-		  wallet-basics chain-verf
+		  tx-valid wallet-basics chain-verf
 
 TESTS		= hex base58 fileio util keyset bloom \
 		  script-parse tx block blkdb script \
-		  wallet-basics chain-verf
+		  tx-valid wallet-basics chain-verf
 
 COMMON_LDADD	= libtest.a ../lib/libccoin.a \
 		  @GLIB_LIBS@ @CRYPTO_LIBS@ @JANSSON_LIBS@ @MATH_LIBS@
@@ -38,6 +39,7 @@ keyset_LDADD		= $(COMMON_LDADD)
 script_LDADD		= $(COMMON_LDADD)
 script_parse_LDADD	= $(COMMON_LDADD)
 tx_LDADD		= $(COMMON_LDADD)
+tx_valid_LDADD		= $(COMMON_LDADD)
 util_LDADD		= $(COMMON_LDADD)
 wallet_basics_LDADD	= $(COMMON_LDADD)
 

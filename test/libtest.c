@@ -4,8 +4,14 @@
  */
 #include "picocoin-config.h"
 
+#include <stdbool.h>
+#include <stdint.h>
+#include <ctype.h>
+#include <assert.h>
 #include <jansson.h>
 #include <glib.h>
+#include <ccoin/script.h>
+#include <ccoin/hexcode.h>
 #include "libtest.h"
 
 json_t *read_json(const char *filename)
@@ -35,5 +41,58 @@ void dumphex(const char *prefix, const void *p_, size_t len)
 	}
 
 	fprintf(stderr, "\n");
+}
+
+static bool is_digitstr(const char *s)
+{
+	if (*s == '-')
+		s++;
+
+	while (*s) {
+		if (!isdigit(*s))
+			return false;
+		s++;
+	}
+
+	return true;
+}
+
+GString *parse_script_str(const char *enc)
+{
+	char **tokens = g_strsplit_set(enc, " \t\n", 0);
+	assert (tokens != NULL);
+
+	GString *script = g_string_sized_new(64);
+
+	unsigned int idx;
+	for (idx = 0; tokens[idx] != NULL; idx++) {
+		char *token = tokens[idx];
+
+		if (is_digitstr(token)) {
+			int64_t v = strtoll(token, NULL, 10);
+			bsp_push_int64(script, v);
+		}
+
+		else if (is_hexstr(token, true)) {
+			GString *raw = hex2str(token);
+			g_string_append_len(script, raw->str, raw->len);
+			g_string_free(raw, TRUE);
+		}
+
+		else if ((strlen(token) >= 2) &&
+			 (token[0] == '\'') &&
+			 (token[strlen(token) - 1] == '\''))
+			bsp_push_data(script, &token[1], strlen(token) - 2);
+
+		else if (GetOpType(token) != OP_INVALIDOPCODE)
+			bsp_push_op(script, GetOpType(token));
+
+		else
+			assert(!"parse error");
+	}
+
+	g_strfreev(tokens);
+
+	return script;
 }
 
