@@ -5,7 +5,6 @@
 #include <openssl/sha.h>
 #include <openssl/ripemd.h>
 #include <ccoin/script.h>
-#include <ccoin/script_eval.h>
 #include <ccoin/util.h>
 #include <ccoin/key.h>
 
@@ -284,10 +283,15 @@ static bool bp_checksig(const struct buffer *vchSigHT,
 	struct bp_key key;
 	bp_key_init(&key);
 
-	bool rc = bp_pubkey_set(&key, vchPubKey->p, vchPubKey->len) &&
-		  bp_verify(&key, &sighash, sizeof(sighash),
-		  	    vchSig.p, vchSig.len);
+	bool rc = false;
+	if (!bp_pubkey_set(&key, vchPubKey->p, vchPubKey->len))
+		goto out;
+	if (!bp_verify(&key, &sighash, sizeof(sighash), vchSig.p, vchSig.len))
+		goto out;
 
+	rc = true;
+
+out:
 	bp_key_free(&key);
 	return rc;
 }

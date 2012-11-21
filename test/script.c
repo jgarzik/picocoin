@@ -8,7 +8,6 @@
 #include <jansson.h>
 #include <glib.h>
 #include <ccoin/script.h>
-#include <ccoin/script_eval.h>
 #include <ccoin/core.h>
 #include "libtest.h"
 

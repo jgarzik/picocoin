@@ -6,6 +6,7 @@
 #include <ccoin/core.h>
 #include <ccoin/hexcode.h>
 #include <ccoin/buint.h>
+#include <ccoin/script.h>
 #include "libtest.h"
 
 static guint input_hash(gconstpointer key_)
@@ -32,7 +33,60 @@ static void input_value_free(gpointer v)
 static void test_tx_valid(bool is_valid, GHashTable *input_map,
 			  GString *tx_ser, bool enforce_p2sh)
 {
-	// FIXME
+	struct bp_tx tx;
+
+	bp_tx_init(&tx);
+
+	struct const_buffer buf = { tx_ser->str, tx_ser->len };
+	assert(deser_bp_tx(&tx, &buf) == true);
+	assert(bp_tx_valid(&tx) == is_valid);
+	bp_tx_calc_sha256(&tx);
+
+	unsigned int i;
+	for (i = 0; i < tx.vin->len; i++) {
+		struct bp_txin *txin;
+
+		txin = g_ptr_array_index(tx.vin, i);
+		assert(txin != NULL);
+
+		GString *scriptPubKey = g_hash_table_lookup(input_map,
+							    &txin->prevout);
+		if (scriptPubKey == NULL) {
+			if (!is_valid) {
+				/* if testing tx_invalid.json, missing input
+				 * is invalid, and therefore correct
+				 */
+				continue;
+			}
+
+			char tx_hexstr[(32 * 2) + 1], hexstr[(32 * 2) + 1];
+			bu256_hex(tx_hexstr, &tx.sha256);
+			bu256_hex(hexstr, &txin->prevout.hash);
+			fprintf(stderr,
+			"tx-valid: TX %s\n"
+			"tx-valid: prevout (%s, %u) not found\n",
+				tx_hexstr, hexstr, txin->prevout.n);
+
+			assert(scriptPubKey != NULL);
+		}
+
+		bool rc = bp_script_verify(txin->scriptSig, scriptPubKey,
+					&tx, i,
+					enforce_p2sh ? SCRIPT_VERIFY_P2SH :
+					SCRIPT_VERIFY_NONE, 0);
+		if (rc != is_valid) {
+			char tx_hexstr[(32 * 2) + 1];
+			bu256_hex(tx_hexstr, &tx.sha256);
+			fprintf(stderr,
+			"tx-valid: TX %s\n"
+			"tx-valid: txin %u script verification failed\n",
+				tx_hexstr, i);
+
+			//assert(rc == is_valid);
+		}
+	}
+
+	bp_tx_free(&tx);
 }
 
 static void runtest(bool is_valid, const char *basefn)
@@ -78,21 +132,15 @@ static void runtest(bool is_valid, const char *basefn)
 			assert(json_is_integer(json_array_get(input, 1)));
 			assert(prev_pubkey_enc != NULL);
 
-			GString *prev_rawhash = hex2str(prev_hashstr);
-			assert(prev_rawhash->len == sizeof(bu256_t));
-
 			struct bp_outpt *outpt;
 			outpt = malloc(sizeof(*outpt));
-			memcpy(&outpt->hash, prev_rawhash->str,
-			       sizeof(outpt->hash));
+			hex_bu256(&outpt->hash, prev_hashstr);
 			outpt->n = prev_n;
 
 			GString *script = parse_script_str(prev_pubkey_enc);
 			assert(script != NULL);
 
 			g_hash_table_insert(input_map, outpt, script);
-
-			g_string_free(prev_rawhash, TRUE);
 		}
 
 		const char *tx_hexser =

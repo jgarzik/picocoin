@@ -10,6 +10,8 @@
 #include <stdbool.h>
 #include <glib.h>
 #include <ccoin/buffer.h>
+#include <ccoin/core.h>
+#include <ccoin/buint.h>
 
 /** Signature hash types/flags */
 enum
@@ -242,6 +244,19 @@ static inline void bsp_start(struct bscript_parser *bp,
 	bp->buf = buf;
 	bp->error = false;
 }
+
+/*
+ * script validation
+ */
+
+extern bool bp_tx_sighash(bu256_t *hash, GString *scriptCode,
+		   const struct bp_tx *txTo, unsigned int nIn,
+		   int nHashType);
+extern bool bp_script_verify(const GString *scriptSig, const GString *scriptPubKey,
+		      const struct bp_tx *txTo, unsigned int nIn,
+		      unsigned int flags, int nHashType);
+extern bool bp_verify_sig(const struct bp_tx *txFrom, const struct bp_tx *txTo,
+		   unsigned int nIn, unsigned int flags, int nHashType);
 
 /*
  * script building
