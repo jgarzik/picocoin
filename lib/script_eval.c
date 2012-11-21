@@ -1,6 +1,7 @@
 
 #include "picocoin-config.h"
 
+#include <assert.h>
 #include <openssl/sha.h>
 #include <openssl/ripemd.h>
 #include <ccoin/script.h>
@@ -179,6 +180,13 @@ static void stack_push_str(GPtrArray *stack, GString *s)
 	g_string_free(s, TRUE);
 }
 
+static void stack_copy(GPtrArray *dest, const GPtrArray *src)
+{
+	unsigned int i;
+	for (i = 0; i < src->len; i++)
+		stack_push(dest, g_ptr_array_index(src, i));
+}
+
 static struct buffer *stacktop(GPtrArray *stack, int index)
 {
 	return stack->pdata[stack->len + index];
@@ -217,8 +225,8 @@ static struct buffer *stack_take(GPtrArray *stack, int index)
 
 static void popstack(GPtrArray *stack)
 {
-	if (stack->len)
-		g_ptr_array_remove_index(stack, stack->len - 1);
+	assert(stack->len > 0);
+	g_ptr_array_remove_index(stack, stack->len - 1);
 }
 
 static void stack_swap(GPtrArray *stack, int idx1, int idx2)
@@ -1013,9 +1021,18 @@ bool bp_script_verify(const GString *scriptSig, const GString *scriptPubKey,
 	bool rc = false;
 	GPtrArray *stack = g_ptr_array_new_with_free_func(
 						(GDestroyNotify) buffer_free);
+	GString *pubkey2 = NULL;
+	GPtrArray *stackCopy = NULL;
 
 	if (!bp_script_eval(stack, scriptSig, txTo, nIn, flags, nHashType))
 		goto out;
+
+	if (flags & SCRIPT_VERIFY_P2SH) {
+		stackCopy = g_ptr_array_new_full(stack->len,
+						(GDestroyNotify) buffer_free);
+		stack_copy(stackCopy, stack);
+	}
+
 	if (!bp_script_eval(stack, scriptPubKey, txTo, nIn, flags, nHashType))
 		goto out;
 	if (stack->len == 0)
@@ -1024,12 +1041,38 @@ bool bp_script_verify(const GString *scriptSig, const GString *scriptPubKey,
 	if (CastToBool(stacktop(stack, -1)) == false)
 		goto out;
 
-	// TODO: P2SH
+	if ((flags & SCRIPT_VERIFY_P2SH) && is_bsp_p2sh_str(scriptPubKey)) {
+		struct const_buffer sigbuf = { scriptSig->str, scriptSig->len };
+		if (!is_bsp_pushonly(&sigbuf))
+			goto out;
+		if (stackCopy->len < 1)
+			goto out;
+
+		struct buffer *pubkey2_buf = stack_take(stackCopy, -1);
+		popstack(stackCopy);
+
+		GString *pubkey2 = g_string_sized_new(pubkey2_buf->len);
+		g_string_append_len(pubkey2, pubkey2_buf->p, pubkey2_buf->len);
+
+		buffer_free(pubkey2_buf);
+
+		if (!bp_script_eval(stackCopy, pubkey2, txTo, nIn,
+				    flags, nHashType))
+			goto out;
+		if (stackCopy->len == 0)
+			goto out;
+		if (CastToBool(stacktop(stackCopy, -1)) == false)
+			goto out;
+	}
 
 	rc = true;
 
 out:
 	g_ptr_array_free(stack, TRUE);
+	if (pubkey2)
+		g_string_free(pubkey2, TRUE);
+	if (stackCopy)
+		g_ptr_array_free(stackCopy, TRUE);
 	return rc;
 }
 

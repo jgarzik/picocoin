@@ -214,10 +214,26 @@ extern GPtrArray *bsp_parse_all(const void *data_, size_t data_len);
 extern enum txnouttype bsp_classify(GPtrArray *ops);
 extern bool bsp_parse_addr(struct bscript_addr *addr,
 		    const void *data, size_t data_len);
+extern bool is_bsp_pushonly(struct const_buffer *buf);
 
 static inline bool is_bsp_pushdata(enum opcodetype op)
 {
 	return (op <= OP_PUSHDATA4);
+}
+
+static inline bool is_bsp_p2sh(struct const_buffer *buf)
+{
+	const unsigned char *vch = buf->p;
+	return	(buf->len == 23 &&
+		 vch[0] == OP_HASH160 &&
+		 vch[1] == 0x14 &&
+		 vch[22] == OP_EQUAL);
+}
+
+static inline bool is_bsp_p2sh_str(const GString *s)
+{
+	struct const_buffer buf = { s->str, s->len };
+	return is_bsp_p2sh(&buf);
 }
 
 static inline void bsp_start(struct bscript_parser *bp,

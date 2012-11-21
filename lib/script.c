@@ -99,6 +99,22 @@ err_out:
 	return NULL;
 }
 
+bool is_bsp_pushonly(struct const_buffer *buf)
+{
+	struct bscript_parser bp;
+	struct bscript_op op;
+
+	bsp_start(&bp, buf);
+
+	while (bsp_getop(&op, &bp))
+		if (!is_bsp_pushdata(op.op))
+			return false;
+	if (bp.error)
+		return false;
+
+	return true;
+}
+
 static bool bsp_match_op(const struct bscript_op *op, unsigned char template)
 {
 	switch (template) {
