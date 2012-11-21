@@ -20,6 +20,14 @@ enum
 	SIGHASH_ANYONECANPAY = 0x80,
 };
 
+/** Script verification flags */
+enum
+{
+    SCRIPT_VERIFY_NONE      = 0,
+    SCRIPT_VERIFY_P2SH      = (1U << 0),
+    SCRIPT_VERIFY_STRICTENC = (1U << 1),
+};
+
 enum txnouttype
 {
 	TX_NONSTANDARD,

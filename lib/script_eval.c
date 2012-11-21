@@ -284,9 +284,21 @@ static bool bp_checksig(const struct buffer *vchSigHT,
 	return rc;
 }
 
+static bool IsCanonicalSignature(const struct buffer *vch)
+{
+	// TODO
+	return true;
+}
+
+static bool IsCanonicalPubKey(const struct buffer *vch)
+{
+	// TODO
+	return true;
+}
+
 static bool bp_script_eval(GPtrArray *stack, const GString *script,
 			   const struct bp_tx *txTo, unsigned int nIn,
-			   int nHashType)
+			   unsigned int flags, int nHashType)
 {
 	struct const_buffer pc = { script->str, script->len };
 	struct const_buffer pend = { script->str + script->len, 0 };
@@ -302,6 +314,7 @@ static bool bp_script_eval(GPtrArray *stack, const GString *script,
 	if (script->len > 10000)
 		goto out;
 	
+	bool fStrictEncodings = flags & SCRIPT_VERIFY_STRICTENC;
 	unsigned int nOpCount = 0;
 
 	struct bscript_parser bp;
@@ -865,9 +878,15 @@ OP_NOP10:
 			// Drop the signature, since there's no way for a signature to sign itself
 			// FIXME scriptCode.FindAndDelete(CScript(vchSig));
 
-			bool fSuccess = bp_checksig(vchSig, vchPubKey,
-						    scriptCode,
-						    txTo, nIn, nHashType);
+			bool fSuccess =
+				(!fStrictEncodings ||
+				 (IsCanonicalSignature(vchSig) &&
+				  IsCanonicalPubKey(vchPubKey)));
+			if (fSuccess)
+				fSuccess = bp_checksig(vchSig, vchPubKey,
+						       scriptCode,
+						       txTo, nIn, nHashType);
+
 			g_string_free(scriptCode, TRUE);
 
 			popstack(stack);
@@ -932,9 +951,14 @@ OP_NOP10:
 				struct buffer *vchPubKey = stacktop(stack, -ikey);
 
 				// Check signature
-				bool fOk = bp_checksig(vchSig, vchPubKey,
-						       scriptCode, txTo, nIn,
-						       nHashType);
+				bool fOk =
+					(!fStrictEncodings ||
+					 (IsCanonicalSignature(vchSig) &&
+					  IsCanonicalPubKey(vchPubKey)));
+				if (fOk)
+					fOk = bp_checksig(vchSig, vchPubKey,
+							  scriptCode, txTo, nIn,
+							  nHashType);
 
 				if (fOk) {
 					isig++;
@@ -984,15 +1008,15 @@ out:
 
 bool bp_script_verify(const GString *scriptSig, const GString *scriptPubKey,
 		      const struct bp_tx *txTo, unsigned int nIn,
-		      int nHashType)
+		      unsigned int flags, int nHashType)
 {
 	bool rc = false;
 	GPtrArray *stack = g_ptr_array_new_with_free_func(
 						(GDestroyNotify) buffer_free);
 
-	if (!bp_script_eval(stack, scriptSig, txTo, nIn, nHashType))
+	if (!bp_script_eval(stack, scriptSig, txTo, nIn, flags, nHashType))
 		goto out;
-	if (!bp_script_eval(stack, scriptPubKey, txTo, nIn, nHashType))
+	if (!bp_script_eval(stack, scriptPubKey, txTo, nIn, flags, nHashType))
 		goto out;
 	if (stack->len == 0)
 		goto out;
@@ -1010,7 +1034,7 @@ out:
 }
 
 bool bp_verify_sig(const struct bp_tx *txFrom, const struct bp_tx *txTo,
-		   unsigned int nIn, int nHashType)
+		   unsigned int nIn, unsigned int flags, int nHashType)
 {
 	if (!txFrom || !txFrom->vout || !txFrom->vout->len ||
 	    !txTo || !txTo->vin || !txTo->vin->len ||
@@ -1025,6 +1049,6 @@ bool bp_verify_sig(const struct bp_tx *txFrom, const struct bp_tx *txTo,
 						   txin->prevout.n);
 
 	return bp_script_verify(txin->scriptSig, txout->scriptPubKey,
-				txTo, nIn, nHashType);
+				txTo, nIn, flags, nHashType);
 }
 

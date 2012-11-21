@@ -72,11 +72,14 @@ static void test_script(bool is_valid,GString *scriptSig, GString *scriptPubKey,
 			const char *scriptPubKeyEnc)
 {
 	struct bp_tx tx;
+	static const unsigned int test_flags =
+		SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC;
 
 	bp_tx_init(&tx);
 
 	bool rc;
-	rc = bp_script_verify(scriptSig, scriptPubKey, &tx, 0, SIGHASH_NONE);
+	rc = bp_script_verify(scriptSig, scriptPubKey, &tx, 0,
+			      test_flags, SIGHASH_NONE);
 	if (rc != is_valid) {
 		fprintf(stderr,
 			"script: %sis_valid test %u failed\n"
