@@ -101,6 +101,8 @@ bool bp_pubkey_set(struct bp_key *key, const void *pubkey_, size_t pk_len)
 	const unsigned char *pubkey = pubkey_;
 	if (!o2i_ECPublicKey(&key->k, &pubkey, pk_len))
 		return false;
+	if (pk_len == 33)
+		EC_KEY_set_conv_form(key->k, POINT_CONVERSION_COMPRESSED);
 	return true;
 }
 
@@ -212,6 +214,6 @@ bool bp_sign(struct bp_key *key, const void *data, size_t data_len,
 bool bp_verify(struct bp_key *key, const void *data, size_t data_len,
 	       const void *sig, size_t sig_len)
 {
-	return ECDSA_verify(0, data, data_len, sig, sig_len, key->k);
+	return ECDSA_verify(0, data, data_len, sig, sig_len, key->k) == 1;
 }
 
