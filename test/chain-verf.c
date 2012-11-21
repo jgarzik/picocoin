@@ -35,8 +35,9 @@ static void runtest(bool use_testnet, const char *blocks_fn)
 	struct p2p_message msg = {};
 	bool read_ok = true;
 	while (fread_message(fd, &msg, &read_ok)) {
+		assert(memcmp(msg.hdr.netmagic, chain->netmagic, 4) == 0);
+
 		// TODO
-		(void) chain;
 	}
 
 	assert(read_ok == true);
