@@ -231,3 +231,65 @@ void bsp_push_data(GString *s, const void *data, size_t data_len)
 	g_string_append_len(s, data, data_len);
 }
 
+void bsp_push_int64(GString *s, int64_t n)
+{
+	if (n == -1 || (n >= 1 && n <= 16)) {
+		unsigned char c = (unsigned char) (n + (OP_1 - 1));
+		g_string_append_len(s, (gchar *) &c, 1);
+		return;
+	}
+
+	bool neg = false;
+	if (n < 0) {
+		neg = true;
+		n = -n;
+	}
+
+	BIGNUM bn, bn_lo, bn_hi;
+	BN_init(&bn);
+	BN_init(&bn_hi);
+	BN_init(&bn_lo);
+
+	BN_set_word(&bn_hi, (n >> 32));
+	BN_set_word(&bn_lo, (n & 0xffffffffU));
+	BN_add(&bn, &bn_hi, &bn_lo);
+	if (neg)
+		BN_set_negative(&bn, 1);
+
+	GString *vch = bn_getvch(&bn);
+
+	bsp_push_data(s, vch->str, vch->len);
+
+	g_string_free(vch, TRUE);
+	BN_clear_free(&bn);
+	BN_clear_free(&bn_hi);
+	BN_clear_free(&bn_lo);
+}
+
+void bsp_push_uint64(GString *s, uint64_t n)
+{
+	if (n >= 1 && n <= 16) {
+		unsigned char c = (unsigned char) (n + (OP_1 - 1));
+		g_string_append_len(s, (gchar *) &c, 1);
+		return;
+	}
+
+	BIGNUM bn, bn_lo, bn_hi;
+	BN_init(&bn);
+	BN_init(&bn_hi);
+	BN_init(&bn_lo);
+
+	BN_set_word(&bn_hi, (n >> 32));
+	BN_set_word(&bn_lo, (n & 0xffffffffU));
+	BN_add(&bn, &bn_hi, &bn_lo);
+
+	GString *vch = bn_getvch(&bn);
+
+	bsp_push_data(s, vch->str, vch->len);
+
+	g_string_free(vch, TRUE);
+	BN_clear_free(&bn);
+	BN_clear_free(&bn_hi);
+	BN_clear_free(&bn_lo);
+}
+

@@ -5,6 +5,7 @@
 #include "picocoin-config.h"
 
 #include <ccoin/script.h>
+#include <ccoin/util.h>
 
 static const char *opnames[256] = {
 	[OP_0] = "OP_0",
@@ -148,5 +149,25 @@ const char *GetOpName(enum opcodetype opcode_)
 	}
 
 	return "<unknown>";
+}
+
+enum opcodetype GetOpType(const char *opname)
+{
+	unsigned int i;
+	char tmpname[64];
+
+	for (i = 0; i < ARRAY_SIZE(opnames); i++) {
+		if (opnames[i]) {
+			if (!strcmp(opname, opnames[i]))
+				return (enum opcodetype) i;
+
+			strcpy(tmpname, "OP_");
+			strcat(tmpname, opname);
+			if (!strcmp(tmpname, opnames[i]))
+				return (enum opcodetype) i;
+		}
+	}
+
+	return OP_INVALIDOPCODE;
 }
 

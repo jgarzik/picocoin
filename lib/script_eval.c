@@ -149,13 +149,13 @@ static bool CastToBool(const struct buffer *buf)
 	return false;
 }
 
-static void stack_insert(GPtrArray *stack, struct buffer *buf, int index_)
+static void stack_insert(GPtrArray *stack, const struct buffer *buf, int index_)
 {
 	int index = stack->len + index_;
 	g_ptr_array_add(stack, NULL);
 	memmove(&stack->pdata[index + 1], &stack->pdata[index],
 		sizeof(gpointer) * (stack->len - index - 1));
-	stack->pdata[index] = buf;
+	stack->pdata[index] = buffer_copy(buf->p, buf->len);
 }
 
 static void stack_push(GPtrArray *stack, const struct buffer *buf)

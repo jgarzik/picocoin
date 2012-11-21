@@ -11,5 +11,6 @@
 extern bool decode_hex(void *p, size_t max_len, const char *hexstr, size_t *out_len_);
 extern void encode_hex(char *hexstr, const void *p_, size_t len);
 extern GString *hex2str(const char *hexstr);
+extern bool is_hexstr(const char *hexstr, bool require_prefix);
 
 #endif /* __LIBCCOIN_HEXCODE_H__ */

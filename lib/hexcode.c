@@ -70,10 +70,37 @@ bool decode_hex(void *p, size_t max_len, const char *hexstr, size_t *out_len_)
 	return true;
 }
 
+bool is_hexstr(const char *hexstr, bool require_prefix)
+{
+	if (!strncmp(hexstr, "0x", 2))
+		hexstr += 2;
+	else if (require_prefix)
+		return false;
+
+	while (*hexstr) {
+		unsigned char c1 = (unsigned char) hexstr[0];
+		unsigned char c2 = (unsigned char) hexstr[1];
+
+		unsigned char v1 = hexdigit_val[c1];
+		unsigned char v2 = hexdigit_val[c2];
+
+		if (!v1 && (c1 != '0'))
+			return false;
+		if (!v2 && (c2 != '0'))
+			return false;
+
+		hexstr += 2;
+	}
+
+	return true;
+}
+
 GString *hex2str(const char *hexstr)
 {
 	if (!hexstr || !*hexstr)
 		return NULL;
+	if (!strncmp(hexstr, "0x", 2))
+		hexstr += 2;
 
 	size_t slen = strlen(hexstr) / 2;
 	GString *s = g_string_sized_new(slen);

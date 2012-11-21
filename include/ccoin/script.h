@@ -195,6 +195,7 @@ struct bscript_addr {
 };
 
 extern const char *GetOpName(enum opcodetype opcode);
+extern enum opcodetype GetOpType(const char *opname);
 
 /*
  * script parsing
@@ -223,6 +224,8 @@ static inline void bsp_start(struct bscript_parser *bp,
  */
 
 extern void bsp_push_data(GString *s, const void *data, size_t data_len);
+extern void bsp_push_int64(GString *s, int64_t v);
+extern void bsp_push_uint64(GString *s, uint64_t v);
 
 static inline void bsp_push_op(GString *s, enum opcodetype op)
 {

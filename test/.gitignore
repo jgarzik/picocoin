@@ -9,6 +9,7 @@ chain-verf
 fileio
 hex
 keyset
+script
 script-parse
 tx
 util
