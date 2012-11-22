@@ -9,6 +9,8 @@
 #include <ccoin/script.h>
 #include "libtest.h"
 
+GPtrArray *comments = NULL;
+
 static guint input_hash(gconstpointer key_)
 {
 	const struct bp_outpt *key = key_;
@@ -28,6 +30,15 @@ static gboolean input_equal(gconstpointer a_, gconstpointer b_)
 static void input_value_free(gpointer v)
 {
 	g_string_free(v, TRUE);
+}
+
+static void dump_comments(void)
+{
+	unsigned int i;
+	for (i = 0; i < comments->len; i++) {
+		fprintf(stderr, "tx-valid cmt: %s\n",
+			(char *)g_ptr_array_index(comments, i));
+	}
 }
 
 static void test_tx_valid(bool is_valid, GHashTable *input_map,
@@ -62,6 +73,7 @@ static void test_tx_valid(bool is_valid, GHashTable *input_map,
 			char tx_hexstr[(32 * 2) + 1], hexstr[(32 * 2) + 1];
 			bu256_hex(tx_hexstr, &tx.sha256);
 			bu256_hex(hexstr, &txin->prevout.hash);
+			dump_comments();
 			fprintf(stderr,
 			"tx-valid: TX %s\n"
 			"tx-valid: prevout (%s, %u) not found\n",
@@ -77,12 +89,13 @@ static void test_tx_valid(bool is_valid, GHashTable *input_map,
 		if (rc != is_valid) {
 			char tx_hexstr[(32 * 2) + 1];
 			bu256_hex(tx_hexstr, &tx.sha256);
+			dump_comments();
 			fprintf(stderr,
 			"tx-valid: TX %s\n"
 			"tx-valid: txin %u script verification failed\n",
 				tx_hexstr, i);
 
-			//assert(rc == is_valid);
+			assert(rc == is_valid);
 		}
 	}
 
@@ -99,12 +112,19 @@ static void runtest(bool is_valid, const char *basefn)
 		input_hash, input_equal,
 		g_free, input_value_free);
 
+	comments = g_ptr_array_new_full(8, g_free);
+
 	unsigned int idx;
 	for (idx = 0; idx < json_array_size(tests); idx++) {
 		json_t *test = json_array_get(tests, idx);
 
-		if (!json_is_array(json_array_get(test, 0)))
+		if (!json_is_array(json_array_get(test, 0))) {
+			const char *cmt =
+				json_string_value(json_array_get(test, 0));
+			if (cmt)
+				g_ptr_array_add(comments, strdup(cmt));
 			continue;			/* comments */
+		}
 
 		assert(json_is_array(test));
 		assert(json_array_size(test) == 3);
@@ -155,7 +175,15 @@ static void runtest(bool is_valid, const char *basefn)
 		test_tx_valid(is_valid, input_map, tx_ser, enforce_p2sh);
 
 		g_string_free(tx_ser, TRUE);
+
+		if (comments->len > 0) {
+			g_ptr_array_free(comments, TRUE);
+			comments = g_ptr_array_new_full(8, g_free);
+		}
 	}
+
+	g_ptr_array_free(comments, TRUE);
+	comments = NULL;
 
 	g_hash_table_unref(input_map);
 	json_decref(tests);

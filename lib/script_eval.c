@@ -15,14 +15,25 @@ static const size_t nMaxNumSize = 4;
 
 static void string_find_del(GString *s, const struct buffer *buf)
 {
+	/* wrap buffer in a script */
+	GString *script = g_string_sized_new(buf->len + 8);
+	bsp_push_data(script, buf->p, buf->len);
+
+	/* search for script, as a substring of 's' */
 	void *p;
-	unsigned int sublen = buf->len;
-	while ((p = memmem(s->str, s->len, buf->p, sublen)) != NULL) {
-		void *end = s->str + s->len;
-		unsigned int tail_len = (end - p) - sublen;
-		memmove(p, p + sublen, tail_len + 1);	/* also move nul */
-		g_string_set_size(s, s->len - sublen);
+	unsigned int sublen = script->len;
+	while ((p = memmem(s->str, s->len, script->str, sublen)) != NULL) {
+		void *begin = s->str;
+		void *end = begin + s->len;
+		void *tail = p + sublen;
+		unsigned int tail_len = end - tail;
+		unsigned int new_len = s->len - sublen;
+
+		memmove(p, tail, tail_len);
+		g_string_set_size(s, new_len);
 	}
+
+	g_string_free(script, TRUE);
 }
 
 static void bp_tx_calc_sighash(bu256_t *hash, const struct bp_tx *tx,
