@@ -1,25 +1,53 @@
 
 #include "picocoin-config.h"
 
+#define _GNU_SOURCE			/* for memmem */
+#include <string.h>
 #include <assert.h>
 #include <openssl/sha.h>
 #include <openssl/ripemd.h>
 #include <ccoin/script.h>
 #include <ccoin/util.h>
 #include <ccoin/key.h>
+#include <ccoin/serialize.h>
 
 static const size_t nMaxNumSize = 4;
 
-bool bp_tx_sighash(bu256_t *hash, GString *scriptCode,
+static void string_find_del(GString *s, const struct buffer *buf)
+{
+	void *p;
+	unsigned int sublen = buf->len;
+	while ((p = memmem(s->str, s->len, buf->p, sublen)) != NULL) {
+		void *end = s->str + s->len;
+		unsigned int tail_len = (end - p) - sublen;
+		memmove(p, p + sublen, tail_len + 1);	/* also move nul */
+		g_string_set_size(s, s->len - sublen);
+	}
+}
+
+static void bp_tx_calc_sighash(bu256_t *hash, const struct bp_tx *tx,
+			       int nHashType)
+{
+	/* TODO: introduce hashing-only serialization mode */
+
+	GString *s = g_string_sized_new(512);
+	ser_bp_tx(s, tx);
+	ser_s32(s, nHashType);
+
+	bu_Hash((unsigned char *) hash, s->str, s->len);
+
+	g_string_free(s, TRUE);
+}
+
+void bp_tx_sighash(bu256_t *hash, GString *scriptCode,
 		   const struct bp_tx *txTo, unsigned int nIn,
 		   int nHashType)
 {
-	if (!hash || !scriptCode || !txTo || !txTo->vin)
-		return false;
-	if (nIn >= txTo->vin->len)
-		return false;
+	if (nIn >= txTo->vin->len) {
+		bu256_set_u64(hash, 1);
+		goto out;
+	}
 	
-	bool rc = false;
 	struct bp_tx txTmp;
 	bp_tx_init(&txTmp);
 	bp_tx_copy(&txTmp, txTo);
@@ -55,8 +83,10 @@ bool bp_tx_sighash(bu256_t *hash, GString *scriptCode,
 	else if ((nHashType & 0x1f) == SIGHASH_SINGLE) {
 		/* Only lock-in the txout payee at same index as txin */
 		unsigned int nOut = nIn;
-		if (nOut >= txTmp.vout->len)
+		if (nOut >= txTmp.vout->len) {
+			bu256_set_u64(hash, 1);
 			goto out;
+		}
 
 		g_ptr_array_set_size(txTmp.vout, nOut + 1);
 
@@ -84,14 +114,10 @@ bool bp_tx_sighash(bu256_t *hash, GString *scriptCode,
 	}
 
 	/* Serialize and hash */
-	bp_tx_calc_sha256(&txTmp);
-	bu256_copy(hash, &txTmp.sha256);
-
-	rc = true;
+	bp_tx_calc_sighash(hash, &txTmp, nHashType);
 
 out:
 	bp_tx_free(&txTmp);
-	return rc;
 }
 
 static const unsigned char disabled_op[256] = {
@@ -276,8 +302,7 @@ static bool bp_checksig(const struct buffer *vchSigHT,
 
 	/* calculate signature hash of transaction */
 	bu256_t sighash;
-	if (!bp_tx_sighash(&sighash, scriptCode, txTo, nIn, nHashType))
-		return false;
+	bp_tx_sighash(&sighash, scriptCode, txTo, nIn, nHashType);
 
 	/* verify signature hash */
 	struct bp_key key;
@@ -887,8 +912,9 @@ OP_NOP10:
 					    pbegincodehash.p,
 					    pbegincodehash.len);
 
-			// Drop the signature, since there's no way for a signature to sign itself
-			// FIXME scriptCode.FindAndDelete(CScript(vchSig));
+			// Drop the signature, since there's no way for
+			// a signature to sign itself
+			string_find_del(scriptCode, vchSig);
 
 			bool fSuccess =
 				(!fStrictEncodings ||
@@ -947,14 +973,14 @@ OP_NOP10:
 					    pbegincodehash.p,
 					    pbegincodehash.len);
 
-#if 0	// FIXME
-			// Drop the signatures, since there's no way for a signature to sign itself
-			for (int k = 0; k < nSigsCount; k++)
+			// Drop the signatures, since there's no way for
+			// a signature to sign itself
+			int k;
+			for (k = 0; k < nSigsCount; k++)
 			{
-				struct buffer *vchSig = stacktop(stack, -isig-k);
-				scriptCode.FindAndDelete(CScript(vchSig));
+				struct buffer *vchSig =stacktop(stack, -isig-k);
+				string_find_del(scriptCode, vchSig);
 			}
-#endif
 
 			bool fSuccess = true;
 			while (fSuccess && nSigsCount > 0)

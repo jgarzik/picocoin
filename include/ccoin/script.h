@@ -249,7 +249,7 @@ static inline void bsp_start(struct bscript_parser *bp,
  * script validation
  */
 
-extern bool bp_tx_sighash(bu256_t *hash, GString *scriptCode,
+extern void bp_tx_sighash(bu256_t *hash, GString *scriptCode,
 		   const struct bp_tx *txTo, unsigned int nIn,
 		   int nHashType);
 extern bool bp_script_verify(const GString *scriptSig, const GString *scriptPubKey,

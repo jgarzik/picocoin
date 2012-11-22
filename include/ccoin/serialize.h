@@ -26,6 +26,11 @@ extern void ser_varlen(GString *s, uint32_t vlen);
 extern void ser_str(GString *s, const char *s_in, size_t maxlen);
 extern void ser_varstr(GString *s, GString *s_in);
 
+static inline void ser_s32(GString *s, int32_t v_)
+{
+	ser_u32(s, (uint32_t) v_);
+}
+
 static inline void ser_s64(GString *s, int64_t v_)
 {
 	ser_u64(s, (uint64_t) v_);

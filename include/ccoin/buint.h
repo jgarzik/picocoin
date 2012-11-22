@@ -44,6 +44,18 @@ static inline void bu256_zero(bu256_t *v)
 	memset(v, 0, sizeof(*v));
 }
 
+static inline void bu256_set_u64(bu256_t *vo, uint64_t vi)
+{
+	vo->dword[0] = GUINT32_TO_LE((uint32_t) vi);
+	vo->dword[1] = GUINT32_TO_LE((uint32_t) (vi >> 32));
+	vo->dword[2] = 0;
+	vo->dword[3] = 0;
+	vo->dword[4] = 0;
+	vo->dword[5] = 0;
+	vo->dword[6] = 0;
+	vo->dword[7] = 0;
+}
+
 static inline bool bu256_equal(const bu256_t *a, const bu256_t *b)
 {
 	return memcmp(a, b, sizeof(bu256_t)) == 0;
