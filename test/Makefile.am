@@ -11,7 +11,7 @@ EXTRA_DIST	= \
 	hdr193000.ser tn_hdr35141.ser \
 	tn_blk35133.ser wallet-basics.json \
 	script_valid.json script_invalid.json \
-	tx_valid.json
+	tx_valid.json tx_invalid.json
 
 noinst_LIBRARIES= libtest.a
 

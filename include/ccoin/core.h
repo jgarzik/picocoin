@@ -75,6 +75,12 @@ static inline bool bp_outpt_null(const struct bp_outpt *outpt)
 	return bu256_is_zero(&outpt->hash) && outpt->n == 0xffffffff;
 }
 
+static inline bool bp_outpt_equal(const struct bp_outpt *a,
+				  const struct bp_outpt *b)
+{
+	return (a->n == b->n) && bu256_equal(&a->hash, &b->hash);
+}
+
 struct bp_txin {
 	struct bp_outpt	prevout;
 	GString		*scriptSig;

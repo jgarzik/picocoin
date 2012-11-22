@@ -12,6 +12,29 @@
 #include <ccoin/coredefs.h>
 #include <ccoin/serialize.h>
 
+static bool bp_has_dup_inputs(const struct bp_tx *tx)
+{
+	if (!tx->vin || !tx->vin->len || tx->vin->len == 1)
+		return false;
+
+	struct bp_txin *txin, *txin_tmp;
+	unsigned int i, j;
+	for (i = 0; i < tx->vin->len; i++) {
+		txin = g_ptr_array_index(tx->vin, i);
+		for (j = 0; j < tx->vin->len; j++) {
+			if (i == j)
+				continue;
+			txin_tmp = g_ptr_array_index(tx->vin, j);
+
+			if (bp_outpt_equal(&txin->prevout,
+					   &txin_tmp->prevout))
+				return true;
+		}
+	}
+
+	return false;
+}
+
 bool bp_tx_valid(const struct bp_tx *tx)
 {
 	unsigned int i;
@@ -24,7 +47,13 @@ bool bp_tx_valid(const struct bp_tx *tx)
 	if (bp_tx_ser_size(tx) > MAX_BLOCK_SIZE)
 		return false;
 
-	if (!bp_tx_coinbase(tx)) {
+	if (bp_tx_coinbase(tx)) {
+		struct bp_txin *txin = g_ptr_array_index(tx->vin, 0);
+
+		if (txin->scriptSig->len < 2 ||
+		    txin->scriptSig->len > 100)
+			return false;
+	} else {
 		for (i = 0; i < tx->vin->len; i++) {
 			struct bp_txin *txin;
 
@@ -46,6 +75,9 @@ bool bp_tx_valid(const struct bp_tx *tx)
 	}
 
 	if (!bp_valid_value(value_total))
+		return false;
+
+	if (bp_has_dup_inputs(tx))
 		return false;
 
 	return true;

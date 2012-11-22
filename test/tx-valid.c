@@ -18,13 +18,9 @@ static guint input_hash(gconstpointer key_)
 	return (guint) key->hash.dword[2];
 }
 
-static gboolean input_equal(gconstpointer a_, gconstpointer b_)
+static gboolean input_equal(gconstpointer a, gconstpointer b)
 {
-	const struct bp_outpt *a = a_;
-	const struct bp_outpt *b = b_;
-
-	return ((a->n == b->n) &&
-		bu256_equal(&a->hash, &b->hash));
+	return bp_outpt_equal(a, b);
 }
 
 static void input_value_free(gpointer v)
@@ -50,7 +46,20 @@ static void test_tx_valid(bool is_valid, GHashTable *input_map,
 
 	struct const_buffer buf = { tx_ser->str, tx_ser->len };
 	assert(deser_bp_tx(&tx, &buf) == true);
-	assert(bp_tx_valid(&tx) == is_valid);
+
+	if (is_valid) {
+		/* checking for valid tx; !bp_tx_valid implies test fail */
+		assert(bp_tx_valid(&tx) == true);
+	} else {
+		/* checking for invalid tx; bp_tx_valid==false implies test
+		 * succeeded; no more work to do; bp_tx_valid==true
+		 * implies the test will detect the invalid condition
+		 * further down in the code
+		 */
+		if (bp_tx_valid(&tx) == false)
+			return;
+	}
+
 	bp_tx_calc_sha256(&tx);
 
 	unsigned int i;
@@ -193,6 +202,7 @@ static void runtest(bool is_valid, const char *basefn)
 int main (int argc, char *argv[])
 {
 	runtest(true, "tx_valid.json");
+	runtest(false, "tx_invalid.json");
 	return 0;
 }
 
