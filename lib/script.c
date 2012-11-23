@@ -267,6 +267,7 @@ void bsp_push_int64(GString *s, int64_t n)
 	BN_init(&bn_lo);
 
 	BN_set_word(&bn_hi, (n >> 32));
+	BN_lshift(&bn_hi, &bn_hi, 32);
 	BN_set_word(&bn_lo, (n & 0xffffffffU));
 	BN_add(&bn, &bn_hi, &bn_lo);
 	if (neg)
@@ -296,6 +297,7 @@ void bsp_push_uint64(GString *s, uint64_t n)
 	BN_init(&bn_lo);
 
 	BN_set_word(&bn_hi, (n >> 32));
+	BN_lshift(&bn_hi, &bn_hi, 32);
 	BN_set_word(&bn_lo, (n & 0xffffffffU));
 	BN_add(&bn, &bn_hi, &bn_lo);
 
