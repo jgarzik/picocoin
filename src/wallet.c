@@ -20,6 +20,7 @@
 #include <ccoin/util.h>
 #include <ccoin/mbr.h>
 #include <ccoin/hexcode.h>
+#include <ccoin/compat.h>		/* for g_ptr_array_new_full */
 
 static struct wallet *wallet_new(void)
 {

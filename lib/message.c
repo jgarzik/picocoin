@@ -11,6 +11,7 @@
 #include <ccoin/message.h>
 #include <ccoin/serialize.h>
 #include <ccoin/util.h>
+#include <ccoin/compat.h>		/* for g_ptr_array_new_full */
 
 void parse_message_hdr(struct p2p_message_hdr *hdr, const unsigned char *data)
 {

@@ -11,6 +11,7 @@
 #include <ccoin/util.h>
 #include <ccoin/coredefs.h>
 #include <ccoin/serialize.h>
+#include <ccoin/compat.h>		/* for g_ptr_array_new_full */
 
 bool deser_bp_addr(unsigned int protover,
 		struct bp_address *addr, struct const_buffer *buf)

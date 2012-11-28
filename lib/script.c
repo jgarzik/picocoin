@@ -8,6 +8,7 @@
 #include <ccoin/serialize.h>
 #include <ccoin/util.h>
 #include <ccoin/buffer.h>
+#include <ccoin/compat.h>		/* for g_ptr_array_new_full */
 
 static const unsigned char stdscr_pubkey[] = {
 	OP_PUBKEY, OP_CHECKSIG,

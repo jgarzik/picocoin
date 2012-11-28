@@ -8,6 +8,7 @@
 #include <ccoin/script.h>
 #include <ccoin/key.h>
 #include <ccoin/addr_match.h>
+#include <ccoin/compat.h>		/* for g_ptr_array_new_full */
 
 bool bp_txout_match(const struct bp_txout *txout,
 		    const struct bp_keyset *ks)

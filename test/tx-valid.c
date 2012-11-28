@@ -7,6 +7,7 @@
 #include <ccoin/hexcode.h>
 #include <ccoin/buint.h>
 #include <ccoin/script.h>
+#include <ccoin/compat.h>		/* for g_ptr_array_new_full */
 #include "libtest.h"
 
 GPtrArray *comments = NULL;

@@ -10,6 +10,7 @@
 #include <ccoin/util.h>
 #include <ccoin/key.h>
 #include <ccoin/serialize.h>
+#include <ccoin/compat.h>		/* for g_ptr_array_new_full */
 
 static const size_t nMaxNumSize = 4;
 
