@@ -20,6 +20,7 @@ libccoin_a_SOURCES=	\
 	key.c		\
 	keyset.c	\
 	mbr.c		\
+	memmem.c	\
 	message.c	\
 	script.c	\
 	script_eval.c	\

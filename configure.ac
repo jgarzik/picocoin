@@ -48,7 +48,7 @@ AC_CHECK_LIB(m, log, MATH_LIBS=-lm,
   [AC_MSG_ERROR([Missing required libm])])
 AC_CHECK_LIB(crypto, MD5_Init, CRYPTO_LIBS=-lcrypto,
   [AC_MSG_ERROR([Missing required libcrypto])])
-AC_CHECK_LIB(event, event_base_new, EVENT_LIBS=-levent,
+AC_CHECK_LIB(event_core, event_base_new, EVENT_LIBS=-levent_core,
   [AC_MSG_ERROR([Missing required libevent])])
 AC_CHECK_LIB(jansson, json_loads, JANSSON_LIBS=-ljansson,
   [AC_MSG_ERROR([Missing required libjansson])])
@@ -56,7 +56,7 @@ AC_CHECK_LIB(jansson, json_loads, JANSSON_LIBS=-ljansson,
 dnl -------------------------------------
 dnl Checks for optional library functions
 dnl -------------------------------------
-AC_CHECK_FUNCS(fdatasync)
+AC_CHECK_FUNCS(fdatasync memmem)
 
 dnl -----------------
 dnl Configure options
