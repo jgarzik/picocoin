@@ -20,7 +20,7 @@
 #include <poll.h>
 #include <errno.h>
 #include <glib.h>
-#include <event.h>
+#include <event2/event.h>
 #include <ccoin/util.h>
 #include <ccoin/mbr.h>
 #include <ccoin/core.h>

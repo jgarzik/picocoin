@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <netdb.h>
+#include <netinet/in.h>
 #include <ctype.h>
 #include <glib.h>
 #include <openssl/bn.h>
