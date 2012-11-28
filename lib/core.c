@@ -439,11 +439,11 @@ void ser_bp_block(GString *s, const struct bp_block *block)
 	}
 }
 
-void bp_block_free(struct bp_block *block)
+void bp_block_vtx_free(struct bp_block *block)
 {
-	unsigned int i;
-
 	if (block->vtx) {
+		unsigned int i;
+
 		for (i = 0; i < block->vtx->len; i++) {
 			struct bp_tx *tx;
 
@@ -455,6 +455,14 @@ void bp_block_free(struct bp_block *block)
 
 		block->vtx = NULL;
 	}
+}
+
+void bp_block_free(struct bp_block *block)
+{
+	if (!block)
+		return;
+
+	bp_block_vtx_free(block);
 }
 
 void bp_block_calc_sha256(struct bp_block *block)

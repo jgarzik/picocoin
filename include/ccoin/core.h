@@ -164,6 +164,7 @@ extern void bp_block_init(struct bp_block *block);
 extern bool deser_bp_block(struct bp_block *block, struct const_buffer *buf);
 extern void ser_bp_block(GString *s, const struct bp_block *block);
 extern void bp_block_free(struct bp_block *block);
+extern void bp_block_vtx_free(struct bp_block *block);
 extern void bp_block_calc_sha256(struct bp_block *block);
 extern void bp_block_merkle(bu256_t *vo, const struct bp_block *block);
 extern GArray *bp_block_merkle_tree(const struct bp_block *block);

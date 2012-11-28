@@ -26,6 +26,8 @@ struct blkinfo *bi_new(void)
 	bi = calloc(1, sizeof(*bi));
 	BN_init(&bi->work);
 	bi->height = -1;
+	bi->n_file = -1;
+	bi->n_pos = -1LL;
 
 	bp_block_init(&bi->hdr);
 

@@ -16,6 +16,9 @@ struct blkinfo {
 
 	BIGNUM		work;
 	int		height;
+
+	int32_t		n_file;		/* uninitialized == -1 */
+	int64_t		n_pos;		/* uninitialized == -1 */
 };
 
 struct blkdb {
