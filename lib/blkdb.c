@@ -18,6 +18,13 @@
 #include <ccoin/buint.h>
 #include <ccoin/mbr.h>
 
+#ifndef HAVE_FDATASYNC
+static int fdatasync(int fd)
+{
+	return fsync(fd);
+}
+#endif
+
 struct blkinfo *bi_new(void)
 {
 	struct blkinfo *bi;
