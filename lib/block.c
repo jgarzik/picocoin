@@ -230,22 +230,11 @@ bool bp_block_valid(struct bp_block *block)
 		if (!bp_tx_valid(tx))
 			return false;
 
-		/* special coinbase rules */
-		if (i == 0) {
-			if (!bp_tx_coinbase(tx))
-				return false;
+		bool is_coinbase_idx = (i == 0);
+		bool is_coinbase = bp_tx_coinbase(tx);
 
-			struct bp_txin *txin = g_ptr_array_index(tx->vin, 0);
-			if (txin->scriptSig->len < 2 ||
-			    txin->scriptSig->len > 100)
-				return false;
-		}
-		
-		/* rules for non-coinbase transactions */
-		else {
-			if (bp_tx_coinbase(tx))
-				return false;
-		}
+		if (is_coinbase != is_coinbase_idx)
+			return false;
 	}
 
 	return true;

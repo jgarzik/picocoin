@@ -27,6 +27,8 @@ static void read_test_msg(struct blkdb *db, const struct p2p_message *msg,
 	assert(deser_bp_block(&block, &buf) == true);
 	bp_block_calc_sha256(&block);
 
+	assert(bp_block_valid(&block) == true);
+
 	/* clear transaction list; don't want to load all that into RAM! */
 	bp_block_vtx_free(&block);
 
