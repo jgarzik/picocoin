@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <glib.h>
 
-#if GLIB_VERSION_CUR_STABLE < G_ENCODE_VERSION (2, 30)
+#ifndef GLIB_VERSION_2_30
 static inline GPtrArray *
 g_ptr_array_new_full (guint          reserved_size,
                       GDestroyNotify element_free_func)
@@ -21,13 +21,13 @@ g_ptr_array_new_full (guint          reserved_size,
   g_ptr_array_set_free_func (array, element_free_func);
   return array;
 }
-#endif
+#endif /* !GLIB_VERSION_2_30 */
 
 #ifndef HAVE_FDATASYNC
 static inline int fdatasync(int fd)
 {
 	return fsync(fd);
 }
-#endif
+#endif /* !HAVE_FDATASYNC */
 
 #endif /* __LIBCCOIN_COMPAT_H__ */
