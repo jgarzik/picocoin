@@ -103,12 +103,21 @@ extern bool deser_bp_txout(struct bp_txout *txout, struct const_buffer *buf);
 extern void ser_bp_txout(GString *s, const struct bp_txout *txout);
 extern void bp_txout_free(struct bp_txout *txout);
 extern void bp_txout_set_null(struct bp_txout *txout);
+extern void bp_txout_copy(struct bp_txout *dest, const struct bp_txout *src);
 
 static inline bool bp_txout_valid(const struct bp_txout *txout)
 {
+	if (!txout || !txout->scriptPubKey)
+		return false;
 	if (!bp_valid_value(txout->nValue))
 		return false;
 	return true;
+}
+
+static inline bool bp_txout_null(const struct bp_txout *txout)
+{
+	return (!txout || txout->nValue == -1 ||
+		!txout->scriptPubKey || !txout->scriptPubKey->len);
 }
 
 struct bp_tx {
@@ -144,6 +153,30 @@ static inline bool bp_tx_coinbase(const struct bp_tx *tx)
 
 	return true;
 }
+
+struct bp_utxo {
+	bu256_t		hash;
+
+	bool		is_coinbase;
+	uint32_t	height;
+
+	uint32_t	version;
+	GPtrArray	*vout;
+};
+
+extern void bp_utxo_init(struct bp_utxo *coin);
+extern void bp_utxo_free(struct bp_utxo *coin);
+extern bool bp_utxo_from_tx(struct bp_utxo *coin, const struct bp_tx *tx,
+		     bool is_coinbase, unsigned int height);
+
+struct bp_utxo_set {
+	GHashTable	*map;
+};
+
+extern void bp_utxo_set_init(struct bp_utxo_set *uset);
+extern void bp_utxo_set_free(struct bp_utxo_set *uset);
+extern bool bp_utxo_is_spent(struct bp_utxo_set *uset, const struct bp_outpt *outpt);
+extern bool bp_utxo_spend(struct bp_utxo_set *uset, const struct bp_outpt *outpt);
 
 struct bp_block {
 	/* serialized */

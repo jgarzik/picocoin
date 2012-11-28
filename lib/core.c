@@ -105,6 +105,9 @@ void ser_bp_locator(GString *s, const struct bp_locator *locator)
 
 void bp_locator_free(struct bp_locator *locator)
 {
+	if (!locator)
+		return;
+
 	if (locator->vHave) {
 		unsigned int i;
 
@@ -161,6 +164,9 @@ void ser_bp_txin(GString *s, const struct bp_txin *txin)
 
 void bp_txin_free(struct bp_txin *txin)
 {
+	if (!txin)
+		return;
+
 	bp_outpt_free(&txin->prevout);
 
 	if (txin->scriptSig) {
@@ -189,6 +195,9 @@ void ser_bp_txout(GString *s, const struct bp_txout *txout)
 
 void bp_txout_free(struct bp_txout *txout)
 {
+	if (!txout)
+		return;
+
 	if (txout->scriptPubKey) {
 		g_string_free(txout->scriptPubKey, TRUE);
 		txout->scriptPubKey = NULL;
@@ -201,6 +210,21 @@ void bp_txout_set_null(struct bp_txout *txout)
 
 	txout->nValue = -1;
 	txout->scriptPubKey = g_string_new("");
+}
+
+void bp_txout_copy(struct bp_txout *dest, const struct bp_txout *src)
+{
+	if (dest->scriptPubKey)
+		g_string_free(dest->scriptPubKey, TRUE);
+
+	dest->nValue = src->nValue;
+	if (src->scriptPubKey) {
+		dest->scriptPubKey = g_string_sized_new(src->scriptPubKey->len);
+		g_string_append_len(dest->scriptPubKey,
+				    src->scriptPubKey->str,
+				    src->scriptPubKey->len);
+	} else
+		dest->scriptPubKey = g_string_new("");
 }
 
 void bp_tx_init(struct bp_tx *tx)
@@ -305,6 +329,9 @@ void bp_tx_free_vout(struct bp_tx *tx)
 
 void bp_tx_free(struct bp_tx *tx)
 {
+	if (!tx)
+		return;
+
 	unsigned int i;
 
 	if (tx->vin) {
@@ -441,7 +468,7 @@ void ser_bp_block(GString *s, const struct bp_block *block)
 
 void bp_block_vtx_free(struct bp_block *block)
 {
-	if (block->vtx) {
+	if (block && block->vtx) {
 		unsigned int i;
 
 		for (i = 0; i < block->vtx->len; i++) {

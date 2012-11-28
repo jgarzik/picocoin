@@ -92,3 +92,18 @@ void bu256_swap_dwords(bu256_t *v)
 	memcpy(v, &tmpv, sizeof(*v));
 }
 
+guint g_bu256_hash(gconstpointer key_)
+{
+	const bu256_t *key = key_;
+
+	return key->dword[4]; /* return random int in the middle of 32b hash */
+}
+
+gboolean g_bu256_equal(gconstpointer a_, gconstpointer b_)
+{
+	const bu256_t *a = a_;
+	const bu256_t *b = b_;
+
+	return bu256_equal(a, b) ? TRUE : FALSE;
+}
+

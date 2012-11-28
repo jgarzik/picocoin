@@ -44,6 +44,7 @@ static void read_headers(const char *ser_base_fn, struct blkdb *db)
 	}
 
 	close(fd);
+	free(filename);
 }
 
 static void runtest(const char *ser_base_fn, const struct chain_info *chain,

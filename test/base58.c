@@ -97,6 +97,9 @@ static void runtest_encdec(const char *base_fn)
 		test_decode(json_string_value(j_raw),
 			    json_string_value(j_enc));
 	}
+
+	free(fn);
+	json_decref(data);
 }
 
 static void test_privkey_valid_enc(const char *base58_str,
@@ -292,6 +295,9 @@ static void runtest_keys_valid(const char *base_fn)
 				is_testnet);
 		}
 	}
+
+	free(fn);
+	json_decref(data);
 }
 
 int main (int argc, char *argv[])

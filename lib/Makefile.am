@@ -26,5 +26,6 @@ libccoin_a_SOURCES=	\
 	script_eval.c	\
 	script_names.c	\
 	serialize.c	\
-	util.c
+	util.c		\
+	utxo.c
 

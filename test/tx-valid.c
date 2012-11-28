@@ -16,7 +16,7 @@ static guint input_hash(gconstpointer key_)
 {
 	const struct bp_outpt *key = key_;
 
-	return (guint) key->hash.dword[2];
+	return (guint) key->hash.dword[4];
 }
 
 static gboolean input_equal(gconstpointer a, gconstpointer b)

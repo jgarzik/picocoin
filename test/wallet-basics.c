@@ -115,6 +115,9 @@ static void runtest(const char *json_base_fn, const char *ser_in_fn,
 	bp_key_free(&key);
 	bp_block_free(&block_in);
 	json_decref(wallet);
+	free(data);
+	free(fn);
+	free(json_fn);
 }
 
 int main (int argc, char *argv[])

@@ -26,6 +26,8 @@ extern void bu256_swap_dwords(bu256_t *v);
 extern void bu256_copy_swap(bu256_t *vo, const bu256_t *vi);
 extern void bu256_copy_swap_dwords(bu256_t *vo, const bu256_t *vi);
 extern void bu256_swap_dwords(bu256_t *v);
+extern guint g_bu256_hash(gconstpointer key_);
+extern gboolean g_bu256_equal(gconstpointer a_, gconstpointer b_);
 
 static inline bool bu256_is_zero(const bu256_t *v)
 {

@@ -47,21 +47,6 @@ void bi_free(struct blkinfo *bi)
 	free(bi);
 }
 
-static guint blk_hash(gconstpointer key_)
-{
-	const guint *key = key_;
-
-	return key[4];	/* return a random int in the middle of the 32b hash */
-}
-
-static gboolean blk_equal(gconstpointer a, gconstpointer b)
-{
-	const bu256_t *v1 = a;
-	const bu256_t *v2 = b;
-
-	return bu256_equal(v1, v2);
-}
-
 bool blkdb_init(struct blkdb *db, const unsigned char *netmagic,
 		const bu256_t *genesis_block)
 {
@@ -76,7 +61,8 @@ bool blkdb_init(struct blkdb *db, const unsigned char *netmagic,
 	db->nBestHeight = -1;
 
 	memcpy(db->netmagic, netmagic, sizeof(db->netmagic));
-	db->blocks = g_hash_table_new_full(blk_hash, blk_equal, NULL, g_free);
+	db->blocks = g_hash_table_new_full(g_bu256_hash, g_bu256_equal,
+					   NULL, g_free);
 
 	return true;
 }

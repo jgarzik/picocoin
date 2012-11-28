@@ -71,6 +71,11 @@ static void runtest(void)
 	}
 
 	bpks_free(&ks);
+
+	for (i = 0; i < ARRAY_SIZE(keys); i++) {
+		struct bp_key *key = &keys[i];
+		bp_key_free(key);
+	}
 }
 
 int main (int argc, char *argv[])
