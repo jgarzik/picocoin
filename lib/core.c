@@ -16,6 +16,8 @@
 bool deser_bp_addr(unsigned int protover,
 		struct bp_address *addr, struct const_buffer *buf)
 {
+	bp_addr_free(addr);
+
 	if (protover >= CADDR_TIME_VERSION)
 		if (!deser_u32(&addr->nTime, buf)) return false;
 	if (!deser_u64(&addr->nServices, buf)) return false;
@@ -40,6 +42,8 @@ void bp_inv_init(struct bp_inv *inv)
 
 bool deser_bp_inv(struct bp_inv *inv, struct const_buffer *buf)
 {
+	bp_inv_free(inv);
+
 	if (!deser_u32(&inv->type, buf)) return false;
 	if (!deser_u256(&inv->hash, buf)) return false;
 	return true;
@@ -58,6 +62,8 @@ void bp_locator_init(struct bp_locator *locator)
 
 bool deser_bp_locator(struct bp_locator *locator, struct const_buffer *buf)
 {
+	bp_locator_free(locator);
+
 	if (!deser_u32(&locator->nVersion, buf)) return false;
 
 	uint32_t vlen;
@@ -130,6 +136,8 @@ void bp_outpt_init(struct bp_outpt *outpt)
 
 bool deser_bp_outpt(struct bp_outpt *outpt, struct const_buffer *buf)
 {
+	bp_outpt_free(outpt);
+
 	if (!deser_u256(&outpt->hash, buf)) return false;
 	if (!deser_u32(&outpt->n, buf)) return false;
 	return true;
@@ -149,6 +157,8 @@ void bp_txin_init(struct bp_txin *txin)
 
 bool deser_bp_txin(struct bp_txin *txin, struct const_buffer *buf)
 {
+	bp_txin_free(txin);
+
 	if (!deser_bp_outpt(&txin->prevout, buf)) return false;
 	if (!deser_varstr(&txin->scriptSig, buf)) return false;
 	if (!deser_u32(&txin->nSequence, buf)) return false;
@@ -182,6 +192,8 @@ void bp_txout_init(struct bp_txout *txout)
 
 bool deser_bp_txout(struct bp_txout *txout, struct const_buffer *buf)
 {
+	bp_txout_free(txout);
+
 	if (!deser_s64(&txout->nValue, buf)) return false;
 	if (!deser_varstr(&txout->scriptPubKey, buf)) return false;
 	return true;
@@ -234,6 +246,8 @@ void bp_tx_init(struct bp_tx *tx)
 
 bool deser_bp_tx(struct bp_tx *tx, struct const_buffer *buf)
 {
+	bp_tx_free(tx);
+
 	tx->vin = g_ptr_array_new_full(8, g_free);
 	tx->vout = g_ptr_array_new_full(8, g_free);
 
@@ -402,6 +416,8 @@ void bp_block_init(struct bp_block *block)
 
 bool deser_bp_block(struct bp_block *block, struct const_buffer *buf)
 {
+	bp_block_free(block);
+
 	block->vtx = g_ptr_array_new_full(512, g_free);
 
 	if (!deser_u32(&block->nVersion, buf)) return false;
