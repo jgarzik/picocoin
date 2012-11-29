@@ -1098,8 +1098,11 @@ bool bp_script_verify(const GString *scriptSig, const GString *scriptPubKey,
 
 		buffer_free(pubkey2_buf);
 
-		if (!bp_script_eval(stackCopy, pubkey2, txTo, nIn,
-				    flags, nHashType))
+		bool rc2 = bp_script_eval(stackCopy, pubkey2, txTo, nIn,
+					  flags, nHashType);
+		g_string_free(pubkey2, TRUE);
+
+		if (!rc2)
 			goto out;
 		if (stackCopy->len == 0)
 			goto out;

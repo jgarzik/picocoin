@@ -50,6 +50,8 @@ static void runtest (void)
 	bloom_free(&bloom2);
 
 	bloom_free(&bloom);
+
+	g_string_free(ser, TRUE);
 }
 
 int main (int argc, char *argv[])

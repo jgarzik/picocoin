@@ -62,7 +62,7 @@ bool blkdb_init(struct blkdb *db, const unsigned char *netmagic,
 
 	memcpy(db->netmagic, netmagic, sizeof(db->netmagic));
 	db->blocks = g_hash_table_new_full(g_bu256_hash, g_bu256_equal,
-					   NULL, g_free);
+					   NULL, (GDestroyNotify) bi_free);
 
 	return true;
 }
