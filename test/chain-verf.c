@@ -51,6 +51,9 @@ static bool spend_block(struct bp_utxo_set *uset, const struct bp_block *block,
 {
 	unsigned int i;
 
+	if (height % 30000 == 0)
+		fprintf(stderr, "chain-verf: spend block @ %u\n", height);
+
 	for (i = 0; i < block->vtx->len; i++) {
 		struct bp_tx *tx;
 

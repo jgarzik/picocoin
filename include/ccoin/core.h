@@ -52,7 +52,7 @@ static inline void bp_inv_free(struct bp_inv *inv) {}
 
 struct bp_locator {
 	uint32_t	nVersion;
-	GPtrArray	*vHave;
+	GPtrArray	*vHave;		/* of bu256_t */
 };
 
 extern void bp_locator_init(struct bp_locator *locator);
@@ -117,8 +117,8 @@ static inline bool bp_txout_valid(const struct bp_txout *txout)
 struct bp_tx {
 	/* serialized */
 	uint32_t	nVersion;
-	GPtrArray	*vin;
-	GPtrArray	*vout;
+	GPtrArray	*vin;			/* of bp_txin */
+	GPtrArray	*vout;			/* of bp_txout */
 	uint32_t	nLockTime;
 
 	/* used at runtime */
@@ -155,7 +155,7 @@ struct bp_utxo {
 	uint32_t	height;
 
 	uint32_t	version;
-	GPtrArray	*vout;
+	GPtrArray	*vout;		/* of bp_txout */
 };
 
 extern void bp_utxo_init(struct bp_utxo *coin);
@@ -186,7 +186,7 @@ struct bp_block {
 	uint32_t	nTime;
 	uint32_t	nBits;
 	uint32_t	nNonce;
-	GPtrArray	*vtx;
+	GPtrArray	*vtx;			/* of bp_tx */
 
 	/* used at runtime */
 	bool		sha256_valid;
