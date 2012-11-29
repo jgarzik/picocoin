@@ -55,7 +55,7 @@ static void runtest(const char *json_fn_base, const char *ser_fn_base)
 
 	bp_tx_calc_sha256(&tx);
 
-	char hexstr[(32 * 2) + 16] = "";
+	char hexstr[BU256_STRSZ];
 	bu256_hex(hexstr, &tx.sha256);
 
 	if (strcmp(hexstr, hashstr)) {

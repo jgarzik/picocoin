@@ -84,7 +84,7 @@ static void runtest(const char *json_base_fn, const char *ser_in_fn,
 	bp_tx_calc_sha256(tx);
 
 	/* verify txid matches expected */
-	char tx_hexstr[(32 * 2) + 1];
+	char tx_hexstr[BU256_STRSZ];
 	bu256_hex(tx_hexstr, &tx->sha256);
 	assert(strcmp(tx_hexstr, tx_in_hash) == 0);
 

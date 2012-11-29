@@ -11,11 +11,17 @@
 #include <stdlib.h>
 #include <openssl/bn.h>
 
-#define BU256_SZ	(256 / 32)
+enum {
+	BU256_WORDS	= (256 / 32),
+#define BU256_WORDS BU256_WORDS
+
+	BU256_STRSZ	= (32 * 2) + 1,
+#define BU256_STRSZ BU256_STRSZ
+};
 
 /* unsigned 256 bit integer, with serialized bitcoin (little endian) ordering */
 typedef struct bu256 {
-	uint32_t dword[256 / 32];
+	uint32_t dword[BU256_WORDS];
 } bu256_t;
 
 extern void bu256_bn(BIGNUM *vo, const bu256_t *vi);

@@ -80,7 +80,7 @@ static void test_tx_valid(bool is_valid, GHashTable *input_map,
 				continue;
 			}
 
-			char tx_hexstr[(32 * 2) + 1], hexstr[(32 * 2) + 1];
+			char tx_hexstr[BU256_STRSZ], hexstr[BU256_STRSZ];
 			bu256_hex(tx_hexstr, &tx.sha256);
 			bu256_hex(hexstr, &txin->prevout.hash);
 			dump_comments();
@@ -97,7 +97,7 @@ static void test_tx_valid(bool is_valid, GHashTable *input_map,
 					enforce_p2sh ? SCRIPT_VERIFY_P2SH :
 					SCRIPT_VERIFY_NONE, 0);
 		if (rc != is_valid) {
-			char tx_hexstr[(32 * 2) + 1];
+			char tx_hexstr[BU256_STRSZ];
 			bu256_hex(tx_hexstr, &tx.sha256);
 			dump_comments();
 			fprintf(stderr,

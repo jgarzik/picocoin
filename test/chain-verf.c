@@ -91,7 +91,7 @@ static void read_test_msg(struct blkdb *db, struct bp_utxo_set *uset,
 	/* if best chain, mark TX's as spent */
 	if (bu256_equal(&db->hashBestChain, &bi->hdr.sha256)) {
 		if (!spend_block(uset, &block, bi->height)) {
-			char hexstr[(32 * 2) + 1];
+			char hexstr[BU256_STRSZ];
 			bu256_hex(hexstr, &bi->hdr.sha256);
 			fprintf(stderr, 
 				"chain-verf: spend fail %u %s\n",
