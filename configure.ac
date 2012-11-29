@@ -75,6 +75,7 @@ AC_SUBST(JANSSON_LIBS)
 
 AC_CONFIG_FILES([
 	Makefile
+	doc/Makefile
 	include/Makefile
 	include/ccoin/Makefile
 	lib/Makefile
