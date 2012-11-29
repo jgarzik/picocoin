@@ -34,6 +34,9 @@ Now, you can build!
     ./configure
     make
 
+You should also run `make check` in order to run tests. This is a vital step
+early in the development of `picocoin`.
+
 You can install it if you want with `make install`. It will be installed to 
 `/usr/local/picocoin`.
 
