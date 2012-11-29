@@ -114,12 +114,6 @@ static inline bool bp_txout_valid(const struct bp_txout *txout)
 	return true;
 }
 
-static inline bool bp_txout_null(const struct bp_txout *txout)
-{
-	return (!txout || txout->nValue == -1 ||
-		!txout->scriptPubKey || !txout->scriptPubKey->len);
-}
-
 struct bp_tx {
 	/* serialized */
 	uint32_t	nVersion;

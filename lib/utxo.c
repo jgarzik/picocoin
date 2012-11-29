@@ -102,7 +102,7 @@ bool bp_utxo_is_spent(struct bp_utxo_set *uset, const struct bp_outpt *outpt)
 		return true;
 	
 	struct bp_txout *txout = g_ptr_array_index(coin->vout, outpt->n);
-	if (bp_txout_null(txout))
+	if (!txout)
 		return true;
 	
 	return false;
@@ -118,7 +118,7 @@ static bool bp_utxo_null(const struct bp_utxo *coin)
 		struct bp_txout *txout;
 
 		txout = g_ptr_array_index(coin->vout, i);
-		if (!bp_txout_null(txout))
+		if (txout)
 			return false;
 	}
 
@@ -133,11 +133,15 @@ bool bp_utxo_spend(struct bp_utxo_set *uset, const struct bp_outpt *outpt)
 	    (outpt->n >= coin->vout->len))
 		return false;
 	
+	/* find txout, given index */
 	struct bp_txout *txout = g_ptr_array_index(coin->vout, outpt->n);
-	if (bp_txout_null(txout))
+	if (!txout)
 		return false;
 
-	bp_txout_set_null(txout);
+	/* free txout, replace with NULL marker indicating spent-ness */
+	coin->vout->pdata[outpt->n] = NULL;
+	bp_txout_free(txout);
+	free(txout);
 
 	/* if coin entirely spent, free it */
 	if (bp_utxo_null(coin))
