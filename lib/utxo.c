@@ -95,8 +95,7 @@ void bp_utxo_set_free(struct bp_utxo_set *uset)
 
 bool bp_utxo_is_spent(struct bp_utxo_set *uset, const struct bp_outpt *outpt)
 {
-	struct bp_utxo *coin = g_hash_table_lookup(uset->map,
-						   &outpt->hash);
+	struct bp_utxo *coin = bp_utxo_lookup(uset, &outpt->hash);
 	if (!coin || !coin->vout || !coin->vout->len ||
 	    (outpt->n >= coin->vout->len))
 		return true;
@@ -127,8 +126,7 @@ static bool bp_utxo_null(const struct bp_utxo *coin)
 
 bool bp_utxo_spend(struct bp_utxo_set *uset, const struct bp_outpt *outpt)
 {
-	struct bp_utxo *coin = g_hash_table_lookup(uset->map,
-						   &outpt->hash);
+	struct bp_utxo *coin = bp_utxo_lookup(uset, &outpt->hash);
 	if (!coin || !coin->vout || !coin->vout->len ||
 	    (outpt->n >= coin->vout->len))
 		return false;

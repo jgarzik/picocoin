@@ -178,6 +178,13 @@ static inline void bp_utxo_set_add(struct bp_utxo_set *uset,
 	g_hash_table_insert(uset->map, &coin->hash, coin);
 }
 
+static inline struct bp_utxo *bp_utxo_lookup(struct bp_utxo_set *uset,
+					     const bu256_t *hash)
+{
+	return g_hash_table_lookup(uset->map, hash);
+}
+
+
 struct bp_block {
 	/* serialized */
 	uint32_t	nVersion;
