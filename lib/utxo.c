@@ -108,6 +108,23 @@ bool bp_utxo_is_spent(struct bp_utxo_set *uset, const struct bp_outpt *outpt)
 	return false;
 }
 
+static bool bp_utxo_null(const struct bp_utxo *coin)
+{
+	if (!coin || !coin->vout || !coin->vout->len)
+		return true;
+	
+	unsigned int i;
+	for (i = 0; i < coin->vout->len; i++) {
+		struct bp_txout *txout;
+
+		txout = g_ptr_array_index(coin->vout, i);
+		if (!bp_txout_null(txout))
+			return false;
+	}
+
+	return true;
+}
+
 bool bp_utxo_spend(struct bp_utxo_set *uset, const struct bp_outpt *outpt)
 {
 	struct bp_utxo *coin = g_hash_table_lookup(uset->map,
@@ -121,6 +138,10 @@ bool bp_utxo_spend(struct bp_utxo_set *uset, const struct bp_outpt *outpt)
 		return false;
 
 	bp_txout_set_null(txout);
+
+	/* if coin entirely spent, free it */
+	if (bp_utxo_null(coin))
+		g_hash_table_remove(uset->map, &coin->hash);
 
 	return true;
 }

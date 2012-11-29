@@ -14,35 +14,52 @@
 #include <ccoin/blkdb.h>
 #include "libtest.h"
 
-static bool tx_spent(struct bp_utxo_set *uset, const struct bp_tx *tx)
+static bool spend_tx(struct bp_utxo_set *uset, const struct bp_tx *tx,
+		     unsigned int tx_idx, unsigned int height)
 {
 	assert(tx->sha256_valid == true);
 
-	unsigned int i;
-	for (i = 0; i < tx->vin->len; i++) {
-		struct bp_txin *txin;
+	bool is_coinbase = (tx_idx == 0);
 
-		txin = g_ptr_array_index(tx->vin, i);
-		if (bp_utxo_is_spent(uset, &txin->prevout))
-			return true;
+	/* spend this transaction's inputs */
+	if (!is_coinbase) {
+		unsigned int i;
+		for (i = 0; i < tx->vin->len; i++) {
+			struct bp_txin *txin;
+
+			txin = g_ptr_array_index(tx->vin, i);
+			if (!bp_utxo_spend(uset, &txin->prevout))
+				return false;
+		}
 	}
 
-	return false;
+	/* copy-and-convert a tx into a UTXO */
+	struct bp_utxo *coin;
+	coin = calloc(1, sizeof(*coin));
+	bp_utxo_init(coin);
+
+	assert(bp_utxo_from_tx(coin, tx, is_coinbase, height) == true);
+
+	/* add unspent outputs to set */
+	bp_utxo_set_add(uset, coin);
+
+	return true;
 }
 
-static bool is_block_spent(struct bp_utxo_set *uset, const struct bp_block *block)
+static bool spend_block(struct bp_utxo_set *uset, const struct bp_block *block,
+			unsigned int height)
 {
 	unsigned int i;
 
-	for (i = 1; i < block->vtx->len; i++) {
+	for (i = 0; i < block->vtx->len; i++) {
 		struct bp_tx *tx;
 
 		tx = g_ptr_array_index(block->vtx, i);
-		if (tx_spent(uset, tx))
-			return true;
+		if (!spend_tx(uset, tx, i, height))
+			return false;
 	}
 
-	return false;
+	return true;
 }
 
 static void read_test_msg(struct blkdb *db, struct bp_utxo_set *uset,
@@ -60,23 +77,27 @@ static void read_test_msg(struct blkdb *db, struct bp_utxo_set *uset,
 
 	assert(bp_block_valid(&block) == true);
 
-#if 0
-	assert(is_block_spent(uset, &block) == false);
-#endif
-
 	struct blkinfo *bi = bi_new();
 	bu256_copy(&bi->hash, &block.sha256);
-	memcpy(&bi->hdr, &block, sizeof(block));
-	bi->hdr.vtx = NULL;
+	bp_block_copy_hdr(&bi->hdr, &block);
 	bi->n_file = 0;
 	bi->n_pos = fpos + P2P_HDR_SZ;
 
 	assert(blkdb_add(db, bi) == true);
 
-	/* clear transaction list; don't want to load all that into RAM! */
-	bp_block_vtx_free(&block);
+	/* if best chain, mark TX's as spent */
+	if (bu256_equal(&db->hashBestChain, &bi->hdr.sha256)) {
+		if (!spend_block(uset, &block, bi->height)) {
+			char hexstr[(32 * 2) + 1];
+			bu256_hex(hexstr, &bi->hdr.sha256);
+			fprintf(stderr, 
+				"chain-verf: spend fail %u %s\n",
+				bi->height, hexstr);
+			assert(!"spend_block");
+		}
+	}
 
-	/* note: no bp_block_free(&block), due to memcpy into *bi */
+	bp_block_free(&block);
 }
 
 static void runtest(bool use_testnet, const char *blocks_fn)

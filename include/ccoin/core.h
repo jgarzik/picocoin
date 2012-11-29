@@ -178,6 +178,12 @@ extern void bp_utxo_set_free(struct bp_utxo_set *uset);
 extern bool bp_utxo_is_spent(struct bp_utxo_set *uset, const struct bp_outpt *outpt);
 extern bool bp_utxo_spend(struct bp_utxo_set *uset, const struct bp_outpt *outpt);
 
+static inline void bp_utxo_set_add(struct bp_utxo_set *uset,
+				   struct bp_utxo *coin)
+{
+	g_hash_table_insert(uset->map, &coin->hash, coin);
+}
+
 struct bp_block {
 	/* serialized */
 	uint32_t	nVersion;
@@ -208,5 +214,12 @@ extern void bp_check_merkle_branch(bu256_t *hash, const bu256_t *txhash_in,
 			    const GArray *mrkbranch, unsigned int txidx);
 extern bool bp_block_valid(struct bp_block *block);
 extern unsigned int bp_block_ser_size(const struct bp_block *block);
+
+static inline void bp_block_copy_hdr(struct bp_block *dest,
+				     const struct bp_block *src)
+{
+	memcpy(dest, src, sizeof(*src));
+	dest->vtx = NULL;
+}
 
 #endif /* __LIBCCOIN_CORE_H__ */
