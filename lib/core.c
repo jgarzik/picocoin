@@ -418,8 +418,6 @@ bool deser_bp_block(struct bp_block *block, struct const_buffer *buf)
 {
 	bp_block_free(block);
 
-	block->vtx = g_ptr_array_new_full(512, g_free);
-
 	if (!deser_u32(&block->nVersion, buf)) return false;
 	if (!deser_u256(&block->hashPrevBlock, buf)) return false;
 	if (!deser_u256(&block->hashMerkleRoot, buf)) return false;
@@ -430,6 +428,8 @@ bool deser_bp_block(struct bp_block *block, struct const_buffer *buf)
 	/* permit header-only blocks */
 	if (buf->len == 0)
 		return true;
+
+	block->vtx = g_ptr_array_new_full(512, g_free);
 
 	uint32_t vlen;
 	if (!deser_varlen(&vlen, buf)) return false;
