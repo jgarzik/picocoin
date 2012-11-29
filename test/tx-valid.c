@@ -58,7 +58,7 @@ static void test_tx_valid(bool is_valid, GHashTable *input_map,
 		 * further down in the code
 		 */
 		if (bp_tx_valid(&tx) == false)
-			return;
+			goto out;
 	}
 
 	bp_tx_calc_sha256(&tx);
@@ -109,6 +109,7 @@ static void test_tx_valid(bool is_valid, GHashTable *input_map,
 		}
 	}
 
+out:
 	bp_tx_free(&tx);
 }
 
