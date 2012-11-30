@@ -31,7 +31,7 @@ Building
 Now, you can build!
 
     ./autogen.sh
-    ./configure
+    ./configure CPPFLAGS="-I`brew --prefix openssl`/include"
     make
 
 You should also run `make check` in order to run tests. This is a vital step
