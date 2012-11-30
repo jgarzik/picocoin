@@ -1,0 +1,11 @@
+
+Checklist: https://en.bitcoin.it/wiki/Protocol_rules
+
+- block sigops total, not just count them.
+- difficulty.
+- subsidy.
+- coinbase maturity.
+- median time.
+- reorg.
+- compare input/output nValue total
+
