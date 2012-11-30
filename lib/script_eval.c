@@ -1121,7 +1121,7 @@ out:
 	return rc;
 }
 
-bool bp_verify_sig(const struct bp_tx *txFrom, const struct bp_tx *txTo,
+bool bp_verify_sig(const struct bp_utxo *txFrom, const struct bp_tx *txTo,
 		   unsigned int nIn, unsigned int flags, int nHashType)
 {
 	if (!txFrom || !txFrom->vout || !txFrom->vout->len ||
@@ -1135,6 +1135,8 @@ bool bp_verify_sig(const struct bp_tx *txFrom, const struct bp_tx *txTo,
 	
 	struct bp_txout *txout = g_ptr_array_index(txFrom->vout,
 						   txin->prevout.n);
+	if (!txout)
+		return false;
 
 	return bp_script_verify(txin->scriptSig, txout->scriptPubKey,
 				txTo, nIn, flags, nHashType);
