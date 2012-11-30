@@ -10,8 +10,8 @@ libccoin library dependencies:
 picocoin client dependencies:
 	GLib 2.x (from the GTK project)
 	OpenSSL
-	libevent
-	jansson
+	libevent 2.x
+	jansson 2.x (2.1 used for development)
 
 
 
