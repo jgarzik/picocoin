@@ -13,6 +13,7 @@
 #include <openssl/sha.h>
 #include <openssl/ripemd.h>
 #include <ccoin/util.h>
+#include <ccoin/compat.h>		/* for mkstemp */
 
 const char ipv4_mapped_pfx[12] = "\0\0\0\0\0\0\0\0\0\0\xff\xff";
 

@@ -56,7 +56,7 @@ AC_CHECK_LIB(jansson, json_loads, JANSSON_LIBS=-ljansson,
 dnl -------------------------------------
 dnl Checks for optional library functions
 dnl -------------------------------------
-AC_CHECK_FUNCS(fdatasync memmem)
+AC_CHECK_FUNCS(fdatasync memmem strndup mkstemp)
 
 dnl -----------------
 dnl Configure options

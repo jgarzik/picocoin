@@ -5,19 +5,24 @@
 #include "picocoin-config.h"
 
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/wait.h>
-#include <sys/uio.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <unistd.h>
+#ifdef WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
+#include <sys/wait.h>
+#include <sys/uio.h>
+#include <sys/socket.h>
 #include <netinet/in.h>
+#include <poll.h>
+#endif
 #include <string.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <signal.h>
-#include <poll.h>
 #include <errno.h>
 #include <glib.h>
 #include <event2/event.h>
