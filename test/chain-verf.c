@@ -24,25 +24,53 @@ static bool spend_tx(struct bp_utxo_set *uset, const struct bp_tx *tx,
 
 	struct bp_utxo *coin;
 
+	int64_t total_in = 0, total_out = 0;
+
+	unsigned int i;
+
 	/* verify and spend this transaction's inputs */
 	if (!is_coinbase) {
-		unsigned int i;
 		for (i = 0; i < tx->vin->len; i++) {
 			struct bp_txin *txin;
+			struct bp_txout *txout;
 
 			txin = g_ptr_array_index(tx->vin, i);
 
 			coin = bp_utxo_lookup(uset, &txin->prevout.hash);
-			if (!coin)
+			if (!coin || !coin->vout)
 				return false;
 
+			if (coin->is_coinbase &&
+			    ((coin->height + COINBASE_MATURITY) > height))
+				return false;
+
+			txout = NULL;
+			if (txin->prevout.n >= coin->vout->len)
+				return false;
+			txout = g_ptr_array_index(coin->vout, txin->prevout.n);
+			total_in += txout->nValue;
+
+#if 0
 			if (!bp_verify_sig(coin, tx, i,
 				/* SCRIPT_VERIFY_P2SH */ 0, 0))
 				return false;
+#endif
 
 			if (!bp_utxo_spend(uset, &txin->prevout))
 				return false;
 		}
+	}
+
+	for (i = 0; i < tx->vout->len; i++) {
+		struct bp_txout *txout;
+
+		txout = g_ptr_array_index(tx->vout, i);
+		total_out += txout->nValue;
+	}
+
+	if (!is_coinbase) {
+		if (total_out > total_in)
+			return false;
 	}
 
 	/* copy-and-convert a tx into a UTXO */
