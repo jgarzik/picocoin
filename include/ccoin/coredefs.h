@@ -9,6 +9,12 @@ enum {
 	CADDR_TIME_VERSION	= 31402,
 
 	MAX_BLOCK_SIZE		= 1000000,
+
+	COINBASE_MATURITY	= 100,
+};
+
+enum {
+	COIN			= 100000000LL,
 };
 
 enum bp_address_type {

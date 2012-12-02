@@ -5,14 +5,19 @@
 #include "picocoin-config.h"
 
 #include <sys/types.h>
-#include <sys/socket.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <netdb.h>
+#ifdef WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
+#include <sys/socket.h>
 #include <netinet/in.h>
+#include <netdb.h>
+#endif
 #include <ctype.h>
 #include <glib.h>
 #include <openssl/bn.h>
@@ -22,6 +27,7 @@
 #include "wallet.h"
 #include <ccoin/core.h>
 #include <ccoin/util.h>
+#include <ccoin/compat.h>		/* for strndup */
 
 const char *prog_name = "picocoin";
 GHashTable *settings;

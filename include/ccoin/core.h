@@ -11,6 +11,7 @@
 #include <glib.h>
 #include <ccoin/buffer.h>
 #include <ccoin/buint.h>
+#include <ccoin/coredefs.h>
 
 enum service_bits {
 	NODE_NETWORK	= (1 << 0),
@@ -18,7 +19,7 @@ enum service_bits {
 
 static inline bool bp_valid_value(int64_t nValue)
 {
-	if (nValue < 0 || nValue > 21000000ULL * 100000000ULL)
+	if (nValue < 0 || nValue > 21000000LL * COIN)
 		return false;
 	return true;
 }
@@ -221,6 +222,13 @@ static inline void bp_block_copy_hdr(struct bp_block *dest,
 {
 	memcpy(dest, src, sizeof(*src));
 	dest->vtx = NULL;
+}
+
+static inline int64_t bp_block_value(unsigned int height, int64_t fees)
+{
+	int64_t subsidy = 50LL * COIN;
+	subsidy >>= (height / 210000);
+	return subsidy + fees;
 }
 
 #endif /* __LIBCCOIN_CORE_H__ */

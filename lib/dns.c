@@ -5,11 +5,16 @@
 #include "picocoin-config.h"
 
 #include <sys/types.h>
+#ifdef WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netdb.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
-#include <netdb.h>
 #include <glib.h>
 #include <ccoin/util.h>
 #include <ccoin/core.h>
