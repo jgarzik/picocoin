@@ -236,40 +236,40 @@ static void chain_set(void)
 
 static void print_help()
 {
-  const char *settings[] = {
-    "config","Pathname to the configuration file.",
-    "wallet","Pathname to the wallet file.",
-    "chain","One of 'bitcoin' or 'testnet3', use with chain-set command."
-  };
+	const char *settings[] = {
+		"config","Pathname to the configuration file.",
+		"wallet","Pathname to the wallet file.",
+		"chain","One of 'bitcoin' or 'testnet3', use with chain-set command."
+	};
 
-  const char *commands[] = {
-    "chain-set","Select blockchain and network.",
-    "dns-seeds","Query and display bitcoin DNS seeds.",
-    "list-settings","Display settings map.",
-    "new-address","Generate a new address and output it. Store pair in wallet.",
-    "new-wallet","Initialize a new wallet. Refuses to initialize if the file exists.",
-    "netsync","\tSynchronize with the network, sending and receiving payments.",
-    "wallet-addr","List all address in the wallet.",
-    "wallet-dump","Dump entire wallet contents, including private keys.",
-    "wallet-info","Print informational summary of wallet data."
-  };
+	const char *commands[] = {
+		"chain-set","Select blockchain and network.",
+		"dns-seeds","Query and display bitcoin DNS seeds.",
+		"list-settings","Display settings map.",
+		"new-address","Generate a new address and output it. Store pair in wallet.",
+		"new-wallet","Initialize a new wallet. Refuses to initialize if the file exists.",
+		"netsync","\tSynchronize with the network, sending and receiving payments.",
+		"wallet-addr","List all address in the wallet.",
+		"wallet-dump","Dump entire wallet contents, including private keys.",
+		"wallet-info","Print informational summary of wallet data."
+	};
 
-  fprintf(stderr, "usage: %s <command|setting> [<command|setting>...]",
-      prog_name);
-  fprintf(stderr, "\n\nsettings, list in the form key=value:\n\n");
-  int i;
-  for(i = 0; i < (sizeof(settings)-1)/sizeof(settings[0]); i=i+2)
-    fprintf(stderr, "\t%s\t%s\n", settings[i], settings[i+1]);
-  fprintf(stderr, "\ncommands:\n\n");
-  for(i = 0; i < (sizeof(commands)-1)/sizeof(commands[0]); i=i+2)
-    fprintf(stderr, "\t%s\t%s\n", commands[i], commands[i+1]);
+	fprintf(stderr, "usage: %s <command|setting> [<command|setting>...]",
+			prog_name);
+	fprintf(stderr, "\n\nsettings, list in the form key=value:\n\n");
+	unsigned int i;
+	for (i = 0; i < ARRAY_SIZE(settings); i=i+2)
+		fprintf(stderr, "\t%s\t%s\n", settings[i], settings[i+1]);
+	fprintf(stderr, "\ncommands:\n\n");
+	for (i = 0; i < ARRAY_SIZE(commands); i=i+2)
+		fprintf(stderr, "\t%s\t%s\n", commands[i], commands[i+1]);
 }
 
 static bool is_command(const char *s)
 {
 	return	!strcmp(s, "chain-set") ||
 		!strcmp(s, "dns-seeds") ||
-    !strcmp(s, "help") ||
+		!strcmp(s, "help") ||
 		!strcmp(s, "list-settings") ||
 		!strcmp(s, "new-address") ||
 		!strcmp(s, "new-wallet") ||
@@ -289,8 +289,8 @@ static bool do_command(const char *s)
 	else if (!strcmp(s, "dns-seeds"))
 		list_dns_seeds();
 
-  else if (!strcmp(s, "help"))
-    print_help();
+	else if (!strcmp(s, "help"))
+		print_help();
 
 	else if (!strcmp(s, "list-settings"))
 		list_settings();
