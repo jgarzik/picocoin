@@ -6,6 +6,7 @@
 
 #include <string.h>
 #include <ccoin/core.h>
+#include <ccoin/compat.h>
 
 void bp_utxo_init(struct bp_utxo *coin)
 {
