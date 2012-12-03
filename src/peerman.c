@@ -9,6 +9,7 @@
 #include <ccoin/mbr.h>
 #include <ccoin/util.h>
 #include <ccoin/coredefs.h>
+#include <ccoin/compat.h>
 #include "picocoin.h"
 
 static guint addr_hash(gconstpointer key)

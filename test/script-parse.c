@@ -16,6 +16,7 @@
 #include <ccoin/core.h>
 #include <ccoin/mbr.h>
 #include <ccoin/message.h>
+#include <ccoin/compat.h>
 #include "libtest.h"
 
 static void test_txout(const struct bp_txout *txout)
