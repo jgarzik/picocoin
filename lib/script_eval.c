@@ -51,7 +51,7 @@ static void bp_tx_calc_sighash(bu256_t *hash, const struct bp_tx *tx,
 	g_string_free(s, TRUE);
 }
 
-void bp_tx_sighash(bu256_t *hash, GString *scriptCode,
+void bp_tx_sighash(bu256_t *hash, const GString *scriptCode,
 		   const struct bp_tx *txTo, unsigned int nIn,
 		   int nHashType)
 {
@@ -296,7 +296,8 @@ static void bn_set_int(BIGNUM *n, int val)
 }
 
 static bool bp_checksig(const struct buffer *vchSigHT,
-			const struct buffer *vchPubKey, GString *scriptCode,
+			const struct buffer *vchPubKey,
+			const GString *scriptCode,
 			const struct bp_tx *txTo, unsigned int nIn,
 			int nHashType)
 {
