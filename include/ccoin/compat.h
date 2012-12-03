@@ -21,6 +21,14 @@ g_ptr_array_new_full (guint          reserved_size,
   g_ptr_array_set_free_func (array, element_free_func);
   return array;
 }
+
+static inline void
+g_list_free_full(GList *element_list,
+		      GDestroyNotify free_func)
+{
+  g_list_foreach(element_list, (GFunc)free_func, NULL);
+  g_list_free(element_list);
+}
 #endif /* GLIB_VERSION < 2.30 */
 
 #ifndef HAVE_FDATASYNC
