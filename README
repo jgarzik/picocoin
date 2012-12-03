@@ -62,6 +62,10 @@ dns-seeds
 ---------
 Query and display bitcoin DNS seeds, for P2P node addresses.
 
+help
+----
+Output these commands and recognized settings.
+
 list-settings
 -------------
 Display settings map.
