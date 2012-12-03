@@ -107,3 +107,18 @@ gboolean g_bu256_equal(gconstpointer a_, gconstpointer b_)
 	return bu256_equal(a, b) ? TRUE : FALSE;
 }
 
+guint g_bu160_hash(gconstpointer key_)
+{
+	const bu160_t *key = key_;
+
+	return key->dword[BU160_WORDS / 2]; /* return rand int in the middle */
+}
+
+gboolean g_bu160_equal(gconstpointer a_, gconstpointer b_)
+{
+	const bu160_t *a = a_;
+	const bu160_t *b = b_;
+
+	return bu160_equal(a, b) ? TRUE : FALSE;
+}
+

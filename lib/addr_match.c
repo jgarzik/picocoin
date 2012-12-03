@@ -19,7 +19,7 @@ bool bp_txout_match(const struct bp_txout *txout,
 	bool rc = false;
 	
 	struct bscript_addr addrs;
-	if (!bsp_parse_addr(&addrs, txout->scriptPubKey->str,
+	if (!bsp_addr_parse(&addrs, txout->scriptPubKey->str,
 			    txout->scriptPubKey->len))
 		return false;
 

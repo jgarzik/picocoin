@@ -12,6 +12,9 @@
 #include <openssl/bn.h>
 
 enum {
+	BU160_WORDS	= (160 / 32),
+#define BU160_WORDS BU160_WORDS
+
 	BU256_WORDS	= (256 / 32),
 #define BU256_WORDS BU256_WORDS
 
@@ -19,10 +22,18 @@ enum {
 #define BU256_STRSZ BU256_STRSZ
 };
 
+/* unsigned 160 bit integer, with serialized bitcoin (little endian) ordering */
+typedef struct bu160 {
+	uint32_t dword[BU160_WORDS];
+} bu160_t;
+
 /* unsigned 256 bit integer, with serialized bitcoin (little endian) ordering */
 typedef struct bu256 {
 	uint32_t dword[BU256_WORDS];
 } bu256_t;
+
+extern guint g_bu160_hash(gconstpointer key_);
+extern gboolean g_bu160_equal(gconstpointer a_, gconstpointer b_);
 
 extern void bu256_bn(BIGNUM *vo, const bu256_t *vi);
 extern bool hex_bu256(bu256_t *vo, const char *hexstr);
@@ -85,6 +96,11 @@ static inline void bu256_free(bu256_t *v)
 		memset(v, 0, sizeof(*v));
 		free(v);
 	}
+}
+
+static inline bool bu160_equal(const bu160_t *a, const bu160_t *b)
+{
+	return memcmp(a, b, sizeof(bu160_t)) == 0;
 }
 
 #endif /* __LIBCCOIN_BUINT_H__ */

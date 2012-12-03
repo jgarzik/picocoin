@@ -12,6 +12,7 @@
 #include <ccoin/buffer.h>
 #include <ccoin/core.h>
 #include <ccoin/buint.h>
+#include <ccoin/key.h>
 
 /** Signature hash types/flags */
 enum
@@ -214,8 +215,9 @@ extern enum opcodetype GetOpType(const char *opname);
 extern bool bsp_getop(struct bscript_op *op, struct bscript_parser *bp);
 extern GPtrArray *bsp_parse_all(const void *data_, size_t data_len);
 extern enum txnouttype bsp_classify(GPtrArray *ops);
-extern bool bsp_parse_addr(struct bscript_addr *addr,
+extern bool bsp_addr_parse(struct bscript_addr *addr,
 		    const void *data, size_t data_len);
+extern void bsp_addr_free(struct bscript_addr *addr);
 extern bool is_bsp_pushonly(struct const_buffer *buf);
 
 static inline bool is_bsp_pushdata(enum opcodetype op)
@@ -246,7 +248,7 @@ static inline void bsp_start(struct bscript_parser *bp,
 }
 
 /*
- * script validation
+ * script validation and signing
  */
 
 extern void bp_tx_sighash(bu256_t *hash, const GString *scriptCode,
@@ -257,6 +259,13 @@ extern bool bp_script_verify(const GString *scriptSig, const GString *scriptPubK
 		      unsigned int flags, int nHashType);
 extern bool bp_verify_sig(const struct bp_utxo *txFrom, const struct bp_tx *txTo,
 		   unsigned int nIn, unsigned int flags, int nHashType);
+
+extern bool bp_script_sign(struct bp_keystore *ks, const GString *fromPubKey,
+		    const struct bp_tx *txTo, unsigned int nIn,
+		    int nHashType);
+extern bool bp_sign_sig(struct bp_keystore *ks, const struct bp_utxo *txFrom,
+		 struct bp_tx *txTo, unsigned int nIn,
+		 unsigned int flags, int nHashType);
 
 /*
  * script building

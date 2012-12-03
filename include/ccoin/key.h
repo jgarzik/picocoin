@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <glib.h>
 #include <openssl/ec.h>
+#include <ccoin/buint.h>
 
 struct bp_key {
 	EC_KEY		*k;
@@ -37,5 +38,17 @@ extern bool bpks_add(struct bp_keyset *ks, struct bp_key *key);
 extern bool bpks_lookup(const struct bp_keyset *ks, const void *data, size_t data_len,
 		 bool is_pubkeyhash);
 extern void bpks_free(struct bp_keyset *ks);
+
+struct bp_keystore {
+	GHashTable	*keys;
+};
+
+extern void bkeys_init(struct bp_keystore *ks);
+extern void bkeys_free(struct bp_keystore *ks);
+extern bool bkeys_add(struct bp_keystore *ks, struct bp_key *key);
+extern bool bkeys_privkey_get(struct bp_keystore *ks, const bu160_t *key_id,
+		      struct bp_key *key);
+extern bool bkeys_pubkey_append(struct bp_keystore *ks, const bu160_t *key_id,
+			GString *scriptSig);
 
 #endif /* __LIBCCOIN_KEY_H__ */

@@ -176,7 +176,7 @@ enum txnouttype bsp_classify(GPtrArray *ops)
 	return TX_NONSTANDARD;
 }
 
-bool bsp_parse_addr(struct bscript_addr *addr,
+bool bsp_addr_parse(struct bscript_addr *addr,
 		    const void *data, size_t data_len)
 {
 	memset(addr, 0, sizeof(*addr));
@@ -211,6 +211,21 @@ bool bsp_parse_addr(struct bscript_addr *addr,
 
 	g_ptr_array_free(ops, TRUE);
 	return true;
+}
+
+void bsp_addr_free(struct bscript_addr *addrs)
+{
+	if (!addrs)
+		return;
+
+	if (addrs->pub) {
+		g_list_free_full(addrs->pub, (GDestroyNotify) buffer_free);
+		addrs->pub = NULL;
+	}
+	if (addrs->pubhash) {
+		g_list_free_full(addrs->pubhash, (GDestroyNotify) buffer_free);
+		addrs->pubhash = NULL;
+	}
 }
 
 void bsp_push_data(GString *s, const void *data, size_t data_len)
