@@ -143,6 +143,10 @@ struct peer_manager *peerman_seed(void)
 	/* make DNS query for seed data */
 	GList *tmp, *seedlist = bu_dns_seed_addrs();
 
+	if (debugging)
+		fprintf(stderr, "peerman: DNS returned %u addresses\n",
+			g_list_length(seedlist));
+
 	/* import seed data into peerman */
 	tmp = seedlist;
 	while (tmp) {
@@ -165,6 +169,10 @@ static bool ser_peerman(struct peer_manager *peers, int fd)
 
 	if (wrc != rec_len)
 		return false;
+
+	if (debugging)
+		fprintf(stderr, "peerman: %u peers to write\n",
+			g_list_length(peers->addrlist));
 
 	/* write peer list */
 	GList *tmp = peers->addrlist;
