@@ -7,6 +7,7 @@ picocoin_SOURCES=	\
 	aes.c		\
 	main.c		\
 	net.c		\
+	fakepoll.h	\
 	peerman.c	\
 	peerman.h	\
 	picocoin.h	\
