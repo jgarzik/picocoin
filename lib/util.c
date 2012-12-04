@@ -127,7 +127,6 @@ bool bu_write_file(const char *filename, const void *data, size_t data_len)
 	if (rename(tmpfn, filename) < 0)
 		goto err_out_fd;
 
-	free(tmpfn);
 	return true;
 
 err_out_fd:
