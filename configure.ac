@@ -38,7 +38,15 @@ dnl AC_CHECK_HEADERS(sys/ioctl.h unistd.h)
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_BIGENDIAN
 AC_TYPE_SIZE_T
+
+dnl TODO: AC_SYS_LARGEFILE does not produce O_LARGEFILE on 64-bit Fedora Linux?
 AC_SYS_LARGEFILE
+
+AH_VERBATIM([_LARGEFILE64_SOURCE],
+[/* Enable LFS extensions on systems that have them.  */
+#ifndef _LARGEFILE64_SOURCE
+# define _LARGEFILE64_SOURCE 1
+#endif])
 
 dnl -----------------------------
 dnl Checks for required libraries

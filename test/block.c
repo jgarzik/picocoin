@@ -13,6 +13,7 @@
 #include <glib.h>
 #include <ccoin/message.h>
 #include <ccoin/mbr.h>
+#include <ccoin/util.h>
 #include "libtest.h"
 
 static void runtest(const char *json_fn_base, const char *ser_fn_base)
@@ -22,7 +23,7 @@ static void runtest(const char *json_fn_base, const char *ser_fn_base)
 	assert(json_is_object(meta));
 
 	char *ser_fn = test_filename(ser_fn_base);
-	int fd = open(ser_fn, O_RDONLY);
+	int fd = file_seq_open(ser_fn);
 	if (fd < 0) {
 		perror(ser_fn);
 		exit(1);

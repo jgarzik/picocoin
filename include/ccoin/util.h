@@ -27,6 +27,7 @@ extern void bu_Hash160(unsigned char *md160, const void *data, size_t data_len);
 extern bool bu_read_file(const char *filename, void **data_, size_t *data_len_,
 	       size_t max_file_len);
 extern bool bu_write_file(const char *filename, const void *data, size_t data_len);
+extern int file_seq_open(const char *filename);
 extern GList *bu_dns_seed_addrs(void);
 
 extern const char ipv4_mapped_pfx[12];

@@ -13,6 +13,7 @@
 #include <ccoin/mbr.h>
 #include <ccoin/blkdb.h>
 #include <ccoin/script.h>
+#include <ccoin/util.h>
 #include "libtest.h"
 
 static bool spend_tx(struct bp_utxo_set *uset, const struct bp_tx *tx,
@@ -165,15 +166,11 @@ static void runtest(bool use_testnet, const char *blocks_fn)
 		use_testnet ? "testnet3" : "mainnet",
 		blocks_fn);
 
-	int fd = open(blocks_fn, O_RDONLY);
+	int fd = file_seq_open(blocks_fn);
 	if (fd < 0) {
 		perror(blocks_fn);
 		assert(fd >= 0);
 	}
-
-#if _XOPEN_SOURCE >= 600 || _POSIX_C_SOURCE >= 200112L
-	posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
-#endif
 
 	struct p2p_message msg = {};
 	bool read_ok = true;

@@ -73,13 +73,9 @@ bool bu_read_file(const char *filename, void **data_, size_t *data_len_,
 	*data_ = NULL;
 	*data_len_ = 0;
 
-	int fd = open(filename, O_RDONLY);
+	int fd = file_seq_open(filename);
 	if (fd < 0)
 		return false;
-
-#if _XOPEN_SOURCE >= 600 || _POSIX_C_SOURCE >= 200112L
-	posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
-#endif
 
 	if (fstat(fd, &st) < 0)
 		goto err_out_fd;

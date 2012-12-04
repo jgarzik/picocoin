@@ -17,6 +17,7 @@
 #include <ccoin/serialize.h>
 #include <ccoin/buint.h>
 #include <ccoin/mbr.h>
+#include <ccoin/util.h>
 #include <ccoin/compat.h>		/* for fdatasync */
 
 struct blkinfo *bi_new(void)
@@ -186,13 +187,9 @@ static GString *blkdb_ser_rec(struct blkdb *db, const struct blkinfo *bi)
 bool blkdb_read(struct blkdb *db, const char *idx_fn)
 {
 	bool rc = true;
-	int fd = open(idx_fn, O_RDONLY);
+	int fd = file_seq_open(idx_fn);
 	if (fd < 0)
 		return false;
-
-#if _XOPEN_SOURCE >= 600 || _POSIX_C_SOURCE >= 200112L
-	posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
-#endif
 
 	struct p2p_message msg;
 	memset(&msg, 0, sizeof(msg));

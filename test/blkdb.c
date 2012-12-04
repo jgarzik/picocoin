@@ -13,6 +13,7 @@
 #include <ccoin/coredefs.h>
 #include <ccoin/buint.h>
 #include <ccoin/buffer.h>
+#include <ccoin/util.h>
 #include "libtest.h"
 
 static void add_header(struct blkdb *db, char *raw)
@@ -34,7 +35,7 @@ static void add_header(struct blkdb *db, char *raw)
 static void read_headers(const char *ser_base_fn, struct blkdb *db)
 {
 	char *filename = test_filename(ser_base_fn);
-	int fd = open(filename, O_RDONLY);
+	int fd = file_seq_open(filename);
 	assert(fd >= 0);
 
 	char hdrbuf[80];
