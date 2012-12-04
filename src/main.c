@@ -40,6 +40,7 @@ static const char *const_settings[] = {
 	"wallet=picocoin.wallet",
 	"chain=bitcoin",
 	"peers=picocoin.peers",
+	"blkdb=picocoin.blkdb",
 };
 
 

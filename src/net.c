@@ -790,22 +790,31 @@ static void network_child(int read_fd, int write_fd)
 	 * read block database
 	 */
 	struct blkdb db;
-	if (!blkdb_init(&db, chain->netmagic, &chain_genesis))
+	if (!blkdb_init(&db, chain->netmagic, &chain_genesis)) {
+		fprintf(stderr, "net: blkdb init failed\n");
 		exit(1);
+	}
 
 	char *blkdb_fn = setting("blkdb");
-	if (!blkdb_fn)
+	if (!blkdb_fn) {
+		fprintf(stderr, "net: blkdb filename not specified\n");
 		exit(1);
+	}
 	if ((access(blkdb_fn, F_OK) == 0) &&
-	    (!blkdb_read(&db, blkdb_fn)))
+	    (!blkdb_read(&db, blkdb_fn))) {
+		fprintf(stderr, "net: failed to read blkdb %s\n", blkdb_fn);
 		exit(1);
+	}
 
 	/*
 	 * prep block database for new records
 	 */
 	db.fd = open(blkdb_fn, O_WRONLY | O_APPEND | O_CREAT, 0666);
-	if (db.fd < 0)
+	if (db.fd < 0) {
+		fprintf(stderr, "net: open %s failed: %s\n",
+			blkdb_fn, strerror(errno));
 		exit(1);
+	}
 	
 	/*
 	 * set up libevent dispatch
