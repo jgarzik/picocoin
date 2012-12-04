@@ -224,7 +224,7 @@ static void print_help()
 	const char *settings[] = {
 		"config","Pathname to the configuration file.",
 		"wallet","Pathname to the wallet file.",
-		"chain","One of 'bitcoin' or 'testnet3', use with chain-set command."
+		"chain","One of 'bitcoin' or 'testnet3', use with chain-set command.",
 		"debug","Enable debugging output",
 	};
 
@@ -244,10 +244,10 @@ static void print_help()
 			prog_name);
 	fprintf(stderr, "\n\nsettings, list in the form key=value:\n\n");
 	unsigned int i;
-	for (i = 0; i < ARRAY_SIZE(settings); i=i+2)
+	for (i = 0; i < ARRAY_SIZE(settings); i += 2)
 		fprintf(stderr, "\t%s\t%s\n", settings[i], settings[i+1]);
 	fprintf(stderr, "\ncommands:\n\n");
-	for (i = 0; i < ARRAY_SIZE(commands); i=i+2)
+	for (i = 0; i < ARRAY_SIZE(commands); i += 2)
 		fprintf(stderr, "\t%s\t%s\n", commands[i], commands[i+1]);
 }
 
