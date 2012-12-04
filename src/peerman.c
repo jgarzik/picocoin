@@ -71,6 +71,10 @@ static bool peerman_has_addr(struct peer_manager *peers,const unsigned char *ip)
 static bool peerman_read_rec(struct peer_manager *peers,
 			     const struct p2p_message *msg)
 {
+	if (!strncmp(msg->hdr.command, "magic.peers",
+		     sizeof(msg->hdr.command)))
+		return true;
+
 	if (strncmp(msg->hdr.command, "CAddress", sizeof(msg->hdr.command)) ||
 	    (msg->hdr.data_len != sizeof(struct bp_address)))
 		return false;
@@ -80,19 +84,13 @@ static bool peerman_read_rec(struct peer_manager *peers,
 
 	addr = calloc(1, sizeof(*addr));
 
-	if (!deser_bp_addr(CADDR_TIME_VERSION, addr, &buf))
-		goto err_out;
-
-	if (!peerman_has_addr(peers, addr->ip))
+	if (deser_bp_addr(CADDR_TIME_VERSION, addr, &buf) &&
+	    !peerman_has_addr(peers, addr->ip))
 		__peerman_add(peers, addr, false);
 	else
 		free(addr);
 
 	return true;
-
-err_out:
-	free(addr);
-	return false;
 }
 
 struct peer_manager *peerman_read(void)
@@ -101,37 +99,37 @@ struct peer_manager *peerman_read(void)
 	if (!filename)
 		return NULL;
 
-	void *data = NULL;
-	size_t data_len = 0;
-
-	if (!bu_read_file(filename, &data, &data_len, 100 * 1024 * 1024))
-		return NULL;
-
 	struct peer_manager *peers;
 
 	peers = peerman_new();
+	if (!peers)
+		return NULL;
 
-	struct const_buffer buf = { data, data_len };
-	struct mbuf_reader mbr;
-
-	mbr_init(&mbr, &buf);
-
-	while (mbr_read(&mbr)) {
-		if (!peerman_read_rec(peers, &mbr.msg)) {
-			mbr.error = true;
-			break;
-		}
+	int fd = file_seq_open(filename);
+	if (fd < 0) {
+		perror(filename);
+		goto err_out;
 	}
 
-	if (mbr.error) {
-		peerman_free(peers);
-		peers = NULL;
+	struct p2p_message msg = {};
+	bool read_ok = true;
+
+	while (fread_message(fd, &msg, &read_ok)) {
+		if (!peerman_read_rec(peers, &msg))
+			goto err_out;
 	}
 
-	mbr_free(&mbr);
-	free(data);
+	if (!read_ok)
+		goto err_out;
+
+	free(msg.data);
+	close(fd);
 
 	return peers;
+
+err_out:
+	peerman_free(peers);
+	return NULL;
 }
 
 struct peer_manager *peerman_seed(void)
@@ -156,14 +154,20 @@ struct peer_manager *peerman_seed(void)
 	return peers;
 }
 
-static GString *ser_peerman(struct peer_manager *peers)
+static bool ser_peerman(struct peer_manager *peers, int fd)
 {
-	unsigned int peer_count = g_hash_table_size(peers->map_addr);
-	GString *s = g_string_sized_new(
-		peer_count * (24 + sizeof(struct bp_address)));
+	/* write "magic number" (constant first file record) */
+	GString *rec = message_str(chain->netmagic, "magic.peers", NULL, 0);
+	unsigned int rec_len = rec->len;
+	ssize_t wrc = write(fd, rec->str, rec_len);
 
+	g_string_free(rec, TRUE);
+
+	if (wrc != rec_len)
+		return false;
+
+	/* write peer list */
 	GList *tmp = peers->addrlist;
-
 	while (tmp) {
 		struct bp_address *addr;
 
@@ -173,16 +177,20 @@ static GString *ser_peerman(struct peer_manager *peers)
 		GString *msg_data = g_string_sized_new(sizeof(struct bp_address));
 		ser_bp_addr(msg_data, CADDR_TIME_VERSION, addr);
 
-		GString *rec = message_str(chain->netmagic, "CAddress",
-					   msg_data->str, msg_data->len);
+		rec = message_str(chain->netmagic, "CAddress",
+				  msg_data->str, msg_data->len);
 
-		g_string_append_len(s, rec->str, rec->len);
+		rec_len = rec->len;
+		wrc = write(fd, rec->str, rec_len);
 
 		g_string_free(rec, TRUE);
 		g_string_free(msg_data, TRUE);
+
+		if (wrc != rec_len)
+			return false;
 	}
 
-	return s;
+	return true;
 }
 
 bool peerman_write(struct peer_manager *peers)
@@ -191,13 +199,33 @@ bool peerman_write(struct peer_manager *peers)
 	if (!filename)
 		return false;
 
-	GString *data = ser_peerman(peers);
+	char tmpfn[strlen(filename) + 32];
+	strcpy(tmpfn, filename);
+	strcat(tmpfn, ".XXXXXX");
 
-	bool rc = bu_write_file(filename, data->str, data->len);
+	int fd = mkstemp(tmpfn);
+	if (fd < 0)
+		return false;
 
-	g_string_free(data, TRUE);
+	if (!ser_peerman(peers, fd))
+		goto err_out;
 
-	return rc;
+	close(fd);
+	fd = -1;
+
+	if (rename(tmpfn, filename)) {
+		strcat(tmpfn, " rename");
+		perror(tmpfn);
+		goto err_out;
+	}
+
+	return true;
+
+err_out:
+	if (fd >= 0)
+		close(fd);
+	unlink(tmpfn);
+	return false;
 }
 
 struct bp_address *peerman_pop(struct peer_manager *peers)

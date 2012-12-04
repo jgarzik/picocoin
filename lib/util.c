@@ -109,13 +109,13 @@ err_out_fd:
 
 bool bu_write_file(const char *filename, const void *data, size_t data_len)
 {
-	char *tmpfn = calloc(1, strlen(filename) + 16);
+	char tmpfn[strlen(filename) + 16];
 	strcpy(tmpfn, filename);
 	strcat(tmpfn, ".XXXXXX");
 
 	int fd = mkstemp(tmpfn);
 	if (fd < 0)
-		goto err_out_tmpfn;
+		return false;
 
 	ssize_t wrc = write(fd, data, data_len);
 	if (wrc != data_len)
@@ -134,8 +134,6 @@ err_out_fd:
 	if (fd >= 0)
 		close(fd);
 	unlink(tmpfn);
-err_out_tmpfn:
-	free(tmpfn);
 	return false;
 }
 
