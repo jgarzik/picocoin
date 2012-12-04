@@ -10,8 +10,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #ifdef WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
+#include <mingw.h>
+#include "fakepoll.h"
 #else
 #include <sys/wait.h>
 #include <sys/uio.h>
@@ -874,7 +874,11 @@ bool neteng_start(struct net_engine *neteng)
 	if (pipe(neteng->tx_pipefd) < 0)
 		goto err_out_rxfd;
 
+	#ifdef WIN32 
+	neteng->child = createthread();
+	#else 
 	neteng->child = fork();
+	#endif
 	if (neteng->child == -1)
 		goto err_out_txfd;
 
