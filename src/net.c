@@ -97,6 +97,36 @@ static bool nc_conn_read_disable(struct nc_conn *conn);
 static bool nc_conn_write_enable(struct nc_conn *conn);
 static bool nc_conn_write_disable(struct nc_conn *conn);
 
+void address_str(char *host, size_t hostsz,
+		 const struct bp_address *addr)
+{
+	bool is_ipv4 = is_ipv4_mapped(addr->ip);
+
+	if (is_ipv4) {
+		struct sockaddr_in saddr;
+
+		memset(&saddr, 0, sizeof(saddr));
+		saddr.sin_family = AF_INET;
+		memcpy(&saddr.sin_addr, &addr->ip[12], 4);
+
+		getnameinfo((struct sockaddr *) &saddr, sizeof(saddr),
+			    host, hostsz,
+			    NULL, 0, NI_NUMERICHOST);
+	} else {
+		struct sockaddr_in6 saddr;
+
+		memset(&saddr, 0, sizeof(saddr));
+		saddr.sin6_family = AF_INET6;
+		memcpy(&saddr.sin6_addr, &addr->ip, 16);
+
+		getnameinfo((struct sockaddr *) &saddr, sizeof(saddr),
+			    host, hostsz,
+			    NULL, 0, NI_NUMERICHOST);
+	}
+
+	host[hostsz - 1] = 0;
+}
+
 static void pipwr(int fd, const void *buf, size_t len)
 {
 	while (len > 0) {
@@ -786,6 +816,10 @@ static void network_child(int read_fd, int write_fd)
 		peerman_write(peers);
 	}
 
+	if (debugging)
+		fprintf(stderr, "net: have %u peers\n",
+			g_hash_table_size(peers->map_addr));
+
 	/*
 	 * read block database
 	 */
@@ -815,6 +849,9 @@ static void network_child(int read_fd, int write_fd)
 			blkdb_fn, strerror(errno));
 		exit(1);
 	}
+
+	if (debugging)
+		fprintf(stderr, "net: blkdb opened\n");
 	
 	/*
 	 * set up libevent dispatch
@@ -902,8 +939,14 @@ bool neteng_start(struct net_engine *neteng)
 	int par_read = neteng->par_read = neteng->rx_pipefd[0];
 	int par_write = neteng->par_write = neteng->tx_pipefd[1];
 
+	if (debugging)
+		fprintf(stderr, "net: parent exec NC_START\n");
+
 	if (!neteng_cmd_exec(neteng->child, par_read, par_write, NC_START))
 		goto err_out_child;
+
+	if (debugging)
+		fprintf(stderr, "net: parent after NC_START\n");
 
 	neteng->running = true;
 	return true;

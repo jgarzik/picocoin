@@ -35,6 +35,7 @@ struct wallet *cur_wallet;
 const struct chain_info *chain = NULL;
 bu256_t chain_genesis;
 uint64_t instance_nonce;
+bool debugging = false;
 
 static const char *const_settings[] = {
 	"wallet=picocoin.wallet",
@@ -112,11 +113,14 @@ static bool do_setting(const char *arg)
 	 * trigger special setting-specific behaviors
 	 */
 
-	if (!strcmp(key, "config") || !strcmp(key, "c"))
+	if (!strcmp(key, "debug"))
+		debugging = true;
+
+	else if (!strcmp(key, "config") || !strcmp(key, "c"))
 		return read_config_file(value);
 
 	/* clear previous wallet, if new wallet file seen */
-	if (!strcmp(key, "wallet") || !strcmp(key, "w"))
+	else if (!strcmp(key, "wallet") || !strcmp(key, "w"))
 		cur_wallet_free();
 
 	return true;
@@ -176,29 +180,9 @@ static void list_dns_seeds(void)
 	for (tmp = addrlist; tmp != NULL; tmp = tmp->next) {
 		struct bp_address *addr = tmp->data;
 		char host[64];
+
 		bool is_ipv4 = is_ipv4_mapped(addr->ip);
-
-		if (is_ipv4) {
-			struct sockaddr_in saddr;
-
-			memset(&saddr, 0, sizeof(saddr));
-			saddr.sin_family = AF_INET;
-			memcpy(&saddr.sin_addr, &addr->ip[12], 4);
-
-			getnameinfo((struct sockaddr *) &saddr, sizeof(saddr),
-				    host, sizeof(host),
-				    NULL, 0, NI_NUMERICHOST);
-		} else {
-			struct sockaddr_in6 saddr;
-
-			memset(&saddr, 0, sizeof(saddr));
-			saddr.sin6_family = AF_INET6;
-			memcpy(&saddr.sin6_addr, &addr->ip, 16);
-
-			getnameinfo((struct sockaddr *) &saddr, sizeof(saddr),
-				    host, sizeof(host),
-				    NULL, 0, NI_NUMERICHOST);
-		}
+		address_str(host, sizeof(host), addr);
 
 		printf("  [ %s, \"%s\", %u, %llu ]%s\n",
 		       is_ipv4 ? "true" : "false",
@@ -241,6 +225,7 @@ static void print_help()
 		"config","Pathname to the configuration file.",
 		"wallet","Pathname to the wallet file.",
 		"chain","One of 'bitcoin' or 'testnet3', use with chain-set command."
+		"debug","Enable debugging output",
 	};
 
 	const char *commands[] = {

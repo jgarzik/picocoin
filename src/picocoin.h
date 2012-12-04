@@ -11,6 +11,7 @@
 #include <glib.h>
 #include <ccoin/coredefs.h>
 #include <ccoin/buint.h>
+#include <ccoin/core.h>
 
 struct wallet;
 
@@ -24,9 +25,12 @@ extern struct wallet *cur_wallet;
 extern const struct chain_info *chain;
 extern bu256_t chain_genesis;
 extern uint64_t instance_nonce;
+extern bool debugging;
 
 /* net.c */
 extern void network_sync(void);
+extern void address_str(char *host, size_t hostsz,
+		 const struct bp_address *addr);
 
 /* aes.c */
 extern GString *read_aes_file(const char *filename, void *key, size_t key_len,
