@@ -22,6 +22,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <assert.h>
 #include <signal.h>
 #include <errno.h>
 #include <glib.h>
@@ -63,6 +64,8 @@ struct net_child_info {
 };
 
 struct nc_conn {
+	bool			dead;
+
 	int			fd;
 
 	struct bp_address	addr;
@@ -94,7 +97,8 @@ enum {
 	NC_MAX_CONN		= 8,
 };
 
-static void nc_conn_free(struct nc_conn *conn);
+static bool network_child_running;
+static void nc_conn_kill(struct nc_conn *conn);
 static bool nc_conn_read_enable(struct nc_conn *conn);
 static bool nc_conn_read_disable(struct nc_conn *conn);
 static bool nc_conn_write_enable(struct nc_conn *conn);
@@ -251,7 +255,7 @@ static void nc_conn_write_evt(int fd, short events, void *priv)
 
 	if (wrc < 0) {
 		if (errno != EAGAIN && errno != EWOULDBLOCK)
-			nc_conn_free(conn);
+			goto err_out;
 		return;
 	}
 
@@ -263,6 +267,11 @@ static void nc_conn_write_evt(int fd, short events, void *priv)
 		nc_conn_write_disable(conn);
 		nc_conn_read_enable(conn);
 	}
+
+	return;
+
+err_out:
+	nc_conn_kill(conn);
 }
 
 static bool nc_conn_send(struct nc_conn *conn, const char *command,
@@ -500,6 +509,14 @@ static struct nc_conn *nc_conn_new(const struct bp_address *addr_in)
 	return conn;
 }
 
+static void nc_conn_kill(struct nc_conn *conn)
+{
+	assert(conn->dead == false);
+
+	conn->dead = true;
+	event_base_loopbreak(conn->nci->eb);
+}
+
 static void nc_conn_free(struct nc_conn *conn)
 {
 	if (!conn)
@@ -656,10 +673,9 @@ static void nc_conn_read_evt(int fd, short events, void *priv)
 				strerror(errno));
 		else
 			fprintf(stderr, "llnet: %s read EOF\n", conn->addr_str);
-		nc_conn_free(conn);
-		return;
-	}
 
+		goto err_out;
+	}
 
 	conn->msg_p += rrc;
 	conn->expected -= rrc;
@@ -681,7 +697,7 @@ static void nc_conn_read_evt(int fd, short events, void *priv)
 	return;
 
 err_out:
-	nc_conn_free(conn);
+	nc_conn_kill(conn);
 }
 
 static GString *nc_version_build(struct nc_conn *conn)
@@ -815,11 +831,46 @@ static void nc_conn_evt_connected(int fd, short events, void *priv)
 	return;
 
 err_out:
-	nc_conn_free(conn);
+	nc_conn_kill(conn);
+}
+
+static void nc_conns_gc(struct net_child_info *nci)
+{
+	GList *dead = NULL;
+	unsigned int n_gc = 0;
+
+	/* build list of dead connections */
+	unsigned int i;
+	for (i = 0; i < nci->conns->len; i++) {
+		struct nc_conn *conn = g_ptr_array_index(nci->conns, i);
+		if (conn->dead)
+			dead = g_list_prepend(dead, conn);
+	}
+
+	/* remove and free dead connections */
+	GList *tmp = dead;
+	while (tmp) {
+		struct nc_conn *conn = tmp->data;
+		tmp = tmp->next;
+
+		g_ptr_array_remove(nci->conns, conn);
+		nc_conn_free(conn);
+		n_gc++;
+	}
+
+	g_list_free(dead);
+
+	if (debugging)
+		fprintf(stderr, "net: gc'd %u connections\n", n_gc);
 }
 
 static void nc_conns_open(struct net_child_info *nci)
 {
+	if (debugging)
+		fprintf(stderr, "net: open connections (have %u, want %u more)\n", 
+			nci->conns->len,
+			NC_MAX_CONN - nci->conns->len);
+
 	while ((g_hash_table_size(nci->peers->map_addr) > 0) &&
 	       (nci->conns->len < NC_MAX_CONN)) {
 
@@ -872,8 +923,14 @@ static void nc_conns_open(struct net_child_info *nci)
 		continue;
 
 err_loop:
-		nc_conn_free(conn);
+		nc_conn_kill(conn);
 	}
+}
+
+static void nc_conns_process(struct net_child_info *nci)
+{
+	nc_conns_gc(nci);
+	nc_conns_open(nci);
 }
 
 static void nc_pipe_evt(int fd, short events, void *priv)
@@ -899,6 +956,8 @@ static void nc_pipe_evt(int fd, short events, void *priv)
 
 static void network_child(int read_fd, int write_fd)
 {
+	network_child_running = true;
+
 	/*
 	 * read network peers
 	 */
@@ -968,10 +1027,11 @@ static void network_child(int read_fd, int write_fd)
 			     nc_pipe_evt, &nci);
 	event_add(pipe_evt, NULL);
 
-	nc_conns_open(&nci);		/* start opening P2P connections */
-
 	/* main loop */
-	event_base_dispatch(nci.eb);
+	do {
+		nc_conns_process(&nci);
+		event_base_dispatch(nci.eb);
+	} while (network_child_running);
 
 	/* cleanup: just the minimum for file I/O correctness */
 	peerman_write(peers);
