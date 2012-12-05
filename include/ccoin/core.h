@@ -41,6 +41,12 @@ extern bool deser_bp_addr(unsigned int protover,
 extern void ser_bp_addr(GString *s, unsigned int protover, const struct bp_address *addr);
 static inline void bp_addr_free(struct bp_address *addr) {}
 
+static inline void bp_addr_copy(struct bp_address *dest,
+				const struct bp_address *src)
+{
+	memcpy(dest, src, sizeof(*dest));
+}
+
 struct bp_inv {
 	uint32_t	type;
 	bu256_t		hash;

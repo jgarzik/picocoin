@@ -68,7 +68,7 @@ struct nc_conn {
 
 	int			fd;
 
-	struct bp_address	addr;
+	struct peer		peer;
 	char			addr_str[64];
 
 	bool			ipv4;
@@ -397,7 +397,7 @@ static bool nc_msg_addr(struct nc_conn *conn)
 	unsigned int i;
 	for (i = 0; i < ma.addrs->len; i++) {
 		struct bp_address *addr = g_ptr_array_index(ma.addrs, i);
-		peerman_add(conn->nci->peers, addr, false);
+		peerman_add_addr(conn->nci->peers, addr, false);
 	}
 
 out_ok:
@@ -420,7 +420,7 @@ static bool nc_msg_verack(struct nc_conn *conn)
 	 * the peer is re-added.  Thus, peers are immediately
 	 * forgotten if they fail, on the first try.
 	 */
-	peerman_add(conn->nci->peers, &conn->addr, true);
+	peerman_add(conn->nci->peers, &conn->peer, true);
 
 	/* request peer addresses */
 	if ((conn->protover >= CADDR_TIME_VERSION) &&
@@ -484,14 +484,14 @@ static bool nc_conn_ip_active(struct net_child_info *nci,
 		struct nc_conn *conn;
 
 		conn = g_ptr_array_index(nci->conns, i);
-		if (!memcmp(conn->addr.ip, ip, 16))
+		if (!memcmp(conn->peer.addr.ip, ip, 16))
 			return true;
 	}
 
 	return false;
 }
 
-static struct nc_conn *nc_conn_new(const struct bp_address *addr_in)
+static struct nc_conn *nc_conn_new(const struct peer *peer)
 {
 	struct nc_conn *conn;
 
@@ -501,10 +501,8 @@ static struct nc_conn *nc_conn_new(const struct bp_address *addr_in)
 
 	conn->fd = -1;
 
-	if (addr_in) {
-		memcpy(&conn->addr, addr_in, sizeof(*addr_in));
-		address_str(conn->addr_str, sizeof(conn->addr_str), addr_in);
-	}
+	peer_copy(&conn->peer, peer);
+	address_str(conn->addr_str, sizeof(conn->addr_str), &conn->peer.addr);
 
 	return conn;
 }
@@ -561,7 +559,7 @@ static bool nc_conn_start(struct nc_conn *conn)
 	char errpfx[64];
 
 	/* create socket */
-	conn->ipv4 = is_ipv4_mapped(conn->addr.ip);
+	conn->ipv4 = is_ipv4_mapped(conn->peer.addr.ip);
 	conn->fd = socket(conn->ipv4 ? AF_INET : AF_INET6,
 			  SOCK_STREAM, IPPROTO_TCP);
 	if (conn->fd < 0) {
@@ -589,8 +587,8 @@ static bool nc_conn_start(struct nc_conn *conn)
 		memset(&saddr4, 0, sizeof(saddr4));
 		saddr4.sin_family = AF_INET;
 		memcpy(&saddr4.sin_addr.s_addr,
-		       &conn->addr.ip[12], 4);
-		saddr4.sin_port = htons(conn->addr.port);
+		       &conn->peer.addr.ip[12], 4);
+		saddr4.sin_port = htons(conn->peer.addr.port);
 
 		saddr = (struct sockaddr *) &saddr4;
 		saddr_len = sizeof(saddr4);
@@ -598,8 +596,8 @@ static bool nc_conn_start(struct nc_conn *conn)
 		memset(&saddr6, 0, sizeof(saddr6));
 		saddr6.sin6_family = AF_INET6;
 		memcpy(&saddr6.sin6_addr.s6_addr,
-		       &conn->addr.ip[0], 16);
-		saddr6.sin6_port = htons(conn->addr.port);
+		       &conn->peer.addr.ip[0], 16);
+		saddr6.sin6_port = htons(conn->peer.addr.port);
 
 		saddr = (struct sockaddr *) &saddr6;
 		saddr_len = sizeof(saddr6);
@@ -882,18 +880,19 @@ static void nc_conns_open(struct net_child_info *nci)
 		/* delete peer from front of address list.  it will be
 		 * re-added before writing peer file, if successful
 		 */
-		struct bp_address *addr = peerman_pop(nci->peers);
+		struct peer *peer = peerman_pop(nci->peers);
 
-		struct nc_conn *conn = nc_conn_new(addr);
+		struct nc_conn *conn = nc_conn_new(peer);
 		conn->nci = nci;
-		free(addr);
+		peer_free(peer);
+		free(peer);
 
 		if (debugging)
 			fprintf(stderr, "net: connecting to %s\n",
 				conn->addr_str);
 
 		/* are we already connected to this IP? */
-		if (nc_conn_ip_active(nci, conn->addr.ip)) {
+		if (nc_conn_ip_active(nci, conn->peer.addr.ip)) {
 			fprintf(stderr, "net: already connected to %s\n",
 				conn->addr_str);
 			goto err_loop;
@@ -1192,10 +1191,17 @@ void network_sync(void)
 {
 	struct net_engine *neteng = neteng_new_start();
 
+	char *sleep_str = setting("sleep");
+	int nsec = atoi(sleep_str ? sleep_str : "");
+	if (nsec < 1)
+		nsec = 10 * 60;
+
 	if (debugging)
-		fprintf(stderr, "net: engine started. sleeping 10 minutes\n");
+		fprintf(stderr, "net: engine started. sleeping %d %s\n",
+			(nsec > 60) ? nsec/60 : nsec,
+			(nsec > 60) ? "minutes" : "seconds");
 	
-	sleep(10 * 60);
+	sleep(nsec);
 
 	neteng_free(neteng);
 }

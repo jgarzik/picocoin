@@ -10,6 +10,7 @@
 #include <ccoin/util.h>
 #include <ccoin/coredefs.h>
 #include <ccoin/compat.h>
+#include <ccoin/serialize.h>
 #include "picocoin.h"
 
 static guint addr_hash(gconstpointer key)
@@ -20,6 +21,33 @@ static guint addr_hash(gconstpointer key)
 static gboolean addr_equal(gconstpointer a, gconstpointer b)
 {
 	return memcmp(a, b, 16) == 0 ? TRUE : FALSE;
+}
+
+bool deser_peer(unsigned int protover,
+		struct peer *peer, struct const_buffer *buf)
+{
+	peer_free(peer);
+
+	if (!deser_bp_addr(protover, &peer->addr, buf)) return false;
+
+	if (!deser_s64(&peer->last_ok, buf)) return false;
+	if (!deser_u32(&peer->n_ok, buf)) return false;
+
+	if (!deser_s64(&peer->last_fail, buf)) return false;
+	if (!deser_u32(&peer->n_fail, buf)) return false;
+
+	return true;
+}
+
+void ser_peer(GString *s, unsigned int protover, const struct peer *peer)
+{
+	ser_bp_addr(s, protover, &peer->addr);
+
+	ser_s64(s, peer->last_ok);
+	ser_u32(s, peer->n_ok);
+
+	ser_s64(s, peer->last_fail);
+	ser_u32(s, peer->n_fail);
 }
 
 static struct peer_manager *peerman_new(void)
@@ -35,6 +63,16 @@ static struct peer_manager *peerman_new(void)
 	return peers;
 }
 
+static void peer_ent_free(gpointer data)
+{
+	if (!data)
+		return;
+	struct peer *peer = data;
+
+	peer_free(peer);
+	free(peer);
+}
+
 void peerman_free(struct peer_manager *peers)
 {
 	if (!peers)
@@ -43,24 +81,21 @@ void peerman_free(struct peer_manager *peers)
 	if (peers->map_addr)
 		g_hash_table_unref(peers->map_addr);
 
-	g_list_free_full(peers->addrlist, g_free);
+	g_list_free_full(peers->addrlist, peer_ent_free);
 
 	memset(peers, 0, sizeof(*peers));
 	free(peers);
 }
 
-static void __peerman_add(struct peer_manager *peers, struct bp_address *addr,
+static void __peerman_add(struct peer_manager *peers, struct peer *peer,
 			  bool prepend_front)
 {
 	if (prepend_front)
-		peers->addrlist = g_list_prepend(peers->addrlist, addr);
+		peers->addrlist = g_list_prepend(peers->addrlist, peer);
 	else
-		peers->addrlist = g_list_append(peers->addrlist, addr);
+		peers->addrlist = g_list_append(peers->addrlist, peer);
 
-	/* when using GHashTable as a set, key=value enables some
-	 * unspecified GLib optimizations
-	 */
-	g_hash_table_insert(peers->map_addr, addr->ip, addr->ip);
+	g_hash_table_insert(peers->map_addr, peer->addr.ip, peer);
 }
 
 static bool peerman_has_addr(struct peer_manager *peers,const unsigned char *ip)
@@ -75,19 +110,22 @@ static bool peerman_read_rec(struct peer_manager *peers,
 		     sizeof(msg->hdr.command)))
 		return true;
 
-	if (strncmp(msg->hdr.command, "CAddress", sizeof(msg->hdr.command)))
+	if (strncmp(msg->hdr.command, "peer", sizeof(msg->hdr.command)))
 		return false;
 
 	struct const_buffer buf = { msg->data, msg->hdr.data_len };
-	struct bp_address *addr;
+	struct peer *peer;
 
-	addr = calloc(1, sizeof(*addr));
+	peer = calloc(1, sizeof(*peer));
+	peer_init(peer);
 
-	if (deser_bp_addr(CADDR_TIME_VERSION, addr, &buf) &&
-	    !peerman_has_addr(peers, addr->ip))
-		__peerman_add(peers, addr, false);
-	else
-		free(addr);
+	if (deser_peer(CADDR_TIME_VERSION, peer, &buf) &&
+	    !peerman_has_addr(peers, peer->addr.ip))
+		__peerman_add(peers, peer, false);
+	else {
+		peer_free(peer);
+		free(peer);
+	}
 
 	return true;
 }
@@ -152,11 +190,16 @@ struct peer_manager *peerman_seed(bool use_dns)
 		fprintf(stderr, "peerman: DNS returned %u addresses\n",
 			g_list_length(seedlist));
 
+	g_list_shuffle(seedlist);
+
 	/* import seed data into peerman */
 	tmp = seedlist;
 	while (tmp) {
-		__peerman_add(peers, tmp->data, true);
+		struct bp_address *addr = tmp->data;
 		tmp = tmp->next;
+
+		peerman_add_addr(peers, addr, true);
+		free(addr);
 	}
 	g_list_free(seedlist);
 
@@ -182,15 +225,15 @@ static bool ser_peerman(struct peer_manager *peers, int fd)
 	/* write peer list */
 	GList *tmp = peers->addrlist;
 	while (tmp) {
-		struct bp_address *addr;
+		struct peer *peer;
 
-		addr = tmp->data;
+		peer = tmp->data;
 		tmp = tmp->next;
 
-		GString *msg_data = g_string_sized_new(sizeof(struct bp_address));
-		ser_bp_addr(msg_data, CADDR_TIME_VERSION, addr);
+		GString *msg_data = g_string_sized_new(sizeof(struct peer));
+		ser_peer(msg_data, CADDR_TIME_VERSION, peer);
 
-		rec = message_str(chain->netmagic, "CAddress",
+		rec = message_str(chain->netmagic, "peer",
 				  msg_data->str, msg_data->len);
 
 		rec_len = rec->len;
@@ -241,36 +284,55 @@ err_out:
 	return false;
 }
 
-struct bp_address *peerman_pop(struct peer_manager *peers)
+struct peer *peerman_pop(struct peer_manager *peers)
 {
-	struct bp_address *addr;
+	struct peer *peer;
 	GList *tmp;
 
 	tmp = peers->addrlist;
 	if (!tmp)
 		return NULL;
 
-	addr = tmp->data;
+	peer = tmp->data;
 
 	peers->addrlist = g_list_delete_link(tmp, tmp);
 
-	g_hash_table_remove(peers->map_addr, addr->ip);
+	g_hash_table_remove(peers->map_addr, peer->addr.ip);
 
-	return addr;
+	return peer;
 }
 
 void peerman_add(struct peer_manager *peers,
+		 const struct peer *peer_in, bool known_working)
+{
+	if (peerman_has_addr(peers, peer_in->addr.ip))
+		return;
+
+	struct peer *peer;
+	peer = malloc(sizeof(*peer));
+	if (!peer)
+		return;
+
+	peer_copy(peer, peer_in);
+
+	__peerman_add(peers, peer, !known_working);
+}
+
+void peerman_add_addr(struct peer_manager *peers,
 		 const struct bp_address *addr_in, bool known_working)
 {
-	struct bp_address *addr;
-
 	if (peerman_has_addr(peers, addr_in->ip))
 		return;
 
-	addr = malloc(sizeof(*addr));
-	memcpy(addr, addr_in, sizeof(*addr));
+	struct peer *peer;
+	peer = malloc(sizeof(*peer));
+	if (!peer)
+		return;
 
-	__peerman_add(peers, addr, !known_working);
+	peer_init(peer);
+	bp_addr_copy(&peer->addr, addr_in);
+
+	__peerman_add(peers, peer, !known_working);
 }
 
 void peerman_addstr(struct peer_manager *peers,

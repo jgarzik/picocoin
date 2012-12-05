@@ -35,6 +35,8 @@ extern GList *bu_dns_seed_addrs(void);
 extern const char ipv4_mapped_pfx[12];
 extern unsigned long djb2_hash(unsigned long hash, const void *_buf, size_t buflen);
 
+extern void g_list_shuffle(GList *l);
+
 static inline bool is_ipv4_mapped(const unsigned char *ipaddr)
 {
 	return memcmp(ipaddr, ipv4_mapped_pfx, 12) == 0;
