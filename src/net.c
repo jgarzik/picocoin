@@ -600,14 +600,17 @@ static bool nc_conn_start(struct nc_conn *conn)
 	return true;
 }
 
-static void nc_conn_got_header(struct nc_conn *conn)
+static bool nc_conn_got_header(struct nc_conn *conn)
 {
 	parse_message_hdr(&conn->msg.hdr, conn->hdrbuf);
 
 	unsigned int data_len = conn->msg.hdr.data_len;
 
-	if (data_len > (16 * 1024 * 1024))
-		goto err_out;
+	if (data_len > (16 * 1024 * 1024)) {
+		free(conn->msg.data);
+		conn->msg.data = NULL;
+		return false;
+	}
 
 	conn->msg.data = malloc(data_len);
 
@@ -616,22 +619,19 @@ static void nc_conn_got_header(struct nc_conn *conn)
 	conn->expected = data_len;
 	conn->reading_hdr = false;
 
-	return;
-
-err_out:
-	nc_conn_free(conn);
+	return true;
 }
 
-static void nc_conn_got_msg(struct nc_conn *conn)
+static bool nc_conn_got_msg(struct nc_conn *conn)
 {
 	if (!message_valid(&conn->msg)) {
 		fprintf(stderr, "llnet: %s invalid message\n",
 			conn->addr_str);
-		goto err_out;
+		return false;
 	}
 
 	if (!nc_conn_message(conn))
-		goto err_out;
+		return false;
 
 	free(conn->msg.data);
 	conn->msg.data = NULL;
@@ -641,10 +641,7 @@ static void nc_conn_got_msg(struct nc_conn *conn)
 	conn->expected = P2P_HDR_SZ;
 	conn->reading_hdr = true;
 
-	return;
-
-err_out:
-	nc_conn_free(conn);
+	return true;
 }
 
 static void nc_conn_read_evt(int fd, short events, void *priv)
@@ -667,15 +664,24 @@ static void nc_conn_read_evt(int fd, short events, void *priv)
 	conn->msg_p += rrc;
 	conn->expected -= rrc;
 
+	/* execute our state machine at most twice */
 	unsigned int i;
 	for (i = 0; i < 2; i++) {
 		if (conn->expected == 0) {
-			if (conn->reading_hdr)
-				nc_conn_got_header(conn);
-			else
-				nc_conn_got_msg(conn);
+			if (conn->reading_hdr) {
+				if (!nc_conn_got_header(conn))
+					goto err_out;
+			} else {
+				if (!nc_conn_got_msg(conn))
+					goto err_out;
+			}
 		}
 	}
+
+	return;
+
+err_out:
+	nc_conn_free(conn);
 }
 
 static GString *nc_version_build(struct nc_conn *conn)
