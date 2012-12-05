@@ -26,7 +26,8 @@ static const char *dns_seeds[] = {
 	"bitseed.xf2.org",
 };
 
-static GList *add_seed_addr(GList *l, const struct addrinfo *ai)
+static GList *add_seed_addr(GList *l, const struct addrinfo *ai,
+			    unsigned int def_port)
 {
 	struct bp_address *addr;
 
@@ -45,7 +46,7 @@ static GList *add_seed_addr(GList *l, const struct addrinfo *ai)
 	} else
 		goto err_out;
 
-	addr->port = 8333;
+	addr->port = def_port;
 	addr->nServices = NODE_NETWORK;
 
 	l = g_list_append(l, addr);
@@ -57,7 +58,7 @@ err_out:
 	return l;
 }
 
-static GList *query_seed(GList *l, const char *seedname)
+GList *bu_dns_lookup(GList *l, const char *seedname, unsigned int def_port)
 {
 	struct addrinfo hints, *res;
 
@@ -70,7 +71,7 @@ static GList *query_seed(GList *l, const char *seedname)
 
 	struct addrinfo *rp;
 	for (rp = res; rp != NULL; rp = rp->ai_next)
-		l = add_seed_addr(l, rp);
+		l = add_seed_addr(l, rp, def_port);
 
 	freeaddrinfo(res);
 
@@ -83,7 +84,7 @@ GList *bu_dns_seed_addrs(void)
 	GList *l = NULL;
 
 	for (i = 0; i < ARRAY_SIZE(dns_seeds); i++)
-		l = query_seed(l, dns_seeds[i]);
+		l = bu_dns_lookup(l, dns_seeds[i], 8333);
 
 	return l;
 }
