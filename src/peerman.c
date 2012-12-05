@@ -50,6 +50,16 @@ void ser_peer(GString *s, unsigned int protover, const struct peer *peer)
 	ser_u32(s, peer->n_fail);
 }
 
+gint g_peer_cmp(gconstpointer a_, gconstpointer b_)
+{
+	const struct peer *a = a_;
+	const struct peer *b = b_;
+
+	int64_t a_time = (a->last_ok > a->addr.nTime) ? a->last_ok : a->addr.nTime;
+	int64_t b_time = (b->last_ok > b->addr.nTime) ? b->last_ok : b->addr.nTime;
+	return (gint) (a_time - b_time);
+}
+
 static struct peer_manager *peerman_new(void)
 {
 	struct peer_manager *peers;
@@ -282,6 +292,11 @@ err_out:
 		close(fd);
 	unlink(tmpfn);
 	return false;
+}
+
+void peerman_sort(struct peer_manager *peers)
+{
+	peers->addrlist = g_list_sort(peers->addrlist, g_peer_cmp);
 }
 
 struct peer *peerman_pop(struct peer_manager *peers)

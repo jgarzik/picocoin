@@ -50,6 +50,7 @@ extern struct peer_manager *peerman_read(void);
 extern struct peer_manager *peerman_seed(bool use_dns);
 extern bool peerman_write(struct peer_manager *peers);
 extern struct peer *peerman_pop(struct peer_manager *peers);
+extern void peerman_sort(struct peer_manager *peers);
 extern void peerman_add(struct peer_manager *peers,
 		 const struct peer *peer_in, bool known_working);
 extern void peerman_add_addr(struct peer_manager *peers,

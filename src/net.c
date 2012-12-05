@@ -992,6 +992,8 @@ static void network_child(int read_fd, int write_fd)
 	if (addnode)
 		peerman_addstr(peers, addnode);
 
+	peerman_sort(peers);
+
 	if (debugging)
 		fprintf(stderr, "net: have %u/%u peers\n",
 			g_hash_table_size(peers->map_addr),
