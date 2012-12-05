@@ -11,6 +11,8 @@ enum {
 	MAX_BLOCK_SIZE		= 1000000,
 
 	COINBASE_MATURITY	= 100,
+
+	MIN_PROTO_VERSION	= 209,
 };
 
 enum {

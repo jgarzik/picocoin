@@ -21,15 +21,21 @@ void parse_message_hdr(struct p2p_message_hdr *hdr, const unsigned char *data)
 
 bool message_valid(const struct p2p_message *msg)
 {
-	if (!msg || !msg->data)
+	if (!msg)
 		return false;
 
 	/* data checksum */
 	unsigned char md32[4];
 
-	bu_Hash4(md32, msg->data, msg->hdr.data_len);
+	if (msg->hdr.data_len)
+		bu_Hash4(md32, msg->data, msg->hdr.data_len);
+	else
+		bu_Hash4(md32, "", 0);
 
-	return memcmp(msg->hdr.hash, md32, sizeof(md32)) == 0;
+	if (memcmp(msg->hdr.hash, md32, sizeof(md32)))
+		return false;
+
+	return true;
 }
 
 GString *message_str(const unsigned char netmagic[4],
@@ -73,10 +79,10 @@ bool deser_msg_version(struct msg_version *mv, struct const_buffer *buf)
 		mv->nVersion = 300;
 	if (!deser_u64(&mv->nServices, buf)) return false;
 	if (!deser_s64(&mv->nTime, buf)) return false;
-	if (!deser_bp_addr(mv->nVersion, &mv->addrTo, buf)) return false;
+	if (!deser_bp_addr(MIN_PROTO_VERSION, &mv->addrTo, buf)) return false;
 
 	if (mv->nVersion >= 106) {
-		if (!deser_bp_addr(mv->nVersion, &mv->addrFrom, buf)) return false;
+		if (!deser_bp_addr(MIN_PROTO_VERSION, &mv->addrFrom, buf)) return false;
 		if (!deser_u64(&mv->nonce, buf)) return false;
 		if (!deser_str(mv->strSubVer, buf, sizeof(mv->strSubVer)))
 			return false;
@@ -95,8 +101,8 @@ GString *ser_msg_version(const struct msg_version *mv)
 	ser_u64(s, mv->nServices);
 	ser_s64(s, mv->nTime);
 
-	ser_bp_addr(s, mv->nVersion, &mv->addrTo);
-	ser_bp_addr(s, mv->nVersion, &mv->addrFrom);
+	ser_bp_addr(s, MIN_PROTO_VERSION, &mv->addrTo);
+	ser_bp_addr(s, MIN_PROTO_VERSION, &mv->addrFrom);
 
 	ser_u64(s, mv->nonce);
 	ser_str(s, mv->strSubVer, sizeof(mv->strSubVer));
