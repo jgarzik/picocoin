@@ -385,19 +385,28 @@ static bool nc_msg_addr(struct nc_conn *conn)
 	if (!deser_msg_addr(conn->protover, &ma, &buf))
 		goto out;
 
-	if (debugging)
-		fprintf(stderr, "net: %s addr(%u addresses)\n",
-			conn->addr_str, ma.addrs->len);
+	unsigned int i;
+	time_t cutoff = time(NULL) - (7 * 24 * 60 * 60);
+	if (debugging) {
+		unsigned int old = 0;
+		for (i = 0; i < ma.addrs->len; i++) {
+			struct bp_address *addr = g_ptr_array_index(ma.addrs, i);
+			if (addr->nTime < cutoff)
+				old++;
+		}
+		fprintf(stderr, "net: %s addr(%u addresses, %u old)\n",
+			conn->addr_str, ma.addrs->len, old);
+	}
 
 	/* ignore ancient addresses */
 	if (conn->protover < CADDR_TIME_VERSION)
 		goto out_ok;
 
 	/* feed addresses to peer manager */
-	unsigned int i;
 	for (i = 0; i < ma.addrs->len; i++) {
 		struct bp_address *addr = g_ptr_array_index(ma.addrs, i);
-		peerman_add_addr(conn->nci->peers, addr, false);
+		if (addr->nTime > cutoff)
+			peerman_add_addr(conn->nci->peers, addr, false);
 	}
 
 out_ok:
