@@ -15,6 +15,8 @@ static inline bool is_ipv4_mapped(const unsigned char *ipaddr)
 	return memcmp(ipaddr, ipv4_mapped_pfx, 12) == 0;
 }
 
+extern void bn_group(unsigned char *group, unsigned int *group_len,
+			const unsigned char *ipaddr);
 extern void bn_address_str(char *host, size_t hostsz, const unsigned char *ipaddr);
 
 #endif /* __LIBCCOIN_NET_H__ */

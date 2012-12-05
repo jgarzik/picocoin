@@ -471,6 +471,26 @@ static bool nc_conn_ip_active(struct net_child_info *nci,
 	return false;
 }
 
+static bool nc_conn_group_active(struct net_child_info *nci,
+				 const struct peer *peer)
+{
+	// FIXME
+	return false;
+
+	unsigned int group_len = peer->group_len;
+	unsigned int i;
+	for (i = 0; i < nci->conns->len; i++) {
+		struct nc_conn *conn;
+
+		conn = g_ptr_array_index(nci->conns, i);
+		if ((group_len == conn->peer.group_len) &&
+		    !memcmp(peer->group, conn->peer.group, group_len))
+			return true;
+	}
+
+	return false;
+}
+
 static struct nc_conn *nc_conn_new(const struct peer *peer)
 {
 	struct nc_conn *conn;
@@ -874,6 +894,13 @@ static void nc_conns_open(struct net_child_info *nci)
 		/* are we already connected to this IP? */
 		if (nc_conn_ip_active(nci, conn->peer.addr.ip)) {
 			fprintf(stderr, "net: already connected to %s\n",
+				conn->addr_str);
+			goto err_loop;
+		}
+
+		/* are we already connected to this network group? */
+		if (nc_conn_group_active(nci, &conn->peer)) {
+			fprintf(stderr, "net: already grouped to %s\n",
 				conn->addr_str);
 			goto err_loop;
 		}

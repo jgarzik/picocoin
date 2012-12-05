@@ -11,6 +11,7 @@
 #include <ccoin/core.h>
 
 struct peer {
+	/* serialized */
 	struct bp_address	addr;
 
 	int64_t			last_ok;
@@ -18,6 +19,10 @@ struct peer {
 
 	int64_t			last_fail;
 	uint32_t		n_fail;
+
+	/* calculated at runtime */
+	unsigned char		group[20];
+	unsigned int		group_len;
 };
 
 static inline void peer_init(struct peer *peer)

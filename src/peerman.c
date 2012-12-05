@@ -9,8 +9,9 @@
 #include <ccoin/mbr.h>
 #include <ccoin/util.h>
 #include <ccoin/coredefs.h>
-#include <ccoin/compat.h>
 #include <ccoin/serialize.h>
+#include <ccoin/net.h>
+#include <ccoin/compat.h>
 #include "picocoin.h"
 
 static guint addr_hash(gconstpointer key)
@@ -100,6 +101,8 @@ void peerman_free(struct peer_manager *peers)
 static void __peerman_add(struct peer_manager *peers, struct peer *peer,
 			  bool prepend_front)
 {
+	bn_group(peer->group, &peer->group_len, peer->addr.ip);
+
 	if (prepend_front)
 		peers->addrlist = g_list_prepend(peers->addrlist, peer);
 	else
