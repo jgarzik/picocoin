@@ -288,6 +288,7 @@ static bool nc_conn_send(struct nc_conn *conn, const char *command,
 
 	/* attempt optimistic write */
 	ssize_t wrc = write(conn->fd, buf->p, buf->len);
+
 	if (wrc < 0) {
 		if (errno != EAGAIN && errno != EWOULDBLOCK) {
 			free(buf->p);
@@ -331,6 +332,21 @@ static bool nc_msg_version(struct nc_conn *conn)
 	if (!deser_msg_version(&mv, &buf))
 		goto out;
 
+	if (debugging) {
+		char fromstr[64], tostr[64];
+		address_str(fromstr, sizeof(fromstr), &mv.addrFrom);
+		address_str(tostr, sizeof(tostr), &mv.addrTo);
+		fprintf(stderr, "%s version(%u, 0x%llx, %lld, To:%s, From:%s, %s, %u)\n",
+			conn->addr_str,
+			mv.nVersion,
+			(unsigned long long) mv.nServices,
+			(long long) mv.nTime,
+			tostr,
+			fromstr,
+			mv.strSubVer,
+			mv.nStartingHeight);
+	}
+
 	if (!(mv.nServices & NODE_NETWORK))	/* require NODE_NETWORK */
 		goto out;
 	if (mv.nonce == instance_nonce)		/* connected to ourselves? */
@@ -359,6 +375,10 @@ static bool nc_msg_addr(struct nc_conn *conn)
 
 	if (!deser_msg_addr(conn->protover, &ma, &buf))
 		goto out;
+
+	if (debugging)
+		fprintf(stderr, "net: %s addr(%u addresses)\n",
+			conn->addr_str, ma.addrs->len);
 
 	/* ignore ancient addresses */
 	if (conn->protover < CADDR_TIME_VERSION)
@@ -403,27 +423,41 @@ static bool nc_msg_verack(struct nc_conn *conn)
 
 static bool nc_conn_message(struct nc_conn *conn)
 {
-	/* verify correct network */
-	if (memcmp(conn->msg.hdr.netmagic, chain->netmagic, 4))
-		return false;
-
 	char *command = conn->msg.hdr.command;
+
+	if (debugging)
+		fprintf(stderr, "net: %s message %s\n",
+			conn->addr_str,
+			command);
+
+	/* verify correct network */
+	if (memcmp(conn->msg.hdr.netmagic, chain->netmagic, 4)) {
+		fprintf(stderr, "net: %s invalid network\n",
+			conn->addr_str);
+		return false;
+	}
 
 	/* incoming message: version */
 	if (!strncmp(command, "version", 12))
 		return nc_msg_version(conn);
 
 	/* "version" must be first message */
-	if (!conn->seen_version)
+	if (!conn->seen_version) {
+		fprintf(stderr, "net: %s 'version' not first\n",
+			conn->addr_str);
 		return false;
+	}
 
 	/* incoming message: verack */
 	if (!strncmp(command, "verack", 12))
 		return nc_msg_verack(conn);
 
 	/* "verack" must be second message */
-	if (!conn->seen_verack)
+	if (!conn->seen_verack) {
+		fprintf(stderr, "net: %s 'verack' not second\n",
+			conn->addr_str);
 		return false;
+	}
 
 	/* incoming message: addr */
 	if (!strncmp(command, "addr", 12))
@@ -501,6 +535,7 @@ static void nc_conn_free(struct nc_conn *conn)
 
 	free(conn->msg.data);
 
+	memset(conn, 0, sizeof(*conn));
 	free(conn);
 }
 
@@ -570,6 +605,7 @@ static void nc_conn_got_header(struct nc_conn *conn)
 	parse_message_hdr(&conn->msg.hdr, conn->hdrbuf);
 
 	unsigned int data_len = conn->msg.hdr.data_len;
+
 	if (data_len > (16 * 1024 * 1024))
 		goto err_out;
 
@@ -588,8 +624,11 @@ err_out:
 
 static void nc_conn_got_msg(struct nc_conn *conn)
 {
-	if (!message_valid(&conn->msg))
+	if (!message_valid(&conn->msg)) {
+		fprintf(stderr, "llnet: %s invalid message\n",
+			conn->addr_str);
 		goto err_out;
+	}
 
 	if (!nc_conn_message(conn))
 		goto err_out;
@@ -614,18 +653,28 @@ static void nc_conn_read_evt(int fd, short events, void *priv)
 
 	ssize_t rrc = read(fd, conn->msg_p, conn->expected);
 	if (rrc <= 0) {
+		if (rrc < 0)
+			fprintf(stderr, "llnet: %s read: %s\n",
+				conn->addr_str,
+				strerror(errno));
+		else
+			fprintf(stderr, "llnet: %s read EOF\n", conn->addr_str);
 		nc_conn_free(conn);
 		return;
 	}
 
+
 	conn->msg_p += rrc;
 	conn->expected -= rrc;
 
-	if (conn->expected == 0) {
-		if (conn->reading_hdr)
-			nc_conn_got_header(conn);
-		else
-			nc_conn_got_msg(conn);
+	unsigned int i;
+	for (i = 0; i < 2; i++) {
+		if (conn->expected == 0) {
+			if (conn->reading_hdr)
+				nc_conn_got_header(conn);
+			else
+				nc_conn_got_msg(conn);
+		}
 	}
 }
 
@@ -733,30 +782,29 @@ static void nc_conn_evt_connected(int fd, short events, void *priv)
 
 	conn->connected = true;
 
+	/* clear event used for watching connect(2) */
 	event_free(conn->ev);
 	conn->ev = NULL;
 
 	/* build and send "version" message */
 	GString *msg_data = nc_version_build(conn);
-	GString *msg = message_str(chain->netmagic, "version",
-				   msg_data->str, msg_data->len);
+	bool rc = nc_conn_send(conn, "version", msg_data->str, msg_data->len);
 	g_string_free(msg_data, TRUE);
 
-	unsigned int msg_len = msg->len;
-	ssize_t wrc = write(conn->fd, msg->str, msg_len);
-
-	g_string_free(msg, TRUE);
-
-	if (wrc != msg_len)
+	if (!rc) {
+		fprintf(stderr, "net: %s !conn_send\n", conn->addr_str);
 		goto err_out;
+	}
 
 	/* switch to read-header state */
 	conn->msg_p = conn->hdrbuf;
 	conn->expected = P2P_HDR_SZ;
 	conn->reading_hdr = true;
 
-	if (!nc_conn_read_enable(conn))
+	if (!nc_conn_read_enable(conn)) {
+		fprintf(stderr, "net: %s read not enabled\n", conn->addr_str);
 		goto err_out;
+	}
 
 	return;
 
@@ -852,12 +900,16 @@ static void network_child(int read_fd, int write_fd)
 
 	peers = peerman_read();
 	if (!peers) {
-		peers = peerman_seed();
+		peers = peerman_seed(setting("no_dns") == NULL ? true : false);
 		if (!peerman_write(peers)) {
 			fprintf(stderr, "net: failed to write peer list\n");
 			exit(1);
 		}
 	}
+
+	char *addnode = setting("addnode");
+	if (addnode)
+		peerman_addstr(peers, addnode);
 
 	if (debugging)
 		fprintf(stderr, "net: have %u/%u peers\n",

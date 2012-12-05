@@ -132,7 +132,7 @@ err_out:
 	return NULL;
 }
 
-struct peer_manager *peerman_seed(void)
+struct peer_manager *peerman_seed(bool use_dns)
 {
 	struct peer_manager *peers;
 
@@ -141,7 +141,9 @@ struct peer_manager *peerman_seed(void)
 		return NULL;
 
 	/* make DNS query for seed data */
-	GList *tmp, *seedlist = bu_dns_seed_addrs();
+	GList *tmp, *seedlist = NULL;
+	if (use_dns)
+		seedlist = bu_dns_seed_addrs();
 
 	if (debugging)
 		fprintf(stderr, "peerman: DNS returned %u addresses\n",
@@ -268,3 +270,43 @@ void peerman_add(struct peer_manager *peers,
 	__peerman_add(peers, addr, !known_working);
 }
 
+void peerman_addstr(struct peer_manager *peers,
+		    const char *addr_str)
+{
+	char hoststr[64] = {};
+	char portstr[16] = {};
+	char *space = strchr(addr_str, ' ');
+	int port;
+
+	if (space) {
+		unsigned int hlen = (space - addr_str);
+		if (hlen > (sizeof(hoststr) - 1))
+			hlen = sizeof(hoststr) - 1;
+
+		memcpy(hoststr, addr_str, hlen);
+		hoststr[hlen] = 0;
+
+		strncpy(portstr, space + 1, sizeof(portstr) - 1);
+	} else {
+		strncpy(hoststr, addr_str, sizeof(hoststr) - 1);
+		strcpy(portstr, "8333");
+	}
+
+	port = atoi(portstr);
+	if (port < 1 || port > 65535)
+		port = 8333;
+
+	GList *tmp, *seedlist = bu_dns_lookup(NULL, hoststr, port);
+
+	if (debugging)
+		fprintf(stderr, "peerman: DNS lookup '%s' returned %u addresses\n",
+			addr_str, g_list_length(seedlist));
+
+	/* import seed data into peerman */
+	tmp = seedlist;
+	while (tmp) {
+		__peerman_add(peers, tmp->data, true);
+		tmp = tmp->next;
+	}
+	g_list_free(seedlist);
+}

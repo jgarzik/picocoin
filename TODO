@@ -7,3 +7,5 @@ Checklist: https://en.bitcoin.it/wiki/Protocol_rules
 - median time.
 - reorg.
 
+- peerman: filter out localhost/invalid/test addresses
+

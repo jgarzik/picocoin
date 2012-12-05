@@ -16,10 +16,11 @@ struct peer_manager {
 
 extern void peerman_free(struct peer_manager *peers);
 extern struct peer_manager *peerman_read(void);
-extern struct peer_manager *peerman_seed(void);
+extern struct peer_manager *peerman_seed(bool use_dns);
 extern bool peerman_write(struct peer_manager *peers);
 extern struct bp_address *peerman_pop(struct peer_manager *peers);
 extern void peerman_add(struct peer_manager *peers,
 		 const struct bp_address *addr_in, bool known_working);
+extern void peerman_addstr(struct peer_manager *peers, const char *addr_str);
 
 #endif /* __PICOCOIN_PEERMAN_H__ */

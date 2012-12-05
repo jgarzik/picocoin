@@ -36,9 +36,17 @@ Similarly, you may read multiple configuration files into the settings map:
 Recognized parameters
 =====================
 
+addnode
+------------------
+Format: address SPACE port
+
+Manually add P2P node to peer manager.
+
+
 config (alias "c")
 ------------------
 Specify a pathname to the configuration file.
+
 
 wallet (alias "w")
 ------------------
@@ -46,6 +54,7 @@ Specify a pathname to the wallet data file.  Default "picocoin.wallet"
 
 AES encryption is applied to the wallet.  Passphrase is specified via
 environment variable PICOCOIN_PASSPHRASE.
+
 
 debug
 ------------------
