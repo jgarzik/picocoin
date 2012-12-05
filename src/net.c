@@ -345,7 +345,7 @@ static bool nc_msg_version(struct nc_conn *conn)
 		char fromstr[64], tostr[64];
 		address_str(fromstr, sizeof(fromstr), &mv.addrFrom);
 		address_str(tostr, sizeof(tostr), &mv.addrTo);
-		fprintf(stderr, "%s version(%u, 0x%llx, %lld, To:%s, From:%s, %s, %u)\n",
+		fprintf(stderr, "net: %s version(%u, 0x%llx, %lld, To:%s, From:%s, %s, %u)\n",
 			conn->addr_str,
 			mv.nVersion,
 			(unsigned long long) mv.nServices,
@@ -794,7 +794,7 @@ static void nc_conn_evt_connected(int fd, short events, void *priv)
 	/* check success of connect(2) */
 	if ((getsockopt(conn->fd, SOL_SOCKET, SO_ERROR, &err, &len) < 0) ||
 	    (err != 0)) {
-		fprintf(stderr, "connect %s failed: %s\n",
+		fprintf(stderr, "net: connect %s failed: %s\n",
 			conn->addr_str, strerror(err));
 		goto err_out;
 	}
@@ -945,6 +945,7 @@ static void nc_pipe_evt(int fd, short events, void *priv)
 		break;
 
 	case NC_STOP:
+		network_child_running = false;
 		sendcmd(nci->write_fd, NC_OK);
 		event_base_loopbreak(nci->eb);
 		break;
@@ -965,6 +966,8 @@ static void network_child(int read_fd, int write_fd)
 
 	peers = peerman_read();
 	if (!peers) {
+		fprintf(stderr, "net: initializing empty peer list\n");
+
 		peers = peerman_seed(setting("no_dns") == NULL ? true : false);
 		if (!peerman_write(peers)) {
 			fprintf(stderr, "net: failed to write peer list\n");

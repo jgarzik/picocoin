@@ -75,8 +75,7 @@ static bool peerman_read_rec(struct peer_manager *peers,
 		     sizeof(msg->hdr.command)))
 		return true;
 
-	if (strncmp(msg->hdr.command, "CAddress", sizeof(msg->hdr.command)) ||
-	    (msg->hdr.data_len != sizeof(struct bp_address)))
+	if (strncmp(msg->hdr.command, "CAddress", sizeof(msg->hdr.command)))
 		return false;
 
 	struct const_buffer buf = { msg->data, msg->hdr.data_len };
@@ -115,12 +114,16 @@ struct peer_manager *peerman_read(void)
 	bool read_ok = true;
 
 	while (fread_message(fd, &msg, &read_ok)) {
-		if (!peerman_read_rec(peers, &msg))
+		if (!peerman_read_rec(peers, &msg)) {
+			fprintf(stderr, "peerman: read record failed\n");
 			goto err_out;
+		}
 	}
 
-	if (!read_ok)
+	if (!read_ok) {
+		fprintf(stderr, "peerman: read I/O failed\n");
 		goto err_out;
+	}
 
 	free(msg.data);
 	close(fd);
