@@ -788,6 +788,11 @@ static void nc_conn_evt_connected(int fd, short events, void *priv)
 {
 	struct nc_conn *conn = priv;
 
+	if ((events & EV_WRITE) == 0) {
+		fprintf(stderr, "net: %s connection timeout\n", conn->addr_str);
+		goto err_out;
+	}
+
 	int err = 0;
 	socklen_t len = sizeof(err);
 
@@ -910,7 +915,7 @@ static void nc_conns_open(struct net_child_info *nci)
 			goto err_loop;
 		}
 
-		struct timeval timeout = { 60, };
+		struct timeval timeout = { 30, };
 		if (event_add(conn->ev, &timeout) != 0) {
 			fprintf(stderr, "net: event_add failed on %s\n",
 				conn->addr_str);
@@ -1188,9 +1193,9 @@ void network_sync(void)
 	struct net_engine *neteng = neteng_new_start();
 
 	if (debugging)
-		fprintf(stderr, "net: engine started. sleeping 60 seconds\n");
+		fprintf(stderr, "net: engine started. sleeping 10 minutes\n");
 	
-	sleep(60);
+	sleep(10 * 60);
 
 	neteng_free(neteng);
 }
