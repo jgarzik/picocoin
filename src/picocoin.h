@@ -29,8 +29,6 @@ extern bool debugging;
 
 /* net.c */
 extern void network_sync(void);
-extern void address_str(char *host, size_t hostsz,
-		 const struct bp_address *addr);
 
 /* aes.c */
 extern GString *read_aes_file(const char *filename, void *key, size_t key_len,

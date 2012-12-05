@@ -7,6 +7,7 @@
 #include <string.h>
 #include <assert.h>
 #include <ccoin/util.h>
+#include <ccoin/net.h>
 
 static const char *s_a = "12345";
 static const char *s_b = "54321";

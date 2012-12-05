@@ -15,8 +15,6 @@
 #include <ccoin/util.h>
 #include <ccoin/compat.h>		/* for mkstemp */
 
-const char ipv4_mapped_pfx[12] = "\0\0\0\0\0\0\0\0\0\0\xff\xff";
-
 void bu_reverse_copy(unsigned char *dst, const unsigned char *src, size_t len)
 {
 	unsigned int i;

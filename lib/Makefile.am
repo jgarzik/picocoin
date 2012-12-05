@@ -24,6 +24,7 @@ libccoin_a_SOURCES=	\
 	mbr.c		\
 	memmem.c	\
 	message.c	\
+	net.c		\
 	script.c	\
 	script_eval.c	\
 	script_names.c	\

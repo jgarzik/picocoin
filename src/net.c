@@ -30,6 +30,7 @@
 #include <ccoin/util.h>
 #include <ccoin/mbr.h>
 #include <ccoin/core.h>
+#include <ccoin/net.h>
 #include <ccoin/message.h>
 #include "picocoin.h"
 #include "peerman.h"
@@ -103,36 +104,6 @@ static bool nc_conn_read_enable(struct nc_conn *conn);
 static bool nc_conn_read_disable(struct nc_conn *conn);
 static bool nc_conn_write_enable(struct nc_conn *conn);
 static bool nc_conn_write_disable(struct nc_conn *conn);
-
-void address_str(char *host, size_t hostsz,
-		 const struct bp_address *addr)
-{
-	bool is_ipv4 = is_ipv4_mapped(addr->ip);
-
-	if (is_ipv4) {
-		struct sockaddr_in saddr;
-
-		memset(&saddr, 0, sizeof(saddr));
-		saddr.sin_family = AF_INET;
-		memcpy(&saddr.sin_addr, &addr->ip[12], 4);
-
-		getnameinfo((struct sockaddr *) &saddr, sizeof(saddr),
-			    host, hostsz,
-			    NULL, 0, NI_NUMERICHOST);
-	} else {
-		struct sockaddr_in6 saddr;
-
-		memset(&saddr, 0, sizeof(saddr));
-		saddr.sin6_family = AF_INET6;
-		memcpy(&saddr.sin6_addr, &addr->ip, 16);
-
-		getnameinfo((struct sockaddr *) &saddr, sizeof(saddr),
-			    host, hostsz,
-			    NULL, 0, NI_NUMERICHOST);
-	}
-
-	host[hostsz - 1] = 0;
-}
 
 static void pipwr(int fd, const void *buf, size_t len)
 {
@@ -343,8 +314,8 @@ static bool nc_msg_version(struct nc_conn *conn)
 
 	if (debugging) {
 		char fromstr[64], tostr[64];
-		address_str(fromstr, sizeof(fromstr), &mv.addrFrom);
-		address_str(tostr, sizeof(tostr), &mv.addrTo);
+		bn_address_str(fromstr, sizeof(fromstr), mv.addrFrom.ip);
+		bn_address_str(tostr, sizeof(tostr), mv.addrTo.ip);
 		fprintf(stderr, "net: %s version(%u, 0x%llx, %lld, To:%s, From:%s, %s, %u)\n",
 			conn->addr_str,
 			mv.nVersion,
@@ -511,7 +482,7 @@ static struct nc_conn *nc_conn_new(const struct peer *peer)
 	conn->fd = -1;
 
 	peer_copy(&conn->peer, peer);
-	address_str(conn->addr_str, sizeof(conn->addr_str), &conn->peer.addr);
+	bn_address_str(conn->addr_str, sizeof(conn->addr_str), conn->peer.addr.ip);
 
 	return conn;
 }

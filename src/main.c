@@ -27,6 +27,7 @@
 #include "wallet.h"
 #include <ccoin/core.h>
 #include <ccoin/util.h>
+#include <ccoin/net.h>
 #include <ccoin/compat.h>		/* for strndup */
 
 const char *prog_name = "picocoin";
@@ -182,7 +183,7 @@ static void list_dns_seeds(void)
 		char host[64];
 
 		bool is_ipv4 = is_ipv4_mapped(addr->ip);
-		address_str(host, sizeof(host), addr);
+		bn_address_str(host, sizeof(host), addr->ip);
 
 		printf("  [ %s, \"%s\", %u, %llu ]%s\n",
 		       is_ipv4 ? "true" : "false",
