@@ -46,6 +46,7 @@ static GList *add_seed_addr(GList *l, const struct addrinfo *ai,
 	} else
 		goto err_out;
 
+	addr->nTime = (uint32_t) (time(NULL) - (24 * 60 * 60));
 	addr->port = def_port;
 	addr->nServices = NODE_NETWORK;
 

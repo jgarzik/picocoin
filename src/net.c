@@ -400,6 +400,9 @@ static bool nc_msg_verack(struct nc_conn *conn)
 	 * the peer is re-added.  Thus, peers are immediately
 	 * forgotten if they fail, on the first try.
 	 */
+	conn->peer.last_ok = time(NULL);
+	conn->peer.n_ok++;
+	conn->peer.addr.nTime = (uint32_t) conn->peer.last_ok;
 	peerman_add(conn->nci->peers, &conn->peer, true);
 
 	/* request peer addresses */
