@@ -122,3 +122,12 @@ gboolean g_bu160_equal(gconstpointer a_, gconstpointer b_)
 	return bu160_equal(a, b) ? TRUE : FALSE;
 }
 
+void bu256_free(bu256_t *v)
+{
+	if (!v)
+		return;
+
+	memset(v, 0, sizeof(*v));
+	free(v);
+}
+

@@ -66,6 +66,7 @@ extern void bp_locator_init(struct bp_locator *locator);
 extern bool deser_bp_locator(struct bp_locator *locator, struct const_buffer *buf);
 extern void ser_bp_locator(GString *s, const struct bp_locator *locator);
 extern void bp_locator_free(struct bp_locator *locator);
+extern void bp_locator_push(struct bp_locator *locator, const bu256_t *hash_in);
 
 struct bp_outpt {
 	bu256_t		hash;

@@ -64,6 +64,8 @@ bool deser_bp_locator(struct bp_locator *locator, struct const_buffer *buf)
 {
 	bp_locator_free(locator);
 
+	locator->vHave = g_ptr_array_new_full(16, (GDestroyNotify) bu256_free);
+
 	if (!deser_u32(&locator->nVersion, buf)) return false;
 
 	uint32_t vlen;
@@ -73,7 +75,7 @@ bool deser_bp_locator(struct bp_locator *locator, struct const_buffer *buf)
 	for (i = 0; i < vlen; i++) {
 		bu256_t *n;
 
-		n = bu256_new();
+		n = bu256_new(NULL);
 		if (!deser_u256(n, buf)) {
 			bu256_free(n);
 			goto err_out;
@@ -115,18 +117,20 @@ void bp_locator_free(struct bp_locator *locator)
 		return;
 
 	if (locator->vHave) {
-		unsigned int i;
-
-		for (i = 0; i > locator->vHave->len; i++) {
-			bu256_t *n;
-
-			n = g_ptr_array_index(locator->vHave, i);
-			bu256_free(n);
-		}
-
 		g_ptr_array_free(locator->vHave, TRUE);
 		locator->vHave = NULL;
 	}
+}
+
+void bp_locator_push(struct bp_locator *locator, const bu256_t *hash_in)
+{
+	/* TODO: replace '16' with number based on real world usage */
+	if (!locator->vHave)
+		locator->vHave = g_ptr_array_new_full(16,
+						(GDestroyNotify) bu256_free);
+
+	bu256_t *hash = bu256_new(hash_in);
+	g_ptr_array_add(locator->vHave, hash);
 }
 
 void bp_outpt_init(struct bp_outpt *outpt)

@@ -235,3 +235,20 @@ void blkdb_free(struct blkdb *db)
 	g_hash_table_unref(db->blocks);
 }
 
+void blkdb_locator(struct blkdb *db, struct blkinfo *bi,
+		   struct bp_locator *locator)
+{
+	int step = 1;
+	while (bi) {
+		bp_locator_push(locator, &bi->hash);
+
+		unsigned int i;
+		for (i = 0; bi && i < step; i++)
+			bi = bi->prev;
+		if (locator->vHave->len > 10)
+			step *= 2;
+	}
+
+	bp_locator_push(locator, &db->block0);
+}
+

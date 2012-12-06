@@ -45,6 +45,7 @@ extern void bu256_copy_swap_dwords(bu256_t *vo, const bu256_t *vi);
 extern void bu256_swap_dwords(bu256_t *v);
 extern guint g_bu256_hash(gconstpointer key_);
 extern gboolean g_bu256_equal(gconstpointer a_, gconstpointer b_);
+extern void bu256_free(bu256_t *v);
 
 static inline bool bu256_is_zero(const bu256_t *v)
 {
@@ -85,17 +86,17 @@ static inline void bu256_copy(bu256_t *vo, const bu256_t *vi)
 	memcpy(vo, vi, sizeof(bu256_t));
 }
 
-static inline bu256_t *bu256_new(void)
+static inline bu256_t *bu256_new(const bu256_t *init_val)
 {
-	return calloc(1, sizeof(bu256_t));
-}
+	bu256_t *v;
 
-static inline void bu256_free(bu256_t *v)
-{
-	if (v) {
-		memset(v, 0, sizeof(*v));
-		free(v);
-	}
+	if (init_val) {
+		bu256_t *v = malloc(sizeof(bu256_t));
+		bu256_copy(v, init_val);
+	} else
+		v = calloc(1, sizeof(bu256_t));
+
+	return v;
 }
 
 static inline bool bu160_equal(const bu160_t *a, const bu160_t *b)

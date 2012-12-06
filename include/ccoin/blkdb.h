@@ -46,5 +46,7 @@ extern bool blkdb_init(struct blkdb *db, const unsigned char *netmagic,
 extern void blkdb_free(struct blkdb *db);
 extern bool blkdb_read(struct blkdb *db, const char *idx_fn);
 extern bool blkdb_add(struct blkdb *db, struct blkinfo *bi);
+extern void blkdb_locator(struct blkdb *db, struct blkinfo *bi,
+		   struct bp_locator *locator);
 
 #endif /* __LIBCCOIN_BLKDB_H__ */
