@@ -16,6 +16,8 @@
 #include <ccoin/util.h>
 #include "libtest.h"
 
+static bool script_verf = true;
+
 static bool spend_tx(struct bp_utxo_set *uset, const struct bp_tx *tx,
 		     unsigned int tx_idx, unsigned int height)
 {
@@ -51,11 +53,10 @@ static bool spend_tx(struct bp_utxo_set *uset, const struct bp_tx *tx,
 			txout = g_ptr_array_index(coin->vout, txin->prevout.n);
 			total_in += txout->nValue;
 
-#if 0
-			if (!bp_verify_sig(coin, tx, i,
-				/* SCRIPT_VERIFY_P2SH */ 0, 0))
+			if (script_verf &&
+			    !bp_verify_sig(coin, tx, i,
+						/* SCRIPT_VERIFY_P2SH */ 0, 0))
 				return false;
-#endif
 
 			if (!bp_utxo_spend(uset, &txin->prevout))
 				return false;
@@ -214,12 +215,16 @@ int main (int argc, char *argv[])
 		runtest(false, fn);
 	}
 
+	if (getenv("NO_SCRIPT_VERF"))
+		script_verf = false;
+
 	if (!verfd) {
 		fprintf(stderr,
 	"chain-verf: Skipping lengthy, extended chain verification test.\n"
 	"chain-verf: Set TEST_TESTNET3_VERF and/or TEST_MAINNET_VERF to a\n"
 	"chain-verf: valid pynode blocks.dat file, to enable.\n"
 	"chain-verf: (a linear sequence of P2P \"block\" messages)\n"
+	"chain-verf: Set NO_SCRIPT_VERF to disabled script verification\n"
 			);
 		return 77;
 	}
