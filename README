@@ -13,6 +13,11 @@ picocoin client dependencies:
 	libevent 2.x
 	jansson 2.x (2.1 used for development)
 
+block relay daemon (brd) dependencies:
+	GLib 2.x (from the GTK project)
+	OpenSSL
+	libevent 2.x
+
 
 
 Command line and configuration file usage
