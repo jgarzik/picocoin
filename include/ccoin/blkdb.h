@@ -35,10 +35,7 @@ struct blkdb {
 
 	GHashTable	*blocks;
 
-	struct blkinfo	*best_blk;
-	bu256_t		hashBestChain;
-	BIGNUM		bnBestChainWork;
-	int		nBestHeight;
+	struct blkinfo	*best_chain;
 };
 
 extern struct blkinfo *bi_new(void);

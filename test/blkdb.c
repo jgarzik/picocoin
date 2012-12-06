@@ -50,8 +50,8 @@ static void read_headers(const char *ser_base_fn, struct blkdb *db)
 
 static void test_blkinfo_prev(struct blkdb *db)
 {
-	struct blkinfo *tmp = db->best_blk;
-	int height = db->nBestHeight;
+	struct blkinfo *tmp = db->best_chain;
+	int height = db->best_chain->height;
 
 	while (tmp) {
 		assert(height == tmp->height);
@@ -77,12 +77,12 @@ static void runtest(const char *ser_base_fn, const struct chain_info *chain,
 
 	read_headers(ser_base_fn, &db);
 
-	assert(db.nBestHeight == check_height);
+	assert(db.best_chain->height == check_height);
 
 	bu256_t best_block;
 	rc = hex_bu256(&best_block, check_hash);
 
-	assert(bu256_equal(&db.hashBestChain, &best_block));
+	assert(bu256_equal(&db.best_chain->hash, &best_block));
 
 	test_blkinfo_prev(&db);
 

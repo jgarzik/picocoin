@@ -57,10 +57,6 @@ bool blkdb_init(struct blkdb *db, const unsigned char *netmagic,
 
 	bu256_copy(&db->block0, genesis_block);
 
-	bu256_zero(&db->hashBestChain);
-	BN_init(&db->bnBestChainWork);
-	db->nBestHeight = -1;
-
 	memcpy(db->netmagic, netmagic, sizeof(db->netmagic));
 	db->blocks = g_hash_table_new_full(g_bu256_hash, g_bu256_equal,
 					   NULL, (GDestroyNotify) bi_free);
@@ -108,17 +104,13 @@ static bool blkdb_connect(struct blkdb *db, struct blkinfo *bi)
 		if (!BN_add(&bi->work, &cur_work, &prev->work))
 			goto out;
 
-		if (BN_cmp(&bi->work, &db->bnBestChainWork) > 0)
+		if (BN_cmp(&bi->work, &db->best_chain->work) > 0)
 			best_chain = true;
 	}
 
 	/* if new best chain found, update pointers */
-	if (best_chain) {
-		db->best_blk = bi;
-		bu256_copy(&db->hashBestChain, &bi->hdr.sha256);
-		BN_copy(&db->bnBestChainWork, &cur_work);
-		db->nBestHeight = bi->height;
-	}
+	if (best_chain)
+		db->best_chain = bi;
 
 	/* add to block map */
 	g_hash_table_insert(db->blocks, &bi->hash, bi);
@@ -239,8 +231,6 @@ void blkdb_free(struct blkdb *db)
 {
 	if (db->close_fd && (db->fd >= 0))
 		close(db->fd);
-
-	BN_clear_free(&db->bnBestChainWork);
 
 	g_hash_table_unref(db->blocks);
 }

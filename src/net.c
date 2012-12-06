@@ -708,7 +708,7 @@ static GString *nc_version_build(struct nc_conn *conn)
 	mv.nTime = (int64_t) time(NULL);
 	mv.nonce = instance_nonce;
 	sprintf(mv.strSubVer, "/picocoin:%s/", VERSION);
-	mv.nStartingHeight = conn->nci->db->nBestHeight;
+	mv.nStartingHeight = conn->nci->db->best_chain->height;
 
 	GString *rs = ser_msg_version(&mv);
 
