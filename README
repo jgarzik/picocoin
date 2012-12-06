@@ -60,6 +60,9 @@ debug
 ------------------
 Enable additional debug output.
 
+net.connect.timeout
+------------------
+TCP connect(2) timeout.
 
 
 Recognized commands

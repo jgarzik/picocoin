@@ -98,6 +98,7 @@ enum {
 	NC_MAX_CONN		= 8,
 };
 
+static unsigned int net_conn_timeout = 60;
 static bool network_child_running;
 static void nc_conn_kill(struct nc_conn *conn);
 static bool nc_conn_read_enable(struct nc_conn *conn);
@@ -926,7 +927,7 @@ static void nc_conns_open(struct net_child_info *nci)
 			goto err_loop;
 		}
 
-		struct timeval timeout = { 30, };
+		struct timeval timeout = { net_conn_timeout, };
 		if (event_add(conn->ev, &timeout) != 0) {
 			fprintf(stderr, "net: event_add failed on %s\n",
 				conn->addr_str);
@@ -1203,17 +1204,23 @@ static struct net_engine *neteng_new_start(void)
 
 void network_sync(void)
 {
-	struct net_engine *neteng = neteng_new_start();
-
 	char *sleep_str = setting("sleep");
 	int nsec = atoi(sleep_str ? sleep_str : "");
 	if (nsec < 1)
 		nsec = 10 * 60;
 
+	char *timeout_str = setting("net.connect.timeout");
+	int v = atoi(timeout_str ? timeout_str : "0");
+	if (v > 0)
+		net_conn_timeout = (unsigned int) v;
+
+	struct net_engine *neteng = neteng_new_start();
+
 	if (debugging)
-		fprintf(stderr, "net: engine started. sleeping %d %s\n",
+		fprintf(stderr, "net: engine started. sleeping %d %s (cxn tmout %u sec)\n",
 			(nsec > 60) ? nsec/60 : nsec,
-			(nsec > 60) ? "minutes" : "seconds");
+			(nsec > 60) ? "minutes" : "seconds",
+			net_conn_timeout);
 	
 	sleep(nsec);
 

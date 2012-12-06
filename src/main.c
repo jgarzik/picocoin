@@ -39,6 +39,7 @@ uint64_t instance_nonce;
 bool debugging = false;
 
 static const char *const_settings[] = {
+	"net.connect.timeout=11",
 	"wallet=picocoin.wallet",
 	"chain=bitcoin",
 	"peers=picocoin.peers",
