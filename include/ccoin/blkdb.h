@@ -10,6 +10,8 @@
 #include <ccoin/core.h>
 #include <ccoin/buint.h>
 
+struct blkinfo;
+
 struct blkinfo {
 	bu256_t		hash;
 	struct bp_block	hdr;
@@ -19,6 +21,8 @@ struct blkinfo {
 
 	int32_t		n_file;		/* uninitialized == -1 */
 	int64_t		n_pos;		/* uninitialized == -1 */
+
+	struct blkinfo	*prev;
 };
 
 struct blkdb {
@@ -31,6 +35,7 @@ struct blkdb {
 
 	GHashTable	*blocks;
 
+	struct blkinfo	*best_blk;
 	bu256_t		hashBestChain;
 	BIGNUM		bnBestChainWork;
 	int		nBestHeight;

@@ -88,6 +88,7 @@ static bool blkdb_connect(struct blkdb *db, struct blkinfo *bi)
 		if (!bu256_equal(&bi->hdr.sha256, &db->block0))
 			goto out;
 
+		/* bi->prev = NULL; */
 		bi->height = 0;
 
 		BN_copy(&bi->work, &cur_work);
@@ -101,6 +102,7 @@ static bool blkdb_connect(struct blkdb *db, struct blkinfo *bi)
 		if (!prev)
 			goto out;
 
+		bi->prev = prev;
 		bi->height = prev->height + 1;
 
 		if (!BN_add(&bi->work, &cur_work, &prev->work))
@@ -112,6 +114,7 @@ static bool blkdb_connect(struct blkdb *db, struct blkinfo *bi)
 
 	/* if new best chain found, update pointers */
 	if (best_chain) {
+		db->best_blk = bi;
 		bu256_copy(&db->hashBestChain, &bi->hdr.sha256);
 		BN_copy(&db->bnBestChainWork, &cur_work);
 		db->nBestHeight = bi->height;
