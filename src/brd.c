@@ -663,9 +663,10 @@ static GString *nc_version_build(struct nc_conn *conn)
 	msg_version_init(&mv);
 
 	mv.nVersion = PROTO_VERSION;
+	mv.nServices = blocks_fd >= 0 ? NODE_NETWORK : 0;
 	mv.nTime = (int64_t) time(NULL);
 	mv.nonce = instance_nonce;
-	sprintf(mv.strSubVer, "/picocoin:%s/", VERSION);
+	sprintf(mv.strSubVer, "/brd:%s/", VERSION);
 	mv.nStartingHeight =
 		conn->nci->db->best_chain ?
 			conn->nci->db->best_chain->height : 0;
