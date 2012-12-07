@@ -17,7 +17,7 @@ bool bp_txout_match(const struct bp_txout *txout,
 		return false;
 
 	bool rc = false;
-	
+
 	struct bscript_addr addrs;
 	if (!bsp_addr_parse(&addrs, txout->scriptPubKey->str,
 			    txout->scriptPubKey->len))
@@ -102,7 +102,7 @@ struct bp_block_match *bbm_new(void)
 	struct bp_block_match *match = malloc(sizeof(struct bp_block_match));
 	if (!match)
 		return NULL;
-	
+
 	bbm_init(match);
 	match->self_alloc = true;
 
@@ -130,7 +130,7 @@ GPtrArray *bp_block_match(const struct bp_block *block,
 				(GDestroyNotify) bbm_free);
 	if (!arr)
 		return NULL;
-	
+
 	BIGNUM tmp_mask;
 	BN_init(&tmp_mask);
 

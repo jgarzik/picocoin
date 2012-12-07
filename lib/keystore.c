@@ -32,7 +32,7 @@ void bkeys_free(struct bp_keystore *ks)
 {
 	if (!ks || !ks->keys)
 		return;
-	
+
 	g_hash_table_unref(ks->keys);
 	ks->keys = NULL;
 }
@@ -85,7 +85,7 @@ bool bkeys_pubkey_append(struct bp_keystore *ks, const bu160_t *key_id,
 	bsp_push_data(scriptSig, pubkey, pk_len);
 
 	free(pubkey);
-	
+
 	/* no bp_key_free(&key), as bkeys_key_get() returns a ref */
 	return true;
 }

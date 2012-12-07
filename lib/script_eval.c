@@ -59,7 +59,7 @@ void bp_tx_sighash(bu256_t *hash, const GString *scriptCode,
 		bu256_set_u64(hash, 1);
 		return;
 	}
-	
+
 	struct bp_tx txTmp;
 	bp_tx_init(&txTmp);
 	bp_tx_copy(&txTmp, txTo);
@@ -154,7 +154,7 @@ static bool CastToBigNum(BIGNUM *vo, const struct buffer *buf)
 {
 	if (buf->len > nMaxNumSize)
 		return false;
-	
+
 	// Get rid of extra leading zeros:
 	// buf -> bn -> buf -> bn
 
@@ -363,7 +363,7 @@ static bool bp_script_eval(GPtrArray *stack, const GString *script,
 
 	if (script->len > 10000)
 		goto out;
-	
+
 	bool fStrictEncodings = flags & SCRIPT_VERIFY_STRICTENC;
 	unsigned int nOpCount = 0;
 
@@ -1133,7 +1133,7 @@ bool bp_verify_sig(const struct bp_utxo *txFrom, const struct bp_tx *txTo,
 	struct bp_txin *txin = g_ptr_array_index(txTo->vin, nIn);
 	if (txin->prevout.n >= txFrom->vout->len)
 		return false;
-	
+
 	struct bp_txout *txout = g_ptr_array_index(txFrom->vout,
 						   txin->prevout.n);
 	if (!txout)

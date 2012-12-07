@@ -31,7 +31,7 @@ void buffer_free(struct buffer *buf)
 {
 	if (!buf)
 		return;
-	
+
 	free(buf->p);
 	free(buf);
 }

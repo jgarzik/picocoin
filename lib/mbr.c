@@ -74,7 +74,7 @@ bool fread_message(int fd, struct p2p_message *msg, bool *read_ok)
 	unsigned int data_len = msg->hdr.data_len;
 	if (data_len > (100 * 1024 * 1024))
 		return false;
-	
+
 	msg->data = malloc(data_len);
 
 	rrc = read(fd, msg->data, data_len);

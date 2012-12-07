@@ -87,7 +87,7 @@ GArray *bp_block_merkle_tree(const struct bp_block *block)
 {
 	if (!block->vtx || !block->vtx->len)
 		return NULL;
-	
+
 	GArray *arr = g_array_new(FALSE, TRUE, sizeof(bu256_t));
 
 	unsigned int i;
@@ -140,7 +140,7 @@ GArray *bp_block_merkle_branch(const struct bp_block *block,
 {
 	if (!block || !block->vtx || !mrktree || (txidx >= block->vtx->len))
 		return NULL;
-	
+
 	GArray *ret = g_array_new(FALSE, TRUE, sizeof(bu256_t));
 
 	unsigned int j = 0, nSize;

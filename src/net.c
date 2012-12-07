@@ -876,7 +876,7 @@ static void nc_conns_gc(struct net_child_info *nci)
 static void nc_conns_open(struct net_child_info *nci)
 {
 	if (debugging)
-		fprintf(stderr, "net: open connections (have %u, want %u more)\n", 
+		fprintf(stderr, "net: open connections (have %u, want %u more)\n",
 			nci->conns->len,
 			NC_MAX_CONN - nci->conns->len);
 
@@ -1035,7 +1035,7 @@ static void network_child(int read_fd, int write_fd)
 
 	if (debugging)
 		fprintf(stderr, "net: blkdb opened\n");
-	
+
 	/*
 	 * set up libevent dispatch
 	 */
@@ -1104,9 +1104,9 @@ bool neteng_start(struct net_engine *neteng)
 	if (pipe(neteng->tx_pipefd) < 0)
 		goto err_out_rxfd;
 
-	#ifdef WIN32 
+	#ifdef WIN32
 	neteng->child = createthread();
-	#else 
+	#else
 	neteng->child = fork();
 	#endif
 	if (neteng->child == -1)
@@ -1221,7 +1221,7 @@ void network_sync(void)
 			(nsec > 60) ? nsec/60 : nsec,
 			(nsec > 60) ? "minutes" : "seconds",
 			net_conn_timeout);
-	
+
 	sleep(nsec);
 
 	neteng_free(neteng);

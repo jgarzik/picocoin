@@ -121,7 +121,7 @@ bool bp_key_secret_set(struct bp_key *key, const void *privkey_, size_t pk_len)
 	key->k = EC_KEY_new_by_curve_name(NID_secp256k1);
 	if (!key->k)
 		goto err_out;
-	
+
 	if (!EC_KEY_regenerate_key(key->k, bn))
 		goto err_out;
 	if (!EC_KEY_check_key(key->k))
@@ -188,7 +188,7 @@ bool bp_key_secret_get(void *p, size_t len, const struct bp_key *key)
 	int n = BN_bn2bin(bn, p + (len - nBytes));
 	if (n != nBytes)
 		return false;
-	
+
 	return true;
 }
 

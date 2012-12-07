@@ -18,7 +18,7 @@ json_t *read_json(const char *filename)
 {
 	json_error_t err;
 	json_t *ret;
-	
+
 	ret = json_load_file(filename, JSON_REJECT_DUPLICATES, &err);
 
 	return ret;

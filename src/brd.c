@@ -535,7 +535,7 @@ static bool nc_conn_message(struct nc_conn *conn)
 	/* incoming message: addr */
 	if (!strncmp(command, "addr", 12))
 		return nc_msg_addr(conn);
-	
+
 	/* incoming message: inv */
 	else if (!strncmp(command, "inv", 12))
 		return nc_msg_inv(conn);
@@ -970,7 +970,7 @@ static void nc_conns_gc(struct net_child_info *nci)
 static void nc_conns_open(struct net_child_info *nci)
 {
 	if (debugging)
-		fprintf(plog, "net: open connections (have %u, want %u more)\n", 
+		fprintf(plog, "net: open connections (have %u, want %u more)\n",
 			nci->conns->len,
 			NC_MAX_CONN - nci->conns->len);
 

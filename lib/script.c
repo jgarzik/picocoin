@@ -46,7 +46,7 @@ bool bsp_getop(struct bscript_op *op, struct bscript_parser *bp)
 
 	if (opcode < OP_PUSHDATA1)
 		data_len = opcode;
-	
+
 	else if (opcode == OP_PUSHDATA1) {
 		uint8_t v8;
 		if (!deser_bytes(&v8, bp->buf, 1))
@@ -201,7 +201,7 @@ bool bsp_addr_parse(struct bscript_addr *addr,
 		addr->pubhash = g_list_append(addr->pub, buf);
 		break;
 	}
-	
+
 	default:
 		/* do nothing */
 		break;

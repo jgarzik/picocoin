@@ -45,7 +45,7 @@ static unsigned int bloom_hash(struct bloom *bf, unsigned int nHashNum,
 		k1 *= c2;
 
 		h1 ^= k1;
-		h1 = ROTL32(h1,13); 
+		h1 = ROTL32(h1,13);
 		h1 = h1*5+0xe6546b64;
 	}
 
@@ -81,7 +81,7 @@ static void string_resize(GString *s, unsigned int new_index)
 	unsigned int cur_size = s->len;
 	if (cur_size >= new_size)
 		return;
-	
+
 	g_string_set_size(s, new_size);
 
 	unsigned int pad = new_size - cur_size;

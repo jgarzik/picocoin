@@ -69,7 +69,7 @@ static struct peer_manager *peerman_new(void)
 	peers = calloc(1, sizeof(*peers));
 	if (!peers)
 		return NULL;
-	
+
 	peers->map_addr = g_hash_table_new(addr_hash, addr_equal);
 
 	return peers;

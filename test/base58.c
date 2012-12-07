@@ -59,7 +59,7 @@ static void test_decode(const char *hexstr, const char *base58_str)
 	}
 	if (s->len != out_len) {
 		fprintf(stderr, "decode len: have %u, want %u\n",
-			(unsigned int) s->len, 
+			(unsigned int) s->len,
 			(unsigned int) out_len);
 		dumphex("decode have", s->str, s->len);
 		dumphex("decode want", raw, out_len);

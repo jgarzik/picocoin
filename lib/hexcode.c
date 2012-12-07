@@ -42,7 +42,7 @@ bool decode_hex(void *p, size_t max_len, const char *hexstr, size_t *out_len_)
 		hexstr += 2;
 	if (strlen(hexstr) > (max_len * 2))
 		return false;
-	
+
 	unsigned char *buf = p;
 	size_t out_len = 0;
 

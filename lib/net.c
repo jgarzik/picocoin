@@ -133,7 +133,7 @@ static bool is_local(const unsigned char *ipaddr)
 	static const unsigned char pchLocal[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
 	if (!memcmp(ipaddr, pchLocal, sizeof(pchLocal)))
 		return true;
-	
+
 	return false;
 }
 
@@ -142,14 +142,14 @@ static bool is_valid(const unsigned char *ipaddr)
 	static const unsigned char none[16] = {};
 	if (!memcmp(ipaddr, none, 16))
 		return false;
-	
+
 	if (is_RFC3849(ipaddr))
 		return false;
 
 	if (is_ipv4_mapped(ipaddr) &&
 	    !memcmp(ipaddr + 12, none, 4))
 		return false;
-	
+
 	return true;
 }
 
@@ -220,7 +220,7 @@ void bn_group(unsigned char *group, unsigned int *group_len,
 	else if (ipaddr[GB(15)] == 0x20 && ipaddr[GB(14)] == 0x11 &&
 		 ipaddr[GB(13)] == 0x04 && ipaddr[GB(12)] == 0x70)
 		bits = 36;
-	
+
 	else
 		bits = 32;
 

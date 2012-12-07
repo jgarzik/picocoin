@@ -145,7 +145,7 @@ GString *ser_msg_getblocks(const struct msg_getblocks *gb)
 
 	ser_bp_locator(s, &gb->locator);
 	ser_u256(s, &gb->hash_stop);
-	
+
 	return s;
 }
 
@@ -205,13 +205,13 @@ void msg_headers_free(struct msg_headers *mh)
 {
 	if (!mh)
 		return;
-	
+
 	if (mh->headers) {
 		unsigned int i;
 
 		for (i = 0; i < mh->headers->len; i++) {
 			struct bp_block *block;
-	
+
 			block = g_ptr_array_index(mh->headers, i);
 			bp_block_free(block);
 		}
@@ -229,7 +229,7 @@ bool deser_msg_ping(unsigned int protover, struct msg_ping *mp,
 
 	if (protover > BIP0031_VERSION)
 		if (!deser_u64(&mp->nonce, buf)) return false;
-	
+
 	return true;
 }
 
@@ -239,7 +239,7 @@ GString *ser_msg_ping(unsigned int protover, const struct msg_ping *mp)
 
 	if (mp && (protover > BIP0031_VERSION))
 		ser_u64(s, mp->nonce);
-	
+
 	return s;
 }
 
@@ -340,7 +340,7 @@ void msg_vinv_free(struct msg_vinv *mv)
 {
 	if (!mv)
 		return;
-	
+
 	if (mv->invs) {
 		g_ptr_array_free(mv->invs, TRUE);
 		mv->invs = NULL;

@@ -517,7 +517,7 @@ void g_bp_block_free(gpointer data)
 {
 	if (!data)
 		return;
-	
+
 	struct bp_block *block = data;
 	bp_block_free(block);
 

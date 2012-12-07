@@ -102,7 +102,7 @@ static bool spend_block(struct bp_utxo_set *uset, const struct bp_block *block,
 		if (!spend_tx(uset, tx, i, height)) {
 			char hexstr[BU256_STRSZ];
 			bu256_hex(hexstr, &tx->sha256);
-			fprintf(stderr, 
+			fprintf(stderr,
 				"chain-verf: tx fail %s\n", hexstr);
 			return false;
 		}
@@ -144,7 +144,7 @@ static void read_test_msg(struct blkdb *db, struct bp_utxo_set *uset,
 		if (!spend_block(uset, &block, bi->height)) {
 			char hexstr[BU256_STRSZ];
 			bu256_hex(hexstr, &bi->hdr.sha256);
-			fprintf(stderr, 
+			fprintf(stderr,
 				"chain-verf: block fail %u %s\n",
 				bi->height, hexstr);
 			assert(!"spend_block");
@@ -234,6 +234,6 @@ int main (int argc, char *argv[])
 			);
 		return 77;
 	}
-	
+
 	return 0;
 }

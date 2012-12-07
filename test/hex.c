@@ -38,7 +38,7 @@ static void test_encode2(void)
 	encode_hex(hexstr, data, data_len);
 
 	assert(strlen(hexstr) == (data_len * 2));
-	
+
 	assert((unsigned char)hexstr[(data_len * 2) + 1] == 0xef);
 }
 

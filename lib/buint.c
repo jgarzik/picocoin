@@ -35,13 +35,13 @@ bool hex_bu256(bu256_t *vo, const char *hexstr)
 
 	if (!decode_hex(&tmpv, sizeof(bu256_t), hexstr, &out_len))
 		return false;
-	
+
 	if (out_len != sizeof(bu256_t))
 		return false;
 
 	bu256_copy_swap(&tmpv2, &tmpv);
 	bu256_copy_swap_dwords(vo, &tmpv2);
-	
+
 	return true;
 }
 

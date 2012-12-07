@@ -39,7 +39,7 @@ void bi_free(struct blkinfo *bi)
 {
 	if (!bi)
 		return;
-	
+
 	BN_clear_free(&bi->work);
 
 	bp_block_free(&bi->hdr);
@@ -92,7 +92,7 @@ static bool blkdb_connect(struct blkdb *db, struct blkinfo *bi,
 
 		best_chain = true;
 	}
-	
+
 	/* lookup and verify previous block */
 	else {
 		struct blkinfo *prev = blkdb_lookup(db, &bi->hdr.hashPrevBlock);
@@ -177,7 +177,7 @@ static bool blkdb_read_rec(struct blkdb *db, const struct p2p_message *msg)
 		goto err_out;
 	if (!deser_bp_block(&bi->hdr, &buf))
 		goto err_out;
-	
+
 	/* verify that provided hash matches block header, as an additional
 	 * self-verification step
 	 */

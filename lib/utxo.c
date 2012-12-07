@@ -61,7 +61,7 @@ bool bp_utxo_from_tx(struct bp_utxo *coin, const struct bp_tx *tx,
 		bp_txout_copy(new_out, old_out);
 		g_ptr_array_add(coin->vout, new_out);
 	}
-	
+
 	return true;
 }
 
@@ -70,7 +70,7 @@ void utxo_free_ent(gpointer data_)
 	struct bp_utxo *coin = data_;
 	if (!coin)
 		return;
-	
+
 	bp_utxo_free(coin);
 	free(coin);
 }
@@ -87,7 +87,7 @@ void bp_utxo_set_free(struct bp_utxo_set *uset)
 {
 	if (!uset)
 		return;
-	
+
 	if (uset->map) {
 		g_hash_table_unref(uset->map);
 		uset->map = NULL;
@@ -100,11 +100,11 @@ bool bp_utxo_is_spent(struct bp_utxo_set *uset, const struct bp_outpt *outpt)
 	if (!coin || !coin->vout || !coin->vout->len ||
 	    (outpt->n >= coin->vout->len))
 		return true;
-	
+
 	struct bp_txout *txout = g_ptr_array_index(coin->vout, outpt->n);
 	if (!txout)
 		return true;
-	
+
 	return false;
 }
 
@@ -112,7 +112,7 @@ static bool bp_utxo_null(const struct bp_utxo *coin)
 {
 	if (!coin || !coin->vout || !coin->vout->len)
 		return true;
-	
+
 	unsigned int i;
 	for (i = 0; i < coin->vout->len; i++) {
 		struct bp_txout *txout;
@@ -131,7 +131,7 @@ bool bp_utxo_spend(struct bp_utxo_set *uset, const struct bp_outpt *outpt)
 	if (!coin || !coin->vout || !coin->vout->len ||
 	    (outpt->n >= coin->vout->len))
 		return false;
-	
+
 	/* find txout, given index */
 	struct bp_txout *txout = g_ptr_array_index(coin->vout, outpt->n);
 	if (!txout)
