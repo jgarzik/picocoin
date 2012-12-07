@@ -46,6 +46,10 @@ extern bool deser_msg_addr(unsigned int protover, struct msg_addr *ma,
 extern GString *ser_msg_addr(unsigned int protover, const struct msg_addr *ma);
 extern void msg_addr_free(struct msg_addr *ma);
 
+/*
+ * msg_getheaders is interchangeable with msg_getblocks
+ */
+
 struct msg_getblocks {
 	struct bp_locator	locator;
 	bu256_t			hash_stop;
@@ -76,6 +80,37 @@ static inline void msg_getdata_init(struct msg_getdata *gd)
 extern bool deser_msg_getdata(struct msg_getdata *gd, struct const_buffer *buf);
 extern GString *ser_msg_getdata(const struct msg_getdata *gd);
 extern void msg_getdata_free(struct msg_getdata *gd);
+
+struct msg_headers {
+	GPtrArray	*headers;
+};
+
+static inline void msg_headers_init(struct msg_headers *mh)
+{
+	memset(mh, 0, sizeof(*mh));
+}
+
+extern bool deser_msg_headers(struct msg_headers *mh, struct const_buffer *buf);
+extern GString *ser_msg_headers(const struct msg_headers *mh);
+extern void msg_headers_free(struct msg_headers *mh);
+
+/*
+ * msg_pong is interchangeable with msg_ping
+ */
+
+struct msg_ping {
+	uint64_t	nonce;
+};
+
+static inline void msg_ping_init(struct msg_ping *mp)
+{
+	memset(mp, 0, sizeof(*mp));
+}
+
+static inline void msg_ping_free(struct msg_ping *mp) {}
+extern bool deser_msg_ping(unsigned int protover, struct msg_ping *ma,
+			   struct const_buffer *buf);
+extern GString *ser_msg_ping(unsigned int protover, const struct msg_ping *ma);
 
 struct msg_version {
 	uint32_t	nVersion;

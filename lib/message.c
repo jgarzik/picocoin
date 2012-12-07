@@ -212,6 +212,100 @@ void msg_getdata_free(struct msg_getdata *gd)
 	}
 }
 
+bool deser_msg_headers(struct msg_headers *mh, struct const_buffer *buf)
+{
+	msg_headers_free(mh);
+
+	uint32_t vlen;
+	if (!deser_varlen(&vlen, buf)) return false;
+
+	mh->headers = g_ptr_array_new_full(vlen, g_free);
+
+	unsigned int i;
+	for (i = 0; i < vlen; i++) {
+		struct bp_block *block;
+
+		block = calloc(1, sizeof(*block));
+		if (!deser_bp_block(block, buf)) {
+			free(block);
+			goto err_out;
+		}
+
+		g_ptr_array_add(mh->headers, block);
+	}
+
+	return true;
+
+err_out:
+	msg_headers_free(mh);
+	return false;
+}
+
+GString *ser_msg_headers(const struct msg_headers *mh)
+{
+	GString *s = g_string_new(NULL);
+
+	if (!mh || !mh->headers || !mh->headers->len) {
+		ser_varlen(s, 0);
+		return s;
+	}
+
+	ser_varlen(s, mh->headers->len);
+
+	unsigned int i;
+	for (i = 0; i < mh->headers->len; i++) {
+		struct bp_block *block;
+
+		block = g_ptr_array_index(mh->headers, i);
+
+		ser_bp_block(s, block);
+	}
+
+	return s;
+}
+
+void msg_headers_free(struct msg_headers *mh)
+{
+	if (!mh)
+		return;
+	
+	if (mh->headers) {
+		unsigned int i;
+
+		for (i = 0; i < mh->headers->len; i++) {
+			struct bp_block *block;
+	
+			block = g_ptr_array_index(mh->headers, i);
+			bp_block_free(block);
+		}
+
+		g_ptr_array_free(mh->headers, TRUE);
+		mh->headers = NULL;
+	}
+}
+
+bool deser_msg_ping(unsigned int protover, struct msg_ping *mp,
+		    struct const_buffer *buf)
+{
+	msg_ping_free(mp);
+	msg_ping_init(mp);
+
+	if (protover > BIP0031_VERSION)
+		if (!deser_u64(&mp->nonce, buf)) return false;
+	
+	return true;
+}
+
+GString *ser_msg_ping(unsigned int protover, const struct msg_ping *mp)
+{
+	GString *s = g_string_new(NULL);
+
+	if (mp && (protover > BIP0031_VERSION))
+		ser_u64(s, mp->nonce);
+	
+	return s;
+}
+
 bool deser_msg_version(struct msg_version *mv, struct const_buffer *buf)
 {
 	memset(mv, 0, sizeof(*mv));
