@@ -57,7 +57,7 @@ void bp_tx_sighash(bu256_t *hash, const GString *scriptCode,
 {
 	if (nIn >= txTo->vin->len) {
 		bu256_set_u64(hash, 1);
-		goto out;
+		return;
 	}
 	
 	struct bp_tx txTmp;

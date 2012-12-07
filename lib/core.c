@@ -230,8 +230,7 @@ void bp_txout_set_null(struct bp_txout *txout)
 
 void bp_txout_copy(struct bp_txout *dest, const struct bp_txout *src)
 {
-	if (dest->scriptPubKey)
-		g_string_free(dest->scriptPubKey, TRUE);
+	bp_txout_free(dest);
 
 	dest->nValue = src->nValue;
 	if (src->scriptPubKey) {
@@ -404,6 +403,8 @@ unsigned int bp_tx_ser_size(const struct bp_tx *tx)
 
 void bp_tx_copy(struct bp_tx *dest, const struct bp_tx *src)
 {
+	bp_tx_free(dest);
+
 	GString *s = g_string_sized_new(512);
 	ser_bp_tx(s, src);
 
