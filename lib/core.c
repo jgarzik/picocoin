@@ -513,6 +513,18 @@ void bp_block_free(struct bp_block *block)
 	bp_block_vtx_free(block);
 }
 
+void g_bp_block_free(gpointer data)
+{
+	if (!data)
+		return;
+	
+	struct bp_block *block = data;
+	bp_block_free(block);
+
+	memset(block, 0, sizeof(*block));
+	free(block);
+}
+
 void bp_block_calc_sha256(struct bp_block *block)
 {
 	if (block->sha256_valid)

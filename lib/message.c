@@ -149,69 +149,6 @@ GString *ser_msg_getblocks(const struct msg_getblocks *gb)
 	return s;
 }
 
-bool deser_msg_getdata(struct msg_getdata *gd, struct const_buffer *buf)
-{
-	msg_getdata_free(gd);
-
-	uint32_t vlen;
-	if (!deser_varlen(&vlen, buf)) return false;
-
-	gd->inv = g_ptr_array_new_full(vlen, g_free);
-
-	unsigned int i;
-	for (i = 0; i < vlen; i++) {
-		struct bp_inv *inv;
-
-		inv = calloc(1, sizeof(*inv));
-		if (!deser_bp_inv(inv, buf)) {
-			free(inv);
-			goto err_out;
-		}
-
-		g_ptr_array_add(gd->inv, inv);
-	}
-
-	return true;
-
-err_out:
-	msg_getdata_free(gd);
-	return false;
-}
-
-GString *ser_msg_getdata(const struct msg_getdata *gd)
-{
-	GString *s = g_string_new(NULL);
-
-	if (!gd || !gd->inv || !gd->inv->len) {
-		ser_varlen(s, 0);
-		return s;
-	}
-
-	ser_varlen(s, gd->inv->len);
-
-	unsigned int i;
-	for (i = 0; i < gd->inv->len; i++) {
-		struct bp_inv *inv;
-
-		inv = g_ptr_array_index(gd->inv, i);
-
-		ser_bp_inv(s, inv);
-	}
-
-	return s;
-}
-
-void msg_getdata_free(struct msg_getdata *gd)
-{
-	if (!gd)
-		return;
-	
-	if (gd->inv) {
-		g_ptr_array_free(gd->inv, TRUE);
-		gd->inv = NULL;
-	}
-}
-
 bool deser_msg_headers(struct msg_headers *mh, struct const_buffer *buf)
 {
 	msg_headers_free(mh);
@@ -345,5 +282,81 @@ GString *ser_msg_version(const struct msg_version *mv)
 	ser_u32(s, mv->nStartingHeight);
 
 	return s;
+}
+
+bool deser_msg_vinv(struct msg_vinv *mv, struct const_buffer *buf)
+{
+	msg_vinv_free(mv);
+
+	uint32_t vlen;
+	if (!deser_varlen(&vlen, buf)) return false;
+
+	mv->invs = g_ptr_array_new_full(vlen, g_free);
+
+	unsigned int i;
+	for (i = 0; i < vlen; i++) {
+		struct bp_inv *inv;
+
+		inv = calloc(1, sizeof(*inv));
+		if (!deser_bp_inv(inv, buf)) {
+			free(inv);
+			goto err_out;
+		}
+
+		g_ptr_array_add(mv->invs, inv);
+	}
+
+	return true;
+
+err_out:
+	msg_vinv_free(mv);
+	return false;
+}
+
+GString *ser_msg_vinv(const struct msg_vinv *mv)
+{
+	GString *s = g_string_new(NULL);
+
+	if (!mv || !mv->invs || !mv->invs->len) {
+		ser_varlen(s, 0);
+		return s;
+	}
+
+	ser_varlen(s, mv->invs->len);
+
+	unsigned int i;
+	for (i = 0; i < mv->invs->len; i++) {
+		struct bp_inv *inv;
+
+		inv = g_ptr_array_index(mv->invs, i);
+
+		ser_bp_inv(s, inv);
+	}
+
+	return s;
+}
+
+void msg_vinv_free(struct msg_vinv *mv)
+{
+	if (!mv)
+		return;
+	
+	if (mv->invs) {
+		g_ptr_array_free(mv->invs, TRUE);
+		mv->invs = NULL;
+	}
+}
+
+void msg_vinv_push(struct msg_vinv *mv, uint32_t msg_type,
+		   const bu256_t *hash_in)
+{
+	if (!mv->invs)
+		mv->invs = g_ptr_array_new_full(512, g_free);
+
+	struct bp_inv *inv = malloc(sizeof(struct bp_inv));
+	inv->type = msg_type;
+	bu256_copy(&inv->hash, hash_in);
+
+	g_ptr_array_add(mv->invs, inv);
 }
 

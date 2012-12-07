@@ -35,6 +35,7 @@ bool debugging = false;
 FILE *plog = NULL;
 
 static struct blkdb db;
+static GHashTable *orphans;
 static struct bp_utxo_set uset;
 static int blocks_fd = -1;
 static bool script_verf = false;
@@ -61,6 +62,8 @@ struct net_child_info {
 
 	GPtrArray		*conns;
 	struct event_base	*eb;
+
+	time_t			last_getblocks;
 };
 
 struct nc_conn {
@@ -349,6 +352,10 @@ static bool nc_msg_verack(struct nc_conn *conn)
 		return false;
 	conn->seen_verack = true;
 
+	if (debugging)
+		fprintf(plog, "net: %s verack\n",
+			conn->addr_str);
+
 	/*
 	 * When a connection attempt is made, the peer is deleted
 	 * from the peer list.  When we successfully connect,
@@ -365,17 +372,136 @@ static bool nc_msg_verack(struct nc_conn *conn)
 	    (!nc_conn_send(conn, "getaddr", NULL, 0)))
 		return false;
 
-	return true;
+	/* request blocks */
+	bool rc = true;
+	time_t now = time(NULL);
+	time_t cutoff = now - (24 * 60 * 60);
+	if (conn->nci->last_getblocks < cutoff) {
+		struct msg_getblocks gb;
+		msg_getblocks_init(&gb);
+		blkdb_locator(&db, NULL, &gb.locator);
+		GString *s = ser_msg_getblocks(&gb);
+
+		rc = nc_conn_send(conn, "getblocks", s->str, s->len);
+
+		g_string_free(s, TRUE);
+		msg_getblocks_free(&gb);
+
+		conn->nci->last_getblocks = now;
+	}
+
+	return rc;
+}
+
+static bool nc_msg_inv(struct nc_conn *conn)
+{
+	struct const_buffer buf = { conn->msg.data, conn->msg.hdr.data_len };
+	struct msg_vinv mv, mv_out;
+	bool rc = false;
+
+	msg_vinv_init(&mv);
+	msg_vinv_init(&mv_out);
+
+	if (!deser_msg_vinv(&mv, &buf))
+		goto out;
+
+	if (debugging && mv.invs && mv.invs->len == 1) {
+		struct bp_inv *inv = g_ptr_array_index(mv.invs, 0);
+		char hexstr[BU256_STRSZ];
+		bu256_hex(hexstr, &inv->hash);
+
+		char typestr[32];
+		switch (inv->type) {
+		case MSG_TX: strcpy(typestr, "tx"); break;
+		case MSG_BLOCK: strcpy(typestr, "block"); break;
+		default: sprintf(typestr, "unknown 0x%x", inv->type); break;
+		}
+
+		fprintf(plog, "net: %s inv %s %s\n",
+			conn->addr_str, typestr, hexstr);
+	}
+	else if (debugging && mv.invs) {
+		fprintf(plog, "net: %s inv (%u sz)\n",
+			conn->addr_str, mv.invs->len);
+	}
+
+	if (!mv.invs || !mv.invs->len)
+		goto out_ok;
+
+	/* scan incoming inv's for interesting material */
+	unsigned int i;
+	for (i = 0; i < mv.invs->len; i++) {
+		struct bp_inv *inv = g_ptr_array_index(mv.invs, i);
+		switch (inv->type) {
+		case MSG_BLOCK:
+			if (!blkdb_lookup(&db, &inv->hash) &&
+			    !g_hash_table_lookup(orphans, &inv->hash))
+				msg_vinv_push(&mv_out, MSG_BLOCK, &inv->hash);
+			break;
+
+		case MSG_TX:
+		default:
+			break;
+		}
+	}
+
+	/* send getdata, if they have anything we want */
+	if (mv_out.invs && mv_out.invs->len) {
+		GString *s = ser_msg_vinv(&mv_out);
+
+		rc = nc_conn_send(conn, "getdata", s->str, s->len);
+
+		g_string_free(s, TRUE);
+	}
+
+out_ok:
+	rc = true;
+
+out:
+	msg_vinv_free(&mv);
+	msg_vinv_free(&mv_out);
+	return rc;
+}
+
+static bool nc_msg_block(struct nc_conn *conn)
+{
+	struct const_buffer buf = { conn->msg.data, conn->msg.hdr.data_len };
+	struct bp_block block;
+	bp_block_init(&block);
+
+	bool rc = false;
+
+	if (!deser_bp_block(&block, &buf))
+		goto out;
+	bp_block_calc_sha256(&block);
+
+	if (debugging) {
+		char hexstr[BU256_STRSZ];
+		bu256_hex(hexstr, &block.sha256);
+
+		fprintf(plog, "net: %s block %s\n",
+			conn->addr_str,
+			hexstr);
+	}
+
+	/* check for duplicate block */
+	if (blkdb_lookup(&db, &block.sha256) ||
+	    g_hash_table_lookup(orphans, &block.sha256))
+		goto out_ok;
+
+	// TODO: we haven't seen this block before...
+
+out_ok:
+	rc = true;
+
+out:
+	bp_block_free(&block);
+	return rc;
 }
 
 static bool nc_conn_message(struct nc_conn *conn)
 {
 	char *command = conn->msg.hdr.command;
-
-	if (debugging)
-		fprintf(plog, "net: %s message %s\n",
-			conn->addr_str,
-			command);
 
 	/* verify correct network */
 	if (memcmp(conn->msg.hdr.netmagic, chain->netmagic, 4)) {
@@ -409,6 +535,19 @@ static bool nc_conn_message(struct nc_conn *conn)
 	/* incoming message: addr */
 	if (!strncmp(command, "addr", 12))
 		return nc_msg_addr(conn);
+	
+	/* incoming message: inv */
+	else if (!strncmp(command, "inv", 12))
+		return nc_msg_inv(conn);
+
+	/* incoming message: block */
+	else if (!strncmp(command, "block", 12))
+		return nc_msg_block(conn);
+
+	if (debugging)
+		fprintf(plog, "net: %s unknown message %s\n",
+			conn->addr_str,
+			command);
 
 	/* ignore unknown messages */
 	return true;
@@ -1265,6 +1404,12 @@ static void readprep_blocks_file(void)
 	}
 }
 
+static void init_orphans(void)
+{
+	orphans = g_hash_table_new_full(g_bu256_hash, g_bu256_equal,
+					NULL, g_bp_block_free);
+}
+
 static void init_peers(struct net_child_info *nci)
 {
 	/*
@@ -1314,6 +1459,7 @@ static void init_daemon(struct net_child_info *nci)
 	init_blkdb();
 	bp_utxo_set_init(&uset);
 	init_blocks();
+	init_orphans();
 	readprep_blocks_file();
 	init_nci(nci);
 }

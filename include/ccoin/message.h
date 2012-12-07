@@ -26,6 +26,11 @@ struct p2p_message {
 	void			*data;
 };
 
+enum {
+	MSG_TX = 1,
+	MSG_BLOCK,
+};
+
 extern void parse_message_hdr(struct p2p_message_hdr *hdr, const unsigned char *data);
 extern bool message_valid(const struct p2p_message *msg);
 extern GString *message_str(const unsigned char netmagic[4],
@@ -67,19 +72,6 @@ static inline void msg_getblocks_free(struct msg_getblocks *gb)
 {
 	bp_locator_free(&gb->locator);
 }
-
-struct msg_getdata {
-	GPtrArray	*inv;		/* of bp_inv */
-};
-
-static inline void msg_getdata_init(struct msg_getdata *gd)
-{
-	memset(gd, 0, sizeof(*gd));
-}
-
-extern bool deser_msg_getdata(struct msg_getdata *gd, struct const_buffer *buf);
-extern GString *ser_msg_getdata(const struct msg_getdata *gd);
-extern void msg_getdata_free(struct msg_getdata *gd);
 
 struct msg_headers {
 	GPtrArray	*headers;
@@ -131,5 +123,24 @@ static inline void msg_version_init(struct msg_version *mv)
 extern bool deser_msg_version(struct msg_version *mv, struct const_buffer *buf);
 extern GString *ser_msg_version(const struct msg_version *mv);
 static inline void msg_version_free(struct msg_version *mv) {}
+
+/*
+ * msg_vinv used with "inv", "getdata"
+ */
+
+struct msg_vinv {
+	GPtrArray	*invs;		/* of bp_inv */
+};
+
+static inline void msg_vinv_init(struct msg_vinv *mv)
+{
+	memset(mv, 0, sizeof(*mv));
+}
+
+extern bool deser_msg_vinv(struct msg_vinv *mv, struct const_buffer *buf);
+extern GString *ser_msg_vinv(const struct msg_vinv *mv);
+extern void msg_vinv_free(struct msg_vinv *mv);
+extern void msg_vinv_push(struct msg_vinv *mv, uint32_t msg_type,
+		   const bu256_t *hash_in);
 
 #endif /* __LIBCCOIN_MESSAGE_H__ */

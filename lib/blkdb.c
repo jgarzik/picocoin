@@ -278,6 +278,9 @@ void blkdb_free(struct blkdb *db)
 void blkdb_locator(struct blkdb *db, struct blkinfo *bi,
 		   struct bp_locator *locator)
 {
+	if (!bi)
+		bi = db->best_chain;
+
 	int step = 1;
 	while (bi) {
 		bp_locator_push(locator, &bi->hash);

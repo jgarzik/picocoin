@@ -223,6 +223,7 @@ extern void bp_check_merkle_branch(bu256_t *hash, const bu256_t *txhash_in,
 			    const GArray *mrkbranch, unsigned int txidx);
 extern bool bp_block_valid(struct bp_block *block);
 extern unsigned int bp_block_ser_size(const struct bp_block *block);
+extern void g_bp_block_free(gpointer data);
 
 static inline void bp_block_copy_hdr(struct bp_block *dest,
 				     const struct bp_block *src)
