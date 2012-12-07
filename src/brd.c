@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <errno.h>
+#include <assert.h>
 #include <openssl/rand.h>
 #include <ccoin/core.h>
 #include <ccoin/util.h>
@@ -325,10 +326,15 @@ static bool read_block_msg(struct p2p_message *msg, int64_t fpos)
 	bi->n_file = 0;
 	bi->n_pos = fpos;
 
-	if (!blkdb_add(&db, bi)) {
+	struct blkdb_reorg reorg;
+
+	if (!blkdb_add(&db, bi, &reorg)) {
 		fprintf(plog, "brd: blkdb add fail\n");
 		goto out;
 	}
+
+	assert(reorg.conn == 1);
+	assert(reorg.disconn == 0);
 
 	/* if best chain, mark TX's as spent */
 	if (bu256_equal(&db.best_chain->hash, &bi->hdr.sha256)) {

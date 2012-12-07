@@ -69,8 +69,11 @@ static struct blkinfo *blkdb_lookup(struct blkdb *db, const bu256_t *hash)
 	return g_hash_table_lookup(db->blocks, hash);
 }
 
-static bool blkdb_connect(struct blkdb *db, struct blkinfo *bi)
+static bool blkdb_connect(struct blkdb *db, struct blkinfo *bi,
+			  struct blkdb_reorg *reorg_info)
 {
+	memset(reorg_info, 0, sizeof(*reorg_info));
+
 	bool rc = false;
 	BIGNUM cur_work;
 	BN_init(&cur_work);
@@ -108,12 +111,49 @@ static bool blkdb_connect(struct blkdb *db, struct blkinfo *bi)
 			best_chain = true;
 	}
 
-	/* if new best chain found, update pointers */
-	if (best_chain)
-		db->best_chain = bi;
-
 	/* add to block map */
 	g_hash_table_insert(db->blocks, &bi->hash, bi);
+
+	/* if new best chain found, update pointers */
+	if (best_chain) {
+		struct blkinfo *old_best = db->best_chain;
+		struct blkinfo *new_best = bi;
+
+		reorg_info->old_best = old_best;
+
+		/* likely case: new best chain has greater height */
+		if (!old_best) {
+			while (new_best) {
+				new_best = new_best->prev;
+				reorg_info->conn++;
+			}
+		} else {
+			while (new_best &&
+			       (new_best->height > old_best->height)) {
+				new_best = new_best->prev;
+				reorg_info->conn++;
+			}
+		}
+
+		/* unlikely case: old best chain has greater height */
+		while (old_best && new_best &&
+		       (old_best->height > new_best->height)) {
+			old_best = old_best->prev;
+			reorg_info->disconn++;
+		}
+
+		/* height matches, but we are still walking parallel chains */
+		while (old_best && new_best && (old_best != new_best)) {
+			new_best = new_best->prev;
+			reorg_info->conn++;
+
+			old_best = old_best->prev;
+			reorg_info->disconn++;
+		}
+
+		/* reorg analyzed. update database's best-chain pointer */
+		db->best_chain = bi;
+	}
 
 	rc = true;
 
@@ -148,7 +188,8 @@ static bool blkdb_read_rec(struct blkdb *db, const struct p2p_message *msg)
 		goto err_out;
 
 	/* verify block may be added to chain, then add it */
-	if (!blkdb_connect(db, bi))
+	struct blkdb_reorg dummy;
+	if (!blkdb_connect(db, bi, &dummy))
 		goto err_out;
 
 	return true;
@@ -203,7 +244,8 @@ bool blkdb_read(struct blkdb *db, const char *idx_fn)
 	return read_ok && rc;
 }
 
-bool blkdb_add(struct blkdb *db, struct blkinfo *bi)
+bool blkdb_add(struct blkdb *db, struct blkinfo *bi,
+	       struct blkdb_reorg *reorg_info)
 {
 	if (db->fd >= 0) {
 		GString *data = blkdb_ser_rec(db, bi);
@@ -224,7 +266,7 @@ bool blkdb_add(struct blkdb *db, struct blkinfo *bi)
 	}
 
 	/* verify block may be added to chain, then add it */
-	return blkdb_connect(db, bi);
+	return blkdb_connect(db, bi, reorg_info);
 }
 
 void blkdb_free(struct blkdb *db)

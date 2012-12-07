@@ -132,7 +132,12 @@ static void read_test_msg(struct blkdb *db, struct bp_utxo_set *uset,
 	bi->n_file = 0;
 	bi->n_pos = fpos + P2P_HDR_SZ;
 
-	assert(blkdb_add(db, bi) == true);
+	struct blkdb_reorg reorg;
+
+	assert(blkdb_add(db, bi, &reorg) == true);
+
+	assert(reorg.conn == 1);
+	assert(reorg.disconn == 0);
 
 	/* if best chain, mark TX's as spent */
 	if (bu256_equal(&db->best_chain->hash, &bi->hdr.sha256)) {
@@ -163,9 +168,10 @@ static void runtest(bool use_testnet, const char *blocks_fn)
 	struct bp_utxo_set uset;
 	bp_utxo_set_init(&uset);
 
-	fprintf(stderr, "chain-verf: validating %s chainfile %s\n",
+	fprintf(stderr, "chain-verf: validating %s chainfile %s (%cscript)\n",
 		use_testnet ? "testnet3" : "mainnet",
-		blocks_fn);
+		blocks_fn,
+		script_verf ? '+' : '-');
 
 	int fd = file_seq_open(blocks_fn);
 	if (fd < 0) {
@@ -203,6 +209,9 @@ int main (int argc, char *argv[])
 	char *fn;
 	unsigned int verfd = 0;
 
+	if (getenv("NO_SCRIPT_VERF"))
+		script_verf = false;
+
 	fn = getenv("TEST_TESTNET3_VERF");
 	if (fn) {
 		verfd++;
@@ -215,16 +224,13 @@ int main (int argc, char *argv[])
 		runtest(false, fn);
 	}
 
-	if (getenv("NO_SCRIPT_VERF"))
-		script_verf = false;
-
 	if (!verfd) {
 		fprintf(stderr,
 	"chain-verf: Skipping lengthy, extended chain verification test.\n"
 	"chain-verf: Set TEST_TESTNET3_VERF and/or TEST_MAINNET_VERF to a\n"
 	"chain-verf: valid pynode blocks.dat file, to enable.\n"
 	"chain-verf: (a linear sequence of P2P \"block\" messages)\n"
-	"chain-verf: Set NO_SCRIPT_VERF to disabled script verification\n"
+	"chain-verf: Set NO_SCRIPT_VERF to disable script verification\n"
 			);
 		return 77;
 	}

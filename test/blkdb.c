@@ -29,7 +29,12 @@ static void add_header(struct blkdb *db, char *raw)
 
 	bu256_copy(&bi->hash, &bi->hdr.sha256);
 
-	assert(blkdb_add(db, bi) == true);
+	struct blkdb_reorg reorg;
+
+	assert(blkdb_add(db, bi, &reorg) == true);
+
+	assert(reorg.conn == 1);
+	assert(reorg.disconn == 0);
 }
 
 static void read_headers(const char *ser_base_fn, struct blkdb *db)

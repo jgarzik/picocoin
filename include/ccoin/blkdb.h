@@ -25,6 +25,12 @@ struct blkinfo {
 	struct blkinfo	*prev;
 };
 
+struct blkdb_reorg {
+	struct blkinfo	*old_best;	/* previous best_chain */
+	unsigned int	conn;		/* # blocks connected (normally 1) */
+	unsigned int	disconn;	/* # blocks disconnected (normally 0) */
+};
+
 struct blkdb {
 	int		fd;
 	bool		datasync_fd;
@@ -45,7 +51,8 @@ extern bool blkdb_init(struct blkdb *db, const unsigned char *netmagic,
 		       const bu256_t *genesis_block);
 extern void blkdb_free(struct blkdb *db);
 extern bool blkdb_read(struct blkdb *db, const char *idx_fn);
-extern bool blkdb_add(struct blkdb *db, struct blkinfo *bi);
+extern bool blkdb_add(struct blkdb *db, struct blkinfo *bi,
+		      struct blkdb_reorg *reorg_info);
 extern void blkdb_locator(struct blkdb *db, struct blkinfo *bi,
 		   struct bp_locator *locator);
 
