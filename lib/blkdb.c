@@ -64,15 +64,13 @@ bool blkdb_init(struct blkdb *db, const unsigned char *netmagic,
 	return true;
 }
 
-static struct blkinfo *blkdb_lookup(struct blkdb *db, const bu256_t *hash)
-{
-	return g_hash_table_lookup(db->blocks, hash);
-}
-
 static bool blkdb_connect(struct blkdb *db, struct blkinfo *bi,
 			  struct blkdb_reorg *reorg_info)
 {
 	memset(reorg_info, 0, sizeof(*reorg_info));
+
+	if (blkdb_lookup(db, &bi->hash))
+		return false;
 
 	bool rc = false;
 	BIGNUM cur_work;

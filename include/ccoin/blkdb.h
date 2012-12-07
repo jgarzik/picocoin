@@ -56,4 +56,9 @@ extern bool blkdb_add(struct blkdb *db, struct blkinfo *bi,
 extern void blkdb_locator(struct blkdb *db, struct blkinfo *bi,
 		   struct bp_locator *locator);
 
+static inline struct blkinfo *blkdb_lookup(struct blkdb *db,const bu256_t *hash)
+{
+	return g_hash_table_lookup(db->blocks, hash);
+}
+
 #endif /* __LIBCCOIN_BLKDB_H__ */
