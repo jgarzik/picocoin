@@ -2,6 +2,8 @@
 libnode.a
 
 brd
+brd.peers
+brd.blocks
 
 picocoin
 picocoin.peers

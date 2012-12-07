@@ -39,6 +39,8 @@ static struct bp_utxo_set uset;
 static int blocks_fd = -1;
 static bool script_verf = false;
 static bool daemon_running = true;
+struct net_child_info global_nci;
+
 
 
 static const char *const_settings[] = {
@@ -1023,6 +1025,8 @@ static void init_log(void)
 			exit(1);
 		}
 	}
+
+	setvbuf(plog, NULL, _IONBF, BUFSIZ);
 }
 
 static void init_blkdb(void)
@@ -1294,6 +1298,7 @@ static void init_peers(struct net_child_info *nci)
 
 static void init_nci(struct net_child_info *nci)
 {
+	memset(nci, 0, sizeof(*nci));
 	nci->read_fd = -1;
 	nci->write_fd = -1;
 	init_peers(nci);
@@ -1321,6 +1326,26 @@ static void run_daemon(struct net_child_info *nci)
 	} while (daemon_running);
 }
 
+static void shutdown_daemon(struct net_child_info *nci)
+{
+	bool rc = peerman_write(nci->peers);
+	fprintf(plog, "net: %s %u/%u peers\n",
+		rc ? "wrote" : "failed to write",
+		g_hash_table_size(nci->peers->map_addr),
+		g_list_length(nci->peers->addrlist));
+
+	if (plog != stdout && plog != stderr) {
+		fclose(plog);
+		plog = NULL;
+	}
+}
+
+static void term_signal(int signo)
+{
+	daemon_running = false;
+	event_base_loopbreak(global_nci.eb);
+}
+
 int main (int argc, char *argv[])
 {
 	settings = g_hash_table_new_full(g_str_hash, g_str_equal,
@@ -1339,10 +1364,20 @@ int main (int argc, char *argv[])
 			return 1;
 	}
 
-	struct net_child_info nci;
+	/*
+	 * properly capture TERM and other signals
+	 */
+	signal(SIGHUP, SIG_IGN);
+	signal(SIGPIPE, SIG_IGN);
+	signal(SIGINT, term_signal);
+	signal(SIGTERM, term_signal);
 
-	init_daemon(&nci);
-	run_daemon(&nci);
+	init_daemon(&global_nci);
+	run_daemon(&global_nci);
+
+	fprintf(plog, "daemon exiting\n");
+
+	shutdown_daemon(&global_nci);
 
 	return 0;
 }
