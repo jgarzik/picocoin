@@ -18,6 +18,9 @@
 #include <ccoin/util.h>
 #include <ccoin/buint.h>
 #include <ccoin/blkdb.h>
+#include <ccoin/message.h>
+#include <ccoin/mbr.h>
+#include <ccoin/script.h>
 #include "brd.h"
 
 GHashTable *settings;
@@ -27,14 +30,17 @@ uint64_t instance_nonce;
 bool debugging = false;
 FILE *plog = NULL;
 
-struct blkdb db;
-int blocks_fd;
+static struct blkdb db;
+static struct bp_utxo_set uset;
+static int blocks_fd = -1;
+static bool script_verf = false;
+
 
 static const char *const_settings[] = {
 	"net.connect.timeout=11",
 	"chain=bitcoin",
 	"peers=brd.peers",
-	"blkdb=brd.blkdb",
+	/* "blkdb=brd.blkdb", */
 	"blocks=brd.blocks",
 	"log=-", /* "log=brd.log", */
 };
@@ -171,6 +177,9 @@ static void init_blkdb(void)
 	}
 
 	char *blkdb_fn = setting("blkdb");
+	if (!blkdb_fn)
+		return;
+
 	if ((access(blkdb_fn, F_OK) == 0) &&
 	    !blkdb_read(&db, blkdb_fn)) {
 		fprintf(plog, "blkdb read failed\n");
@@ -188,6 +197,9 @@ static void init_blkdb(void)
 static void init_blocks(void)
 {
 	char *blocks_fn = setting("blocks");
+	if (!blocks_fn)
+		return;
+
 	blocks_fd = open(blocks_fn, O_RDWR | O_CREAT | O_LARGEFILE, 0666);
 	if (blocks_fd < 0) {
 		fprintf(plog, "blocks file open failed: %s\n", strerror(errno));
@@ -195,12 +207,205 @@ static void init_blocks(void)
 	}
 }
 
+static bool spend_tx(struct bp_utxo_set *uset, const struct bp_tx *tx,
+		     unsigned int tx_idx, unsigned int height)
+{
+	bool is_coinbase = (tx_idx == 0);
+
+	struct bp_utxo *coin;
+
+	int64_t total_in = 0, total_out = 0;
+
+	unsigned int i;
+
+	/* verify and spend this transaction's inputs */
+	if (!is_coinbase) {
+		for (i = 0; i < tx->vin->len; i++) {
+			struct bp_txin *txin;
+			struct bp_txout *txout;
+
+			txin = g_ptr_array_index(tx->vin, i);
+
+			coin = bp_utxo_lookup(uset, &txin->prevout.hash);
+			if (!coin || !coin->vout)
+				return false;
+
+			if (coin->is_coinbase &&
+			    ((coin->height + COINBASE_MATURITY) > height))
+				return false;
+
+			txout = NULL;
+			if (txin->prevout.n >= coin->vout->len)
+				return false;
+			txout = g_ptr_array_index(coin->vout, txin->prevout.n);
+			total_in += txout->nValue;
+
+			if (script_verf &&
+			    !bp_verify_sig(coin, tx, i,
+						/* SCRIPT_VERIFY_P2SH */ 0, 0))
+				return false;
+
+			if (!bp_utxo_spend(uset, &txin->prevout))
+				return false;
+		}
+	}
+
+	for (i = 0; i < tx->vout->len; i++) {
+		struct bp_txout *txout;
+
+		txout = g_ptr_array_index(tx->vout, i);
+		total_out += txout->nValue;
+	}
+
+	if (!is_coinbase) {
+		if (total_out > total_in)
+			return false;
+	}
+
+	/* copy-and-convert a tx into a UTXO */
+	coin = calloc(1, sizeof(*coin));
+	bp_utxo_init(coin);
+
+	if (!bp_utxo_from_tx(coin, tx, is_coinbase, height))
+		return false;
+
+	/* add unspent outputs to set */
+	bp_utxo_set_add(uset, coin);
+
+	return true;
+}
+
+static bool spend_block(struct bp_utxo_set *uset, const struct bp_block *block,
+			unsigned int height)
+{
+	unsigned int i;
+
+	for (i = 0; i < block->vtx->len; i++) {
+		struct bp_tx *tx;
+
+		tx = g_ptr_array_index(block->vtx, i);
+		if (!spend_tx(uset, tx, i, height)) {
+			char hexstr[BU256_STRSZ];
+			bu256_hex(hexstr, &tx->sha256);
+			fprintf(plog, "brd: spent_block tx fail %s\n", hexstr);
+			return false;
+		}
+	}
+
+	return true;
+}
+
+static bool read_block_msg(struct p2p_message *msg, int64_t fpos)
+{
+	/* unknown records are invalid */
+	if (strncmp(msg->hdr.command, "block",
+		    sizeof(msg->hdr.command)))
+		return false;
+
+	bool rc = false;
+
+	struct bp_block block;
+	bp_block_init(&block);
+
+	struct const_buffer buf = { msg->data, msg->hdr.data_len };
+	if (!deser_bp_block(&block, &buf)) {
+		fprintf(plog, "brd: block deser fail\n");
+		goto out;
+	}
+	bp_block_calc_sha256(&block);
+
+	if (!bp_block_valid(&block)) {
+		fprintf(plog, "brd: block not valid\n");
+		goto out;
+	}
+
+	struct blkinfo *bi = bi_new();
+	bu256_copy(&bi->hash, &block.sha256);
+	bp_block_copy_hdr(&bi->hdr, &block);
+	bi->n_file = 0;
+	bi->n_pos = fpos;
+
+	if (!blkdb_add(&db, bi)) {
+		fprintf(plog, "brd: blkdb add fail\n");
+		goto out;
+	}
+
+	/* if best chain, mark TX's as spent */
+	if (bu256_equal(&db.best_chain->hash, &bi->hdr.sha256)) {
+		if (!spend_block(&uset, &block, bi->height)) {
+			char hexstr[BU256_STRSZ];
+			bu256_hex(hexstr, &bi->hdr.sha256);
+			fprintf(plog,
+				"brd: block fail %u %s\n",
+				bi->height, hexstr);
+			goto out;
+		}
+	}
+
+	rc = true;
+
+out:
+	/* TODO: leak bi on err? */
+	bp_block_free(&block);
+	return rc;
+}
+
+static void read_blocks(void)
+{
+	int fd = blocks_fd;
+
+	struct p2p_message msg = {};
+	bool read_ok = true;
+	int64_t fpos = 0;
+	while (fread_message(fd, &msg, &read_ok)) {
+		if (memcmp(msg.hdr.netmagic, chain->netmagic, 4)) {
+			fprintf(plog, "blocks file: invalid network magic\n");
+			exit(1);
+		}
+
+		if (!read_block_msg(&msg, fpos))
+			exit(1);
+
+		fpos += P2P_HDR_SZ;
+		fpos += msg.hdr.data_len;
+	}
+
+	if (!read_ok) {
+		fprintf(plog, "blocks file: read failed\n");
+		exit(1);
+	}
+
+	free(msg.data);
+}
+
+static void readprep_blocks_file(void)
+{
+	/* if no blk index, but blocks are present, read and index
+	 * all block data (several gigabytes)
+	 */
+	if (blocks_fd >= 0) {
+		if (db.fd < 0)
+			read_blocks();
+		else {
+			/* TODO: verify that blocks file offsets are
+			 * present in blkdb */
+
+			if (lseek(blocks_fd, 0, SEEK_END) == (off_t)-1) {
+				fprintf(plog, "blocks file: seek failed: %s\n",
+					strerror(errno));
+				exit(1);
+			}
+		}
+	}
+}
+
 static void init_daemon(void)
 {
 	init_log();
 	init_blkdb();
+	bp_utxo_set_init(&uset);
 	init_blocks();
-	/* TODO: verify that blocks file offsets are present in blkdb */
+	readprep_blocks_file();
 }
 
 int main (int argc, char *argv[])
