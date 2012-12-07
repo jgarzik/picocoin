@@ -3,11 +3,17 @@ INCLUDES	= @GLIB_CFLAGS@ -I$(top_srcdir)/include
 
 bin_PROGRAMS	= brd picocoin
 
+noinst_LIBRARIES= libnode.a
+
+libnode_a_SOURCES=	\
+	peerman.c	\
+	peerman.h
+
 brd_SOURCES=		\
 	brd.c		\
 	brd.h
 
-brd_LDADD	= ../lib/libccoin.a \
+brd_LDADD	= libnode.a ../lib/libccoin.a \
 		  @GLIB_LIBS@ @CRYPTO_LIBS@ @EVENT_LIBS@
 
 picocoin_SOURCES=	\
@@ -15,11 +21,9 @@ picocoin_SOURCES=	\
 	main.c		\
 	net.c		\
 	fakepoll.h	\
-	peerman.c	\
-	peerman.h	\
 	picocoin.h	\
 	wallet.c wallet.h
 
-picocoin_LDADD	= ../lib/libccoin.a \
+picocoin_LDADD	= libnode.a ../lib/libccoin.a \
 		  @GLIB_LIBS@ @CRYPTO_LIBS@ @EVENT_LIBS@ @JANSSON_LIBS@
 

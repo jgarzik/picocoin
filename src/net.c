@@ -1040,7 +1040,7 @@ static void network_child(int read_fd, int write_fd)
 	 * set up libevent dispatch
 	 */
 	struct net_child_info nci = { read_fd, write_fd, peers, &db };
-	nci.conns = g_ptr_array_sized_new(8);
+	nci.conns = g_ptr_array_sized_new(NC_MAX_CONN);
 
 	struct event *pipe_evt;
 
