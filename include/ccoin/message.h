@@ -46,6 +46,37 @@ extern bool deser_msg_addr(unsigned int protover, struct msg_addr *ma,
 extern GString *ser_msg_addr(unsigned int protover, const struct msg_addr *ma);
 extern void msg_addr_free(struct msg_addr *ma);
 
+struct msg_getblocks {
+	struct bp_locator	locator;
+	bu256_t			hash_stop;
+};
+
+static inline void msg_getblocks_init(struct msg_getblocks *gb)
+{
+	memset(gb, 0, sizeof(*gb));
+}
+
+extern bool deser_msg_getblocks(struct msg_getblocks *gb, struct const_buffer *buf);
+extern GString *ser_msg_getblocks(const struct msg_getblocks *gb);
+
+static inline void msg_getblocks_free(struct msg_getblocks *gb)
+{
+	bp_locator_free(&gb->locator);
+}
+
+struct msg_getdata {
+	GPtrArray	*inv;		/* of bp_inv */
+};
+
+static inline void msg_getdata_init(struct msg_getdata *gd)
+{
+	memset(gd, 0, sizeof(*gd));
+}
+
+extern bool deser_msg_getdata(struct msg_getdata *gd, struct const_buffer *buf);
+extern GString *ser_msg_getdata(const struct msg_getdata *gd);
+extern void msg_getdata_free(struct msg_getdata *gd);
+
 struct msg_version {
 	uint32_t	nVersion;
 	uint64_t	nServices;

@@ -70,6 +70,148 @@ GString *message_str(const unsigned char netmagic[4],
 	return s;
 }
 
+bool deser_msg_addr(unsigned int protover, struct msg_addr *ma,
+		    struct const_buffer *buf)
+{
+	memset(ma, 0, sizeof(*ma));
+
+	uint32_t vlen;
+	if (!deser_varlen(&vlen, buf)) return false;
+
+	ma->addrs = g_ptr_array_new_full(vlen, g_free);
+
+	unsigned int i;
+	for (i = 0; i < vlen; i++) {
+		struct bp_address *addr;
+
+		addr = calloc(1, sizeof(*addr));
+		if (!deser_bp_addr(protover, addr, buf)) {
+			free(addr);
+			goto err_out;
+		}
+
+		g_ptr_array_add(ma->addrs, addr);
+	}
+
+	return true;
+
+err_out:
+	msg_addr_free(ma);
+	return false;
+}
+
+GString *ser_msg_addr(unsigned int protover, const struct msg_addr *ma)
+{
+	GString *s = g_string_new(NULL);
+
+	if (!ma || !ma->addrs || !ma->addrs->len) {
+		ser_varlen(s, 0);
+		return s;
+	}
+
+	ser_varlen(s, ma->addrs->len);
+
+	unsigned int i;
+	for (i = 0; i < ma->addrs->len; i++) {
+		struct bp_address *addr;
+
+		addr = g_ptr_array_index(ma->addrs, i);
+
+		ser_bp_addr(s, protover, addr);
+	}
+
+	return s;
+}
+
+void msg_addr_free(struct msg_addr *ma)
+{
+	if (ma->addrs) {
+		g_ptr_array_free(ma->addrs, TRUE);
+		ma->addrs = NULL;
+	}
+}
+
+bool deser_msg_getblocks(struct msg_getblocks *gb, struct const_buffer *buf)
+{
+	if (!deser_bp_locator(&gb->locator, buf)) return false;
+	if (!deser_u256(&gb->hash_stop, buf)) return false;
+	return true;
+}
+
+GString *ser_msg_getblocks(const struct msg_getblocks *gb)
+{
+	unsigned int n_loc = gb->locator.vHave->len;
+	GString *s = g_string_sized_new((n_loc + 2) * sizeof(bu256_t));
+
+	ser_bp_locator(s, &gb->locator);
+	ser_u256(s, &gb->hash_stop);
+	
+	return s;
+}
+
+bool deser_msg_getdata(struct msg_getdata *gd, struct const_buffer *buf)
+{
+	msg_getdata_free(gd);
+
+	uint32_t vlen;
+	if (!deser_varlen(&vlen, buf)) return false;
+
+	gd->inv = g_ptr_array_new_full(vlen, g_free);
+
+	unsigned int i;
+	for (i = 0; i < vlen; i++) {
+		struct bp_inv *inv;
+
+		inv = calloc(1, sizeof(*inv));
+		if (!deser_bp_inv(inv, buf)) {
+			free(inv);
+			goto err_out;
+		}
+
+		g_ptr_array_add(gd->inv, inv);
+	}
+
+	return true;
+
+err_out:
+	msg_getdata_free(gd);
+	return false;
+}
+
+GString *ser_msg_getdata(const struct msg_getdata *gd)
+{
+	GString *s = g_string_new(NULL);
+
+	if (!gd || !gd->inv || !gd->inv->len) {
+		ser_varlen(s, 0);
+		return s;
+	}
+
+	ser_varlen(s, gd->inv->len);
+
+	unsigned int i;
+	for (i = 0; i < gd->inv->len; i++) {
+		struct bp_inv *inv;
+
+		inv = g_ptr_array_index(gd->inv, i);
+
+		ser_bp_inv(s, inv);
+	}
+
+	return s;
+}
+
+void msg_getdata_free(struct msg_getdata *gd)
+{
+	if (!gd)
+		return;
+	
+	if (gd->inv) {
+		g_ptr_array_free(gd->inv, TRUE);
+		gd->inv = NULL;
+	}
+}
+
 bool deser_msg_version(struct msg_version *mv, struct const_buffer *buf)
 {
 	memset(mv, 0, sizeof(*mv));
@@ -109,66 +251,5 @@ GString *ser_msg_version(const struct msg_version *mv)
 	ser_u32(s, mv->nStartingHeight);
 
 	return s;
-}
-
-bool deser_msg_addr(unsigned int protover, struct msg_addr *ma,
-		    struct const_buffer *buf)
-{
-	memset(ma, 0, sizeof(*ma));
-
-	uint32_t vlen;
-	if (!deser_varlen(&vlen, buf)) return false;
-
-	ma->addrs = g_ptr_array_new_full(vlen, g_free);
-
-	unsigned int i;
-	for (i = 0; i < vlen; i++) {
-		struct bp_address *addr;
-
-		addr = calloc(1, sizeof(*addr));
-		if (!deser_bp_addr(protover, addr, buf)) {
-			free(addr);
-			goto err_out;
-		}
-
-		g_ptr_array_add(ma->addrs, addr);
-	}
-
-	return true;
-
-err_out:
-	msg_addr_free(ma);
-	return false;
-}
-
-GString *ser_msg_addr(unsigned int protover, const struct msg_addr *ma)
-{
-	GString *s = g_string_new(NULL);
-
-	if (!ma) {
-		ser_varlen(s, 0);
-		return s;
-	}
-
-	ser_varlen(s, ma->addrs->len);
-
-	unsigned int i;
-	for (i = 0; i < ma->addrs->len; i++) {
-		struct bp_address *addr;
-
-		addr = g_ptr_array_index(ma->addrs, i);
-
-		ser_bp_addr(s, protover, addr);
-	}
-
-	return s;
-}
-
-void msg_addr_free(struct msg_addr *ma)
-{
-	if (ma->addrs) {
-		g_ptr_array_free(ma->addrs, TRUE);
-		ma->addrs = NULL;
-	}
 }
 
