@@ -18,16 +18,7 @@ static void bp_utxo_free_vout(struct bp_utxo *coin)
 	if (!coin || !coin->vout)
 		return;
 
-	unsigned int i;
-	for (i = 0; i < coin->vout->len; i++) {
-		struct bp_txout *txout;
-
-		txout = g_ptr_array_index(coin->vout, i);
-		bp_txout_free(txout);
-	}
-
 	g_ptr_array_free(coin->vout, TRUE);
-
 	coin->vout = NULL;
 }
 
@@ -50,7 +41,7 @@ bool bp_utxo_from_tx(struct bp_utxo *coin, const struct bp_tx *tx,
 	coin->height = height;
 	coin->version = tx->nVersion;
 
-	coin->vout = g_ptr_array_new_full(tx->vout->len, g_free);
+	coin->vout = g_ptr_array_new_full(tx->vout->len, g_bp_txout_free);
 	unsigned int i;
 
 	for (i = 0; i < tx->vout->len; i++) {

@@ -82,7 +82,7 @@ void bp_tx_sighash(bu256_t *hash, const GString *scriptCode,
 	if ((nHashType & 0x1f) == SIGHASH_NONE) {
 		/* Wildcard payee */
 		bp_tx_free_vout(&txTmp);
-		txTmp.vout = g_ptr_array_new_full(1, g_free);
+		txTmp.vout = g_ptr_array_new_full(1, g_bp_txout_free);
 
 		/* Let the others update at will */
 		for (i = 0; i < txTmp.vin->len; i++) {

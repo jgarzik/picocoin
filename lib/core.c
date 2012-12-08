@@ -148,6 +148,18 @@ void bp_txin_free(struct bp_txin *txin)
 	}
 }
 
+void g_bp_txin_free(gpointer data)
+{
+	if (!data)
+		return;
+	
+	struct bp_txin *txin = data;
+	bp_txin_free(txin);
+
+	memset(txin, 0, sizeof(*txin));
+	free(txin);
+}
+
 void bp_txout_init(struct bp_txout *txout)
 {
 	memset(txout, 0, sizeof(*txout));
@@ -177,6 +189,18 @@ void bp_txout_free(struct bp_txout *txout)
 		g_string_free(txout->scriptPubKey, TRUE);
 		txout->scriptPubKey = NULL;
 	}
+}
+
+void g_bp_txout_free(gpointer data)
+{
+	if (!data)
+		return;
+	
+	struct bp_txout *txout = data;
+	bp_txout_free(txout);
+
+	memset(txout, 0, sizeof(*txout));
+	free(txout);
 }
 
 void bp_txout_set_null(struct bp_txout *txout)
@@ -210,8 +234,8 @@ bool deser_bp_tx(struct bp_tx *tx, struct const_buffer *buf)
 {
 	bp_tx_free(tx);
 
-	tx->vin = g_ptr_array_new_full(8, g_free);
-	tx->vout = g_ptr_array_new_full(8, g_free);
+	tx->vin = g_ptr_array_new_full(8, g_bp_txin_free);
+	tx->vout = g_ptr_array_new_full(8, g_bp_txout_free);
 
 	if (!deser_u32(&tx->nVersion, buf)) return false;
 
@@ -290,16 +314,7 @@ void bp_tx_free_vout(struct bp_tx *tx)
 	if (!tx || !tx->vout)
 		return;
 
-	unsigned int i;
-	for (i = 0; i < tx->vout->len; i++) {
-		struct bp_txout *txout;
-
-		txout = g_ptr_array_index(tx->vout, i);
-		bp_txout_free(txout);
-	}
-
 	g_ptr_array_free(tx->vout, TRUE);
-
 	tx->vout = NULL;
 }
 
@@ -308,18 +323,8 @@ void bp_tx_free(struct bp_tx *tx)
 	if (!tx)
 		return;
 
-	unsigned int i;
-
 	if (tx->vin) {
-		for (i = 0; i < tx->vin->len; i++) {
-			struct bp_txin *txin;
-
-			txin = g_ptr_array_index(tx->vin, i);
-			bp_txin_free(txin);
-		}
-
 		g_ptr_array_free(tx->vin, TRUE);
-
 		tx->vin = NULL;
 	}
 

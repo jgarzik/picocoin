@@ -103,6 +103,7 @@ extern void bp_txin_init(struct bp_txin *txin);
 extern bool deser_bp_txin(struct bp_txin *txin, struct const_buffer *buf);
 extern void ser_bp_txin(GString *s, const struct bp_txin *txin);
 extern void bp_txin_free(struct bp_txin *txin);
+extern void g_bp_txin_free(gpointer data);
 static inline bool bp_txin_valid(const struct bp_txin *txin) { return true; }
 
 struct bp_txout {
@@ -114,6 +115,7 @@ extern void bp_txout_init(struct bp_txout *txout);
 extern bool deser_bp_txout(struct bp_txout *txout, struct const_buffer *buf);
 extern void ser_bp_txout(GString *s, const struct bp_txout *txout);
 extern void bp_txout_free(struct bp_txout *txout);
+extern void g_bp_txout_free(gpointer data);
 extern void bp_txout_set_null(struct bp_txout *txout);
 extern void bp_txout_copy(struct bp_txout *dest, const struct bp_txout *src);
 
