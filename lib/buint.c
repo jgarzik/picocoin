@@ -131,3 +131,8 @@ void bu256_free(bu256_t *v)
 	free(v);
 }
 
+void g_bu256_free(gpointer data)
+{
+	bu256_free(data);
+}
+

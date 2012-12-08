@@ -62,7 +62,8 @@ struct msg_getblocks {
 
 static inline void msg_getblocks_init(struct msg_getblocks *gb)
 {
-	memset(gb, 0, sizeof(*gb));
+	bp_locator_init(&gb->locator);
+	bu256_zero(&gb->hash_stop);
 }
 
 extern bool deser_msg_getblocks(struct msg_getblocks *gb, struct const_buffer *buf);

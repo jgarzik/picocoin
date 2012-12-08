@@ -46,6 +46,7 @@ extern void bu256_swap_dwords(bu256_t *v);
 extern guint g_bu256_hash(gconstpointer key_);
 extern gboolean g_bu256_equal(gconstpointer a_, gconstpointer b_);
 extern void bu256_free(bu256_t *v);
+extern void g_bu256_free(gpointer data);
 
 static inline bool bu256_is_zero(const bu256_t *v)
 {

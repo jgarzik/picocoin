@@ -62,7 +62,11 @@ struct bp_locator {
 	GPtrArray	*vHave;		/* of bu256_t */
 };
 
-extern void bp_locator_init(struct bp_locator *locator);
+static inline void bp_locator_init(struct bp_locator *locator)
+{
+	memset(locator, 0, sizeof(*locator));
+}
+
 extern bool deser_bp_locator(struct bp_locator *locator, struct const_buffer *buf);
 extern void ser_bp_locator(GString *s, const struct bp_locator *locator);
 extern void bp_locator_free(struct bp_locator *locator);

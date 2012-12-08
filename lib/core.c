@@ -55,60 +55,20 @@ void ser_bp_inv(GString *s, const struct bp_inv *inv)
 	ser_u256(s, &inv->hash);
 }
 
-void bp_locator_init(struct bp_locator *locator)
-{
-	memset(locator, 0, sizeof(*locator));
-}
-
 bool deser_bp_locator(struct bp_locator *locator, struct const_buffer *buf)
 {
 	bp_locator_free(locator);
 
-	locator->vHave = g_ptr_array_new_full(16, (GDestroyNotify) bu256_free);
-
 	if (!deser_u32(&locator->nVersion, buf)) return false;
-
-	uint32_t vlen;
-	if (!deser_varlen(&vlen, buf)) return false;
-
-	unsigned int i;
-	for (i = 0; i < vlen; i++) {
-		bu256_t *n;
-
-		n = bu256_new(NULL);
-		if (!deser_u256(n, buf)) {
-			bu256_free(n);
-			goto err_out;
-		}
-
-		g_ptr_array_add(locator->vHave, n);
-	}
+	if (!deser_u256_array(&locator->vHave, buf)) return false;
 
 	return true;
-
-err_out:
-	bp_locator_free(locator);
-	return false;
 }
 
 void ser_bp_locator(GString *s, const struct bp_locator *locator)
 {
 	ser_u32(s, locator->nVersion);
-
-	if (!locator->vHave || !locator->vHave->len) {
-		ser_varlen(s, 0);
-		return;
-	}
-
-	ser_varlen(s, locator->vHave->len);
-
-	unsigned int i;
-	for (i = 0; i < locator->vHave->len; i++) {
-		bu256_t *n;
-
-		n = g_ptr_array_index(locator->vHave, i);
-		ser_u256(s, n);
-	}
+	ser_u256_array(s, locator->vHave);
 }
 
 void bp_locator_free(struct bp_locator *locator)
@@ -126,8 +86,7 @@ void bp_locator_push(struct bp_locator *locator, const bu256_t *hash_in)
 {
 	/* TODO: replace '16' with number based on real world usage */
 	if (!locator->vHave)
-		locator->vHave = g_ptr_array_new_full(16,
-						(GDestroyNotify) bu256_free);
+		locator->vHave = g_ptr_array_new_full(16, g_bu256_free);
 
 	bu256_t *hash = bu256_new(hash_in);
 	g_ptr_array_add(locator->vHave, hash);

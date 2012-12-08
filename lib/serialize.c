@@ -78,6 +78,21 @@ void ser_varstr(GString *s, GString *s_in)
 	ser_bytes(s, s_in->str, s_in->len);
 }
 
+void ser_u256_array(GString *s, GPtrArray *arr)
+{
+	unsigned int arr_len = arr ? arr->len : 0;
+
+	ser_varlen(s, arr_len);
+
+	unsigned int i;
+	for (i = 0; i < arr_len; i++) {
+		bu256_t *av;
+
+		av = g_ptr_array_index(arr, i);
+		ser_u256(s, av);
+	}
+}
+
 bool deser_skip(struct const_buffer *buf, size_t len)
 {
 	if (buf->len < len)
@@ -209,6 +224,45 @@ bool deser_varstr(GString **so, struct const_buffer *buf)
 	*so = s;
 
 	return true;
+}
+
+bool deser_u256_array(GPtrArray **ao, struct const_buffer *buf)
+{
+	GPtrArray *arr = *ao;
+	if (arr) {
+		g_ptr_array_free(arr, TRUE);
+		*ao = arr = NULL;
+	}
+
+	uint32_t vlen;
+	if (!deser_varlen(&vlen, buf)) return false;
+
+	if (!vlen)
+		return true;
+
+	arr = g_ptr_array_new_full(vlen, g_bu256_free);
+	if (!arr)
+		return false;
+
+	unsigned int i;
+	for (i = 0; i < vlen; i++) {
+		bu256_t *n;
+
+		n = bu256_new(NULL);
+		if (!deser_u256(n, buf)) {
+			bu256_free(n);
+			goto err_out;
+		}
+
+		g_ptr_array_add(arr, n);
+	}
+
+	*ao = arr;
+	return true;
+
+err_out:
+	g_ptr_array_free(arr, TRUE);
+	return false;
 }
 
 void u256_from_compact(BIGNUM *vo, uint32_t c)

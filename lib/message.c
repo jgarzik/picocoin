@@ -133,6 +133,8 @@ void msg_addr_free(struct msg_addr *ma)
 
 bool deser_msg_getblocks(struct msg_getblocks *gb, struct const_buffer *buf)
 {
+	msg_getblocks_free(gb);
+
 	if (!deser_bp_locator(&gb->locator, buf)) return false;
 	if (!deser_u256(&gb->hash_stop, buf)) return false;
 	return true;
@@ -140,8 +142,7 @@ bool deser_msg_getblocks(struct msg_getblocks *gb, struct const_buffer *buf)
 
 GString *ser_msg_getblocks(const struct msg_getblocks *gb)
 {
-	unsigned int n_loc = gb->locator.vHave->len;
-	GString *s = g_string_sized_new((n_loc + 2) * sizeof(bu256_t));
+	GString *s = g_string_sized_new(256);
 
 	ser_bp_locator(s, &gb->locator);
 	ser_u256(s, &gb->hash_stop);
