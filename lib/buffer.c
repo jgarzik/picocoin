@@ -10,14 +10,14 @@
 #include <ccoin/util.h>
 #include <ccoin/buffer.h>
 
-guint buffer_hash(gconstpointer key_)
+guint g_buffer_hash(gconstpointer key_)
 {
 	const struct buffer *buf = key_;
 
 	return djb2_hash(0x1721, buf->p, buf->len);
 }
 
-gboolean buffer_equal(gconstpointer a_, gconstpointer b_)
+gboolean g_buffer_equal(gconstpointer a_, gconstpointer b_)
 {
 	const struct buffer *a = a_;
 	const struct buffer *b = b_;
@@ -34,6 +34,11 @@ void buffer_free(struct buffer *buf)
 
 	free(buf->p);
 	free(buf);
+}
+
+void g_buffer_free(gpointer data)
+{
+	buffer_free(data);
 }
 
 struct buffer *buffer_copy(const void *data, size_t data_len)

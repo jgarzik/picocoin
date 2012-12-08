@@ -356,8 +356,7 @@ static bool bp_script_eval(GPtrArray *stack, const GString *script,
 	struct bscript_op op;
 	bool rc = false;
 	GByteArray *vfExec = g_byte_array_new();
-	GPtrArray *altstack = g_ptr_array_new_with_free_func(
-						(GDestroyNotify) buffer_free);
+	GPtrArray *altstack = g_ptr_array_new_with_free_func(g_buffer_free);
 	BIGNUM bn;
 	BN_init(&bn);
 
@@ -1062,8 +1061,7 @@ bool bp_script_verify(const GString *scriptSig, const GString *scriptPubKey,
 		      unsigned int flags, int nHashType)
 {
 	bool rc = false;
-	GPtrArray *stack = g_ptr_array_new_with_free_func(
-						(GDestroyNotify) buffer_free);
+	GPtrArray *stack = g_ptr_array_new_with_free_func(g_buffer_free);
 	GString *pubkey2 = NULL;
 	GPtrArray *stackCopy = NULL;
 
@@ -1071,8 +1069,7 @@ bool bp_script_verify(const GString *scriptSig, const GString *scriptPubKey,
 		goto out;
 
 	if (flags & SCRIPT_VERIFY_P2SH) {
-		stackCopy = g_ptr_array_new_full(stack->len,
-						(GDestroyNotify) buffer_free);
+		stackCopy = g_ptr_array_new_full(stack->len, g_buffer_free);
 		stack_copy(stackCopy, stack);
 	}
 

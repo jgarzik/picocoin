@@ -219,11 +219,11 @@ void bsp_addr_free(struct bscript_addr *addrs)
 		return;
 
 	if (addrs->pub) {
-		g_list_free_full(addrs->pub, (GDestroyNotify) buffer_free);
+		g_list_free_full(addrs->pub, g_buffer_free);
 		addrs->pub = NULL;
 	}
 	if (addrs->pubhash) {
-		g_list_free_full(addrs->pubhash, (GDestroyNotify) buffer_free);
+		g_list_free_full(addrs->pubhash, g_buffer_free);
 		addrs->pubhash = NULL;
 	}
 }

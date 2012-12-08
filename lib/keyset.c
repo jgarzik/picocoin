@@ -15,10 +15,10 @@ void bpks_init(struct bp_keyset *ks)
 {
 	memset(ks, 0, sizeof(*ks));
 
-	ks->pub = g_hash_table_new_full(buffer_hash, buffer_equal,
-					(GDestroyNotify) buffer_free, NULL);
-	ks->pubhash = g_hash_table_new_full(buffer_hash, buffer_equal,
-					(GDestroyNotify) buffer_free, NULL);
+	ks->pub = g_hash_table_new_full(g_buffer_hash, g_buffer_equal,
+					g_buffer_free, NULL);
+	ks->pubhash = g_hash_table_new_full(g_buffer_hash, g_buffer_equal,
+					    g_buffer_free, NULL);
 }
 
 bool bpks_add(struct bp_keyset *ks, struct bp_key *key)
