@@ -91,7 +91,7 @@ static inline bu256_t *bu256_new(const bu256_t *init_val)
 	bu256_t *v;
 
 	if (init_val) {
-		bu256_t *v = malloc(sizeof(bu256_t));
+		v = malloc(sizeof(bu256_t));
 		bu256_copy(v, init_val);
 	} else
 		v = calloc(1, sizeof(bu256_t));
