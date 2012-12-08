@@ -4,6 +4,7 @@
  */
 #include "picocoin-config.h"
 
+#include <assert.h>
 #include <ccoin/script.h>
 #include <ccoin/serialize.h>
 #include <ccoin/util.h>
@@ -36,12 +37,6 @@ bool bsp_getop(struct bscript_op *op, struct bscript_parser *bp)
 		goto err_out;
 	op->op = opcode;
 
-	if (!is_bsp_pushdata(opcode)) {
-		op->data.p = NULL;
-		op->data.len = 0;
-		return true;
-	}
-
 	uint32_t data_len;
 
 	if (opcode < OP_PUSHDATA1)
@@ -64,6 +59,11 @@ bool bsp_getop(struct bscript_op *op, struct bscript_parser *bp)
 		if (!deser_u32(&v32, bp->buf))
 			goto err_out;
 		data_len = v32;
+	} else {
+		assert(!is_bsp_pushdata(opcode));
+		op->data.p = NULL;
+		op->data.len = 0;
+		return true;
 	}
 
 	op->data.p = bp->buf->p;

@@ -196,7 +196,6 @@ struct bscript_parser {
 struct bscript_op {
 	enum opcodetype		op;		/* opcode found */
 	struct const_buffer	data;		/* associated data, if any */
-
 };
 
 struct bscript_addr {
