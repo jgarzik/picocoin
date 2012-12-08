@@ -38,10 +38,23 @@ void buffer_free(struct buffer *buf)
 
 struct buffer *buffer_copy(const void *data, size_t data_len)
 {
-	struct buffer *buf = calloc(1, sizeof(struct buffer));
-	buf->p = g_memdup(data, data_len);
+	struct buffer *buf;
+	buf = malloc(sizeof(*buf));
+	if (!buf)
+		goto err_out;
+
+	buf->p = malloc(data_len);
+	if (!buf->p)
+		goto err_out_free;
+
+	memcpy(buf->p, data, data_len);
 	buf->len = data_len;
 
 	return buf;
+
+err_out_free:
+	free(buf);
+err_out:
+	return NULL;
 }
 
