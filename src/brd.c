@@ -58,7 +58,6 @@ struct net_child_info {
 	int			write_fd;
 
 	struct peer_manager	*peers;
-	struct blkdb		*db;
 
 	GPtrArray		*conns;
 	struct event_base	*eb;
@@ -806,9 +805,7 @@ static GString *nc_version_build(struct nc_conn *conn)
 	mv.nTime = (int64_t) time(NULL);
 	mv.nonce = instance_nonce;
 	sprintf(mv.strSubVer, "/brd:%s/", VERSION);
-	mv.nStartingHeight =
-		conn->nci->db->best_chain ?
-			conn->nci->db->best_chain->height : 0;
+	mv.nStartingHeight = db.best_chain ? db.best_chain->height : 0;
 
 	GString *rs = ser_msg_version(&mv);
 
@@ -937,7 +934,7 @@ err_out:
 	nc_conn_kill(conn);
 }
 
-static void nc_conns_gc(struct net_child_info *nci)
+static void nc_conns_gc(struct net_child_info *nci, bool free_all)
 {
 	GList *dead = NULL;
 	unsigned int n_gc = 0;
@@ -946,7 +943,7 @@ static void nc_conns_gc(struct net_child_info *nci)
 	unsigned int i;
 	for (i = 0; i < nci->conns->len; i++) {
 		struct nc_conn *conn = g_ptr_array_index(nci->conns, i);
-		if (conn->dead)
+		if (free_all || conn->dead)
 			dead = g_list_prepend(dead, conn);
 	}
 
@@ -1040,7 +1037,7 @@ err_loop:
 
 static void nc_conns_process(struct net_child_info *nci)
 {
-	nc_conns_gc(nci);
+	nc_conns_gc(nci, false);
 	nc_conns_open(nci);
 }
 
@@ -1448,7 +1445,6 @@ static void init_nci(struct net_child_info *nci)
 	nci->read_fd = -1;
 	nci->write_fd = -1;
 	init_peers(nci);
-	nci->db = &db;
 	nci->conns = g_ptr_array_sized_new(NC_MAX_CONN);
 	nci->eb = event_base_new();
 }
@@ -1473,6 +1469,15 @@ static void run_daemon(struct net_child_info *nci)
 	} while (daemon_running);
 }
 
+static void shutdown_nci(struct net_child_info *nci)
+{
+	peerman_free(nci->peers);
+	nc_conns_gc(nci, true);
+	assert(nci->conns->len == 0);
+	g_ptr_array_free(nci->conns, TRUE);
+	event_base_free(nci->eb);
+}
+
 static void shutdown_daemon(struct net_child_info *nci)
 {
 	bool rc = peerman_write(nci->peers);
@@ -1484,6 +1489,14 @@ static void shutdown_daemon(struct net_child_info *nci)
 	if (plog != stdout && plog != stderr) {
 		fclose(plog);
 		plog = NULL;
+	}
+
+	if (setting("free")) {
+		shutdown_nci(nci);
+		g_hash_table_unref(orphans);
+		g_hash_table_unref(settings);
+		blkdb_free(&db);
+		bp_utxo_set_free(&uset);
 	}
 }
 
