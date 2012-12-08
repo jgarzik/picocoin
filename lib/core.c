@@ -160,6 +160,20 @@ void g_bp_txin_free(gpointer data)
 	free(txin);
 }
 
+void bp_txin_copy(struct bp_txin *dest, const struct bp_txin *src)
+{
+	bp_outpt_copy(&dest->prevout, &src->prevout);
+	dest->nSequence = src->nSequence;
+
+	if (!src->scriptSig)
+		dest->scriptSig = NULL;
+	else {
+		dest->scriptSig = g_string_sized_new(src->scriptSig->len);
+		g_string_append_len(dest->scriptSig,
+				    src->scriptSig->str, src->scriptSig->len);
+	}
+}
+
 void bp_txout_init(struct bp_txout *txout)
 {
 	memset(txout, 0, sizeof(*txout));
@@ -213,16 +227,16 @@ void bp_txout_set_null(struct bp_txout *txout)
 
 void bp_txout_copy(struct bp_txout *dest, const struct bp_txout *src)
 {
-	bp_txout_free(dest);
-
 	dest->nValue = src->nValue;
-	if (src->scriptPubKey) {
+
+	if (!src->scriptPubKey)
+		dest->scriptPubKey = NULL;
+	else {
 		dest->scriptPubKey = g_string_sized_new(src->scriptPubKey->len);
 		g_string_append_len(dest->scriptPubKey,
 				    src->scriptPubKey->str,
 				    src->scriptPubKey->len);
-	} else
-		dest->scriptPubKey = g_string_new("");
+	}
 }
 
 void bp_tx_init(struct bp_tx *tx)
@@ -367,15 +381,45 @@ unsigned int bp_tx_ser_size(const struct bp_tx *tx)
 
 void bp_tx_copy(struct bp_tx *dest, const struct bp_tx *src)
 {
-	bp_tx_free(dest);
+	dest->nVersion = src->nVersion;
+	dest->nLockTime = src->nLockTime;
+	dest->sha256_valid = src->sha256_valid;
+	bu256_copy(&dest->sha256, &src->sha256);
 
-	GString *s = g_string_sized_new(512);
-	ser_bp_tx(s, src);
+	if (!src->vin)
+		dest->vin = NULL;
+	else {
+		unsigned int i;
 
-	struct const_buffer buf = { s->str, s->len };
-	deser_bp_tx(dest, &buf);
+		dest->vin = g_ptr_array_new_full(src->vin->len, g_bp_txin_free);
 
-	g_string_free(s, TRUE);
+		for (i = 0; i < src->vin->len; i++) {
+			struct bp_txin *txin_old, *txin_new;
+
+			txin_old = g_ptr_array_index(src->vin, i);
+			txin_new = malloc(sizeof(*txin_new));
+			bp_txin_copy(txin_new, txin_old);
+			g_ptr_array_add(dest->vin, txin_new);
+		}
+	}
+
+	if (!src->vout)
+		dest->vout = NULL;
+	else {
+		unsigned int i;
+
+		dest->vout = g_ptr_array_new_full(src->vout->len,
+						  g_bp_txout_free);
+
+		for (i = 0; i < src->vout->len; i++) {
+			struct bp_txout *txout_old, *txout_new;
+
+			txout_old = g_ptr_array_index(src->vout, i);
+			txout_new = malloc(sizeof(*txout_new));
+			bp_txout_copy(txout_new, txout_old);
+			g_ptr_array_add(dest->vout, txout_new);
+		}
+	}
 }
 
 void bp_block_init(struct bp_block *block)

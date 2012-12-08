@@ -93,6 +93,12 @@ static inline bool bp_outpt_equal(const struct bp_outpt *a,
 	return (a->n == b->n) && bu256_equal(&a->hash, &b->hash);
 }
 
+static inline void bp_outpt_copy(struct bp_outpt *dest,
+				 const struct bp_outpt *src)
+{
+	memcpy(dest, src, sizeof(*dest));
+}
+
 struct bp_txin {
 	struct bp_outpt	prevout;
 	GString		*scriptSig;
@@ -105,6 +111,7 @@ extern void ser_bp_txin(GString *s, const struct bp_txin *txin);
 extern void bp_txin_free(struct bp_txin *txin);
 extern void g_bp_txin_free(gpointer data);
 static inline bool bp_txin_valid(const struct bp_txin *txin) { return true; }
+extern void bp_txin_copy(struct bp_txin *dest, const struct bp_txin *src);
 
 struct bp_txout {
 	int64_t		nValue;

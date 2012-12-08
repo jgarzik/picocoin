@@ -48,7 +48,7 @@ bool bp_utxo_from_tx(struct bp_utxo *coin, const struct bp_tx *tx,
 		struct bp_txout *old_out, *new_out;
 
 		old_out = g_ptr_array_index(tx->vout, i);
-		new_out = calloc(1, sizeof(*new_out));
+		new_out = malloc(sizeof(*new_out));
 		bp_txout_copy(new_out, old_out);
 		g_ptr_array_add(coin->vout, new_out);
 	}
