@@ -6,6 +6,7 @@ Checklist: https://en.bitcoin.it/wiki/Protocol_rules
 - subsidy.
 - median time.
 - reorg.
-
-- peerman: filter out localhost/invalid/test addresses
+- TX_SCRIPTHASH
+- TX_MULTISIG
+- peerman: fix bn_group()
 
