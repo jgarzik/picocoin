@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <openssl/bn.h>
+#include <glib.h>
 
 enum {
 	BU160_WORDS	= (160 / 32),

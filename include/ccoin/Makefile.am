@@ -7,6 +7,7 @@ EXTRA_DIST = \
 	bloom.h		\
 	buffer.h	\
 	buint.h		\
+	checkpoints.h	\
 	compat.h	\
 	coredefs.h	\
 	core.h		\

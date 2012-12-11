@@ -13,6 +13,7 @@ libccoin_a_SOURCES=	\
 	bloom.c		\
 	buffer.c	\
 	buint.c		\
+	checkpoints.c	\
 	core.c		\
 	coredefs.c	\
 	dns.c		\
