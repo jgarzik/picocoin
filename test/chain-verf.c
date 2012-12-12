@@ -14,12 +14,15 @@
 #include <ccoin/blkdb.h>
 #include <ccoin/script.h>
 #include <ccoin/util.h>
+#include <ccoin/checkpoints.h>
 #include "libtest.h"
 
-static bool script_verf = true;
+static bool no_script_verf = false;
+static bool force_script_verf = false;
 
 static bool spend_tx(struct bp_utxo_set *uset, const struct bp_tx *tx,
-		     unsigned int tx_idx, unsigned int height)
+		     unsigned int tx_idx, unsigned int height,
+		     unsigned int ckpt_height)
 {
 	assert(tx->sha256_valid == true);
 
@@ -53,7 +56,17 @@ static bool spend_tx(struct bp_utxo_set *uset, const struct bp_tx *tx,
 			txout = g_ptr_array_index(coin->vout, txin->prevout.n);
 			total_in += txout->nValue;
 
-			if (script_verf &&
+			bool check_script;
+			if (force_script_verf)
+				check_script = true;
+			else if (no_script_verf)
+				check_script = false;
+			else if (height < ckpt_height)
+				check_script = false;
+			else
+				check_script = true;
+
+			if (check_script &&
 			    !bp_verify_sig(coin, tx, i,
 						/* SCRIPT_VERIFY_P2SH */ 0, 0))
 				return false;
@@ -88,18 +101,18 @@ static bool spend_tx(struct bp_utxo_set *uset, const struct bp_tx *tx,
 }
 
 static bool spend_block(struct bp_utxo_set *uset, const struct bp_block *block,
-			unsigned int height)
+			unsigned int height, unsigned int ckpt_height)
 {
 	unsigned int i;
 
-	if (height % 10000 == 0)
+	if (height % 5000 == 0)
 		fprintf(stderr, "chain-verf: spend block @ %u\n", height);
 
 	for (i = 0; i < block->vtx->len; i++) {
 		struct bp_tx *tx;
 
 		tx = g_ptr_array_index(block->vtx, i);
-		if (!spend_tx(uset, tx, i, height)) {
+		if (!spend_tx(uset, tx, i, height, ckpt_height)) {
 			char hexstr[BU256_STRSZ];
 			bu256_hex(hexstr, &tx->sha256);
 			fprintf(stderr,
@@ -112,7 +125,8 @@ static bool spend_block(struct bp_utxo_set *uset, const struct bp_block *block,
 }
 
 static void read_test_msg(struct blkdb *db, struct bp_utxo_set *uset,
-			  const struct p2p_message *msg, int64_t fpos)
+			  const struct p2p_message *msg, int64_t fpos,
+			  unsigned int ckpt_height)
 {
 	assert(strncmp(msg->hdr.command, "block",
 		       sizeof(msg->hdr.command)) == 0);
@@ -141,7 +155,7 @@ static void read_test_msg(struct blkdb *db, struct bp_utxo_set *uset,
 
 	/* if best chain, mark TX's as spent */
 	if (bu256_equal(&db->best_chain->hash, &bi->hdr.sha256)) {
-		if (!spend_block(uset, &block, bi->height)) {
+		if (!spend_block(uset, &block, bi->height, ckpt_height)) {
 			char hexstr[BU256_STRSZ];
 			bu256_hex(hexstr, &bi->hdr.sha256);
 			fprintf(stderr,
@@ -156,8 +170,10 @@ static void read_test_msg(struct blkdb *db, struct bp_utxo_set *uset,
 
 static void runtest(bool use_testnet, const char *blocks_fn)
 {
-	const struct chain_info *chain =
-		&chain_metadata[use_testnet ? CHAIN_TESTNET3 : CHAIN_BITCOIN];
+	enum chains chain_id = use_testnet ? CHAIN_TESTNET3 : CHAIN_BITCOIN;
+	const struct chain_info *chain = &chain_metadata[chain_id];
+
+	unsigned int ckpt_height = bp_ckpt_last(chain_id);
 
 	struct blkdb blkdb;
 	bu256_t blk0;
@@ -171,7 +187,8 @@ static void runtest(bool use_testnet, const char *blocks_fn)
 	fprintf(stderr, "chain-verf: validating %s chainfile %s (%cscript)\n",
 		use_testnet ? "testnet3" : "mainnet",
 		blocks_fn,
-		script_verf ? '+' : '-');
+		force_script_verf ? '+' :
+		  no_script_verf ? '-' : '*');
 
 	int fd = file_seq_open(blocks_fn);
 	if (fd < 0) {
@@ -186,7 +203,7 @@ static void runtest(bool use_testnet, const char *blocks_fn)
 	while (fread_message(fd, &msg, &read_ok)) {
 		assert(memcmp(msg.hdr.netmagic, chain->netmagic, 4) == 0);
 
-		read_test_msg(&blkdb, &uset, &msg, fpos);
+		read_test_msg(&blkdb, &uset, &msg, fpos, ckpt_height);
 
 		fpos += P2P_HDR_SZ;
 		fpos += msg.hdr.data_len;
@@ -210,7 +227,11 @@ int main (int argc, char *argv[])
 	unsigned int verfd = 0;
 
 	if (getenv("NO_SCRIPT_VERF"))
-		script_verf = false;
+		no_script_verf = true;
+	if (getenv("FORCE_SCRIPT_VERF")) {
+		no_script_verf = false;
+		force_script_verf = true;
+	}
 
 	fn = getenv("TEST_TESTNET3_VERF");
 	if (fn) {
@@ -230,7 +251,8 @@ int main (int argc, char *argv[])
 	"chain-verf: Set TEST_TESTNET3_VERF and/or TEST_MAINNET_VERF to a\n"
 	"chain-verf: valid pynode blocks.dat file, to enable.\n"
 	"chain-verf: (a linear sequence of P2P \"block\" messages)\n"
-	"chain-verf: Set NO_SCRIPT_VERF to disable script verification\n"
+	"chain-verf: NO_SCRIPT_VERF=1 to disable script verification\n"
+	"chain-verf: FORCE_SCRIPT_VERF=1 to verify all scripts, even checkpointed\n"
 			);
 		return 77;
 	}
