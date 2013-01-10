@@ -11,6 +11,7 @@
 #include <openssl/bn.h>
 #include <ccoin/serialize.h>
 #include <ccoin/util.h>
+#include <ccoin/compat.h>
 
 void ser_bytes(GString *s, const void *p, size_t len)
 {
