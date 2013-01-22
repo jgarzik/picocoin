@@ -26,6 +26,8 @@ AC_CONFIG_HEADERS([picocoin-config.h])
 dnl Make sure anyone changing configure.ac/Makefile.am has a clue
 AM_MAINTAINER_MODE
 
+AC_CANONICAL_HOST
+
 dnl Checks for programs
 AC_PROG_CC
 AC_PROG_RANLIB
@@ -47,6 +49,16 @@ AH_VERBATIM([_LARGEFILE64_SOURCE],
 #ifndef _LARGEFILE64_SOURCE
 # define _LARGEFILE64_SOURCE 1
 #endif])
+
+case "${host}" in
+	*-*-darwin*)
+		AH_VERBATIM([O_LARGEFILE],
+		[/* OSX naturally supports 64-bit files */
+		#ifndef O_LARGEFILE
+		# define O_LARGEFILE 0
+		#endif])
+		;;
+esac
 
 dnl -----------------------------
 dnl Checks for required libraries
