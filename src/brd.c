@@ -1292,6 +1292,45 @@ static bool spend_block(struct bp_utxo_set *uset, const struct bp_block *block,
 	return true;
 }
 
+static bool process_block(const struct bp_block *block, int64_t fpos)
+{
+	struct blkinfo *bi = bi_new();
+	bu256_copy(&bi->hash, &block->sha256);
+	bp_block_copy_hdr(&bi->hdr, block);
+	bi->n_file = 0;
+	bi->n_pos = fpos;
+
+	struct blkdb_reorg reorg;
+
+	if (!blkdb_add(&db, bi, &reorg)) {
+		fprintf(plog, "brd: blkdb add fail\n");
+		goto err_out;
+	}
+
+	/* FIXME: support reorg */
+	assert(reorg.conn == 1);
+	assert(reorg.disconn == 0);
+
+	/* if best chain, mark TX's as spent */
+	if (bu256_equal(&db.best_chain->hash, &bi->hdr.sha256)) {
+		if (!spend_block(&uset, block, bi->height)) {
+			char hexstr[BU256_STRSZ];
+			bu256_hex(hexstr, &bi->hdr.sha256);
+			fprintf(plog,
+				"brd: block spend fail %u %s\n",
+				bi->height, hexstr);
+			/* FIXME: bad record is now in blkdb */
+			goto err_out;
+		}
+	}
+
+	return true;
+
+err_out:
+	bi_free(bi);
+	return false;
+}
+
 static bool read_block_msg(struct p2p_message *msg, int64_t fpos)
 {
 	/* unknown records are invalid */
@@ -1316,38 +1355,9 @@ static bool read_block_msg(struct p2p_message *msg, int64_t fpos)
 		goto out;
 	}
 
-	struct blkinfo *bi = bi_new();
-	bu256_copy(&bi->hash, &block.sha256);
-	bp_block_copy_hdr(&bi->hdr, &block);
-	bi->n_file = 0;
-	bi->n_pos = fpos;
-
-	struct blkdb_reorg reorg;
-
-	if (!blkdb_add(&db, bi, &reorg)) {
-		fprintf(plog, "brd: blkdb add fail\n");
-		goto out;
-	}
-
-	assert(reorg.conn == 1);
-	assert(reorg.disconn == 0);
-
-	/* if best chain, mark TX's as spent */
-	if (bu256_equal(&db.best_chain->hash, &bi->hdr.sha256)) {
-		if (!spend_block(&uset, &block, bi->height)) {
-			char hexstr[BU256_STRSZ];
-			bu256_hex(hexstr, &bi->hdr.sha256);
-			fprintf(plog,
-				"brd: block fail %u %s\n",
-				bi->height, hexstr);
-			goto out;
-		}
-	}
-
-	rc = true;
+	rc = process_block(&block, fpos);
 
 out:
-	/* TODO: leak bi on err? */
 	bp_block_free(&block);
 	return rc;
 }
