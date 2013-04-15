@@ -9,6 +9,7 @@
 #include <ccoin/buint.h>
 #include <ccoin/hexcode.h>
 #include <ccoin/key.h>
+#include <ccoin/address.h>
 #include <ccoin/addr_match.h>
 #include "libtest.h"
 
@@ -20,15 +21,42 @@ static void load_json_key(json_t *wallet, struct bp_key *key)
 	json_t *key_o = json_array_get(keys_a, 0);
 	assert(json_is_object(key_o));
 
+	const char *address_str = json_string_value(json_object_get(key_o, "address"));
+	assert(address_str != NULL);
+
+	const char *pubkey_str = json_string_value(json_object_get(key_o, "pubkey"));
+	assert(pubkey_str != NULL);
+
 	const char *privkey_str = json_string_value(json_object_get(key_o, "privkey"));
 	assert(privkey_str != NULL);
 
 	char rawbuf[strlen(privkey_str)];
 	size_t buf_len = 0;
 
+	/* decode privkey */
 	assert(decode_hex(rawbuf, sizeof(rawbuf), privkey_str, &buf_len) == true);
 
 	assert(bp_privkey_set(key, rawbuf, buf_len) == true);
+
+	/* decode pubkey */
+	assert(decode_hex(rawbuf, sizeof(rawbuf), pubkey_str, &buf_len) == true);
+
+	void *pk = NULL;
+	size_t pk_len = 0;
+
+	/* verify pubkey matches expected */
+	assert(bp_pubkey_get(key, &pk, &pk_len) == true);
+	assert(pk_len == buf_len);
+	assert(memcmp(rawbuf, pk, pk_len) == 0);
+
+	free(pk);
+
+	/* verify pubkey hash (bitcoin address) matches expected */
+	GString *btc_addr = bp_pubkey_get_address(key, PUBKEY_ADDRESS_TEST);
+	assert(strlen(address_str) == btc_addr->len);
+	assert(memcmp(address_str, btc_addr->str, btc_addr->len) == 0);
+
+	g_string_free(btc_addr, TRUE);
 }
 
 static void runtest(const char *json_base_fn, const char *ser_in_fn,
