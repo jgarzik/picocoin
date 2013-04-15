@@ -45,6 +45,7 @@ static char *address_fn = "addresses.txt";
 static bool opt_quiet = false;
 
 static struct bp_keyset bpks;
+static GHashTable *tx_idx = NULL;
 
 static error_t parse_opt (int key, char *arg, struct argp_state *state);
 
@@ -126,34 +127,99 @@ static void load_addresses(void)
 			g_hash_table_size(bpks.pubhash));
 }
 
-static void print_txin(unsigned int i, struct bp_txin *txin)
+/* file pos -> block lookup */
+static bool reload_block(int fd, uint64_t fpos, struct bp_block *block)
 {
-	char hexstr[BU256_STRSZ];
-
-	bu256_hex(hexstr, &txin->prevout.hash);
-
-	printf("\tInput %u: %s %u",
-		i, hexstr, txin->prevout.n);
-}
-
-static void print_txins(struct bp_tx *tx)
-{
-	unsigned int i;
-	for (i = 0; i < tx->vin->len; i++) {
-		struct bp_txin *txin;
-
-		txin = g_ptr_array_index(tx->vin, i);
-
-		print_txin(i + 1, txin);
+	off_t save_ofs = lseek(fd, 0, SEEK_CUR);
+	if (save_ofs == (off_t)-1) {
+		perror("lseek 1");
+		return false;
 	}
+
+	if (lseek(fd, (off_t) fpos, SEEK_SET) != (off_t) fpos) {
+		perror("lseek 2");
+		return false;
+	}
+
+	struct p2p_message msg = {};
+	bool read_ok = false;
+
+	if (!fread_block(fd, &msg, &read_ok)) {
+		fprintf(stderr, "reload_block fread_block fail\n");
+		goto err_out;
+	}
+
+	struct const_buffer buf = { msg.data, msg.hdr.data_len };
+
+	bool rc = deser_bp_block(block, &buf);
+	if (!rc) {
+		fprintf(stderr, "reload_block deser_block fail\n");
+		goto err_out;
+	}
+
+	if (lseek(fd, save_ofs, SEEK_SET) != save_ofs)
+		perror("lseek restore true");
+	free(msg.data);
+	return true;
+
+err_out:
+	if (lseek(fd, save_ofs, SEEK_SET) != save_ofs)
+		perror("lseek restore false");
+	free(msg.data);
+	return false;
 }
 
-static void print_txout(unsigned int i, struct bp_txout *txout)
+/* search for tx_hash within given block; return full tx */
+static bool tx_from_block(struct bp_tx *dest, bu256_t *tx_hash,
+			  const struct bp_block *block)
+{
+	unsigned int n;
+	for (n = 0; n < block->vtx->len; n++) {
+		struct bp_tx *tx;
+
+		tx = g_ptr_array_index(block->vtx, n);
+
+		bp_tx_calc_sha256(tx);
+
+		if (bu256_equal(&tx->sha256, tx_hash)) {
+			bp_tx_copy(dest, tx);
+			return true;
+		}
+	}
+
+	return false;
+}
+
+static bool tx_from_fpos(struct bp_tx *dest, bu256_t *tx_hash,
+			 int fd, uint64_t fpos)
+{
+	struct bp_block block;
+	bool rc = false;
+
+	bp_block_init(&block);
+
+	if (!reload_block(fd, fpos, &block))
+		goto out;
+
+	if (!tx_from_block(dest, tx_hash, &block))
+		goto out;
+
+	rc = true;
+
+out:
+	bp_block_free(&block);
+	return rc;
+}
+
+static int block_fd = -1;
+
+static void print_txout(bool show_from, unsigned int i, struct bp_txout *txout)
 {
 	char valstr[VALSTR_SZ];
 	btc_decimal(valstr, VALSTR_SZ, txout->nValue);
 
-	printf("\tOutput %u: %s",
+	printf("\t%s %u: %s",
+		show_from ? "\tFrom" : "Output",
 		i, valstr);
 
 	struct bscript_addr addrs;
@@ -197,7 +263,7 @@ out:
         g_list_free_full(addrs.pubhash, g_buffer_free);
 }
 
-static void print_txouts(struct bp_tx *tx)
+static void print_txouts(struct bp_tx *tx, int idx)
 {
 	unsigned int i;
 	for (i = 0; i < tx->vout->len; i++) {
@@ -205,7 +271,70 @@ static void print_txouts(struct bp_tx *tx)
 
 		txout = g_ptr_array_index(tx->vout, i);
 
-		print_txout(i + 1, txout);
+		if (idx < 0)
+			print_txout(false, i, txout);
+		else if (idx == i)
+			print_txout(true, i, txout);
+	}
+}
+
+static void print_txin(unsigned int i, struct bp_txin *txin)
+{
+	char hexstr[BU256_STRSZ];
+
+	bu256_hex(hexstr, &txin->prevout.hash);
+
+	printf("\tInput %u: %s %u\n",
+		i, hexstr, txin->prevout.n);
+
+	uint64_t *fpos_p = g_hash_table_lookup(tx_idx, &txin->prevout.hash);
+	if (!fpos_p) {
+		printf("\t\tINPUT NOT FOUND!\n");
+		return;
+	}
+
+	struct bp_tx tx;
+	bp_tx_init(&tx);
+
+	if (!tx_from_fpos(&tx, &txin->prevout.hash, block_fd, *fpos_p)) {
+		printf("\t\tINPUT NOT READ!\n");
+		goto out;
+	}
+
+	print_txouts(&tx, txin->prevout.n);
+
+out:
+	bp_tx_free(&tx);
+}
+
+static void print_txins(struct bp_tx *tx)
+{
+	unsigned int i;
+	for (i = 0; i < tx->vin->len; i++) {
+		struct bp_txin *txin;
+
+		txin = g_ptr_array_index(tx->vin, i);
+
+		print_txin(i, txin);
+	}
+}
+
+static void index_block(unsigned int height, struct bp_block *block,
+			uint64_t fpos)
+{
+	uint64_t *fpos_copy = malloc(sizeof(uint64_t));
+	*fpos_copy = fpos;
+
+	unsigned int n;
+	for (n = 0; n < block->vtx->len; n++) {
+		struct bp_tx *tx;
+
+		tx = g_ptr_array_index(block->vtx, n);
+
+		bp_tx_calc_sha256(tx);
+
+		bu256_t *hash = bu256_new(&tx->sha256);
+		g_hash_table_replace(tx_idx, hash, fpos_copy);
 	}
 }
 
@@ -229,14 +358,15 @@ static void scan_block(unsigned int height, struct bp_block *block)
 			       hashstr);
 
 			print_txins(tx);
-			print_txouts(tx);
+			print_txouts(tx, -1);
 
 			tx_matches++;
 		}
 	}
 }
 
-static void scan_decode_block(unsigned int height, struct p2p_message *msg)
+static void scan_decode_block(unsigned int height, struct p2p_message *msg,
+			      uint64_t *fpos)
 {
 	struct bp_block block;
 	bp_block_init(&block);
@@ -249,7 +379,11 @@ static void scan_decode_block(unsigned int height, struct p2p_message *msg)
 		exit(1);
 	}
 
+	index_block(height, &block, *fpos);
 	scan_block(height, &block);
+
+	uint64_t pos_tmp = msg->hdr.data_len;
+	*fpos += (pos_tmp + 8);
 
 	bp_block_free(&block);
 }
@@ -266,14 +400,21 @@ static void scan_blocks(void)
 	bool read_ok = false;
 
 	unsigned int height = 0;
+	uint64_t fpos = 0;
+
+	block_fd = fd;
 
 	while (fread_block(fd, &msg, &read_ok)) {
-		scan_decode_block(height, &msg);
+		scan_decode_block(height, &msg, &fpos);
 		height++;
 
-		if ((height % 25000 == 0) && (!opt_quiet))
-			fprintf(stderr, "Scanned height %u\n", height);
+		if ((height % 10000 == 0) && (!opt_quiet))
+			fprintf(stderr, "Scanned %u transactions at height %u\n",
+				(unsigned int) g_hash_table_size(tx_idx),
+				height);
 	}
+
+	block_fd = -1;
 
 	if (!read_ok) {
 		fprintf(stderr, "block read %s failed\n", blocks_fn);
@@ -300,6 +441,10 @@ int main (int argc, char *argv[])
 	}
 
 	bpks_init(&bpks);
+
+	tx_idx = g_hash_table_new_full(g_bu256_hash, g_bu256_equal,
+				       g_bu256_free, NULL);
+
 	load_addresses();
 	scan_blocks();
 
