@@ -4,6 +4,8 @@
  */
 #include "picocoin-config.h"
 
+#include <stdint.h>
+#include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -12,6 +14,7 @@
 #include <stdlib.h>
 #include <openssl/sha.h>
 #include <openssl/ripemd.h>
+#include <ccoin/coredefs.h>
 #include <ccoin/util.h>
 #include <ccoin/compat.h>		/* for mkstemp */
 
@@ -171,6 +174,26 @@ void g_list_shuffle(GList *l)
 
 		tmp = tmp->next;
 		idx++;
+	}
+}
+
+void btc_decimal(char *valstr, size_t valstr_sz, int64_t val)
+{
+	int64_t val_abs = (val < 0) ? -val : val;
+	int64_t q = val_abs / COIN;
+	int64_t r = val_abs % COIN;
+
+	snprintf(valstr, valstr_sz, "%lld.%lld",
+		 (long long) q,
+		 (long long) r);
+	valstr[valstr_sz - 1] = 0;
+
+	while ((valstr[0]) && (valstr[strlen(valstr) - 1] == '0'))
+		valstr[strlen(valstr) - 1] = 0;
+
+	if (valstr[strlen(valstr) - 1] == '.') {
+		valstr[strlen(valstr)] = '0';
+		valstr[valstr_sz - 1] = 0;	/* for rare edge case */
 	}
 }
 

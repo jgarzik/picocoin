@@ -14,6 +14,12 @@
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 #endif
 
+enum {
+	VALSTR_SZ	= 18,
+#define VALSTR_SZ VALSTR_SZ
+};
+
+extern void btc_decimal(char *valstr, size_t valstr_sz, int64_t val);
 extern GString *bn_getvch(const BIGNUM *v);
 extern void bn_setvch(BIGNUM *vo, const void *data_, size_t data_len);
 
