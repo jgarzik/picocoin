@@ -1,7 +1,7 @@
 
 INCLUDES	= @GLIB_CFLAGS@ -I$(top_srcdir)/include
 
-bin_PROGRAMS	= brd picocoin
+bin_PROGRAMS	= brd picocoin blkscan
 
 noinst_LIBRARIES= libnode.a
 
@@ -27,3 +27,5 @@ picocoin_SOURCES=	\
 picocoin_LDADD	= libnode.a ../lib/libccoin.a \
 		  @GLIB_LIBS@ @CRYPTO_LIBS@ @EVENT_LIBS@ @JANSSON_LIBS@
 
+blkscan_LDADD	= ../lib/libccoin.a \
+		  @GLIB_LIBS@ @CRYPTO_LIBS@
