@@ -126,6 +126,28 @@ static void load_addresses(void)
 			g_hash_table_size(bpks.pubhash));
 }
 
+static void print_txin(unsigned int i, struct bp_txin *txin)
+{
+	char hexstr[BU256_STRSZ];
+
+	bu256_hex(hexstr, &txin->prevout.hash);
+
+	printf("\tInput %u: %s %u",
+		i, hexstr, txin->prevout.n);
+}
+
+static void print_txins(struct bp_tx *tx)
+{
+	unsigned int i;
+	for (i = 0; i < tx->vin->len; i++) {
+		struct bp_txin *txin;
+
+		txin = g_ptr_array_index(tx->vin, i);
+
+		print_txin(i + 1, txin);
+	}
+}
+
 static void print_txout(unsigned int i, struct bp_txout *txout)
 {
 	char valstr[VALSTR_SZ];
@@ -206,6 +228,7 @@ static void scan_block(unsigned int height, struct bp_block *block)
 			       block->nTime,
 			       hashstr);
 
+			print_txins(tx);
 			print_txouts(tx);
 
 			tx_matches++;
