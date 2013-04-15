@@ -19,6 +19,8 @@
 #include <ccoin/core.h>
 #include <ccoin/util.h>
 #include <ccoin/mbr.h>
+#include <ccoin/script.h>
+#include <ccoin/addr_match.h>
 #include <ccoin/message.h>
 
 const char *argp_program_version = PACKAGE_VERSION;
@@ -124,6 +126,87 @@ static void load_addresses(void)
 			g_hash_table_size(bpks.pubhash));
 }
 
+static void print_txout(unsigned int i, struct bp_txout *txout)
+{
+	char valstr[VALSTR_SZ];
+	btc_decimal(valstr, VALSTR_SZ, txout->nValue);
+
+	printf("\tOutput %u: %s",
+		i, valstr);
+
+	struct bscript_addr addrs;
+	if (!bsp_addr_parse(&addrs, txout->scriptPubKey->str,
+			    txout->scriptPubKey->len)) {
+		printf(" UNPARSEABLE-ADDRESS!\n");
+		return;
+	}
+
+	if (addrs.pub)
+		printf(" SOME-PUBKEYS!");
+
+	struct const_buffer *buf;
+	GList *tmp = addrs.pubhash;
+	while (tmp) {
+		buf = tmp->data;
+		tmp = tmp->next;
+
+		GString *addr = base58_encode_check(PUBKEY_ADDRESS, true,
+						    buf->p, buf->len);
+		if (!addr) {
+			printf(" ENCODE-FAILED!\n");
+			goto out;
+		}
+
+		printf(" %s", addr->str);
+
+		g_string_free(addr, TRUE);
+	}
+
+	printf("\n");
+
+out:
+        g_list_free_full(addrs.pub, g_buffer_free);
+        g_list_free_full(addrs.pubhash, g_buffer_free);
+}
+
+static void print_txouts(struct bp_tx *tx)
+{
+	unsigned int i;
+	for (i = 0; i < tx->vout->len; i++) {
+		struct bp_txout *txout;
+
+		txout = g_ptr_array_index(tx->vout, i);
+
+		print_txout(i + 1, txout);
+	}
+}
+
+static unsigned int tx_matches = 0;
+
+static void scan_block(unsigned int height, struct bp_block *block)
+{
+	unsigned int n;
+	for (n = 0; n < block->vtx->len; n++) {
+		struct bp_tx *tx;
+
+		tx = g_ptr_array_index(block->vtx, n);
+
+		if (bp_tx_match(tx, &bpks)) {
+			char hashstr[BU256_STRSZ];
+			bp_tx_calc_sha256(tx);
+			bu256_hex(hashstr, &tx->sha256);
+
+			printf("%u, %s\n",
+			       block->nTime,
+			       hashstr);
+
+			print_txouts(tx);
+
+			tx_matches++;
+		}
+	}
+}
+
 static void scan_decode_block(unsigned int height, struct p2p_message *msg)
 {
 	struct bp_block block;
@@ -136,6 +219,8 @@ static void scan_decode_block(unsigned int height, struct p2p_message *msg)
 		fprintf(stderr, "block deser failed at height %u\n", height);
 		exit(1);
 	}
+
+	scan_block(height, &block);
 
 	bp_block_free(&block);
 }
@@ -169,8 +254,10 @@ static void scan_blocks(void)
 	close(fd);
 	free(msg.data);
 
-	if (!opt_quiet)
+	if (!opt_quiet) {
 		fprintf(stderr, "Scanned to height %u\n", height);
+		fprintf(stderr, "TX matches: %u\n", tx_matches);
+	}
 }
 
 int main (int argc, char *argv[])
