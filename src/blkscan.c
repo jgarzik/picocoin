@@ -146,9 +146,12 @@ static void print_txout(unsigned int i, struct bp_txout *txout)
 
 	struct const_buffer *buf;
 	GList *tmp = addrs.pubhash;
+	bool is_mine;
 	while (tmp) {
 		buf = tmp->data;
 		tmp = tmp->next;
+
+		is_mine = bpks_lookup(&bpks, buf->p, buf->len, true);
 
 		GString *addr = base58_encode_check(PUBKEY_ADDRESS, true,
 						    buf->p, buf->len);
@@ -157,7 +160,10 @@ static void print_txout(unsigned int i, struct bp_txout *txout)
 			goto out;
 		}
 
-		printf(" %s", addr->str);
+		printf(" %s%s%s",
+		       is_mine ? "*" : "",
+		       addr->str,
+		       is_mine ? "*" : "");
 
 		g_string_free(addr, TRUE);
 	}
