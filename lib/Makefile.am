@@ -10,6 +10,7 @@ libccoin_a_SOURCES=	\
 	bignum.c	\
 	blkdb.c		\
 	block.c		\
+	blockfile.c	\
 	bloom.c		\
 	buffer.c	\
 	buint.c		\

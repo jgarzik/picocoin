@@ -12,6 +12,11 @@
 #include <ccoin/core.h>
 #include <ccoin/buffer.h>
 
+struct p2p_blockfile_hdr {
+	unsigned char	netmagic[4];
+	uint32_t	data_len;
+};
+
 #define P2P_HDR_SZ	(4 + 12 + 4 + 4)
 
 struct p2p_message_hdr {

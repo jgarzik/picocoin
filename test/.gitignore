@@ -3,6 +3,7 @@ libtest.a
 
 base58
 block
+blockfile
 bloom
 blkdb
 chain-verf
