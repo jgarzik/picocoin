@@ -35,10 +35,46 @@ static void test_ipv4_mapped(void)
 	assert(!rc);
 }
 
+static const struct {
+	int64_t		v;
+	const char	*s;
+} btcdec_valstr[] = {
+	{ 0LL, "0.0" },
+	{ 1LL, "0.00000001" },
+	{ 1000000LL, "0.01" },
+	{ 100000000LL, "1.0" },
+	{ 2000000000LL, "20.0" },
+};
+
+static void test_btc_decimal(int64_t v, const char *s)
+{
+	char valstr[128];
+
+	btc_decimal(valstr, sizeof(valstr), v);
+
+	if (strcmp(valstr, s)) {
+		fprintf(stderr, "util: conv(%lld) yielded %s, expected %s\n",
+			(long long) v,
+			valstr,
+			s);
+		
+		assert(!strcmp(valstr, s));
+	}
+}
+
+static void test_btc_decimals(void)
+{
+	unsigned int i;
+	for (i = 0; i < ARRAY_SIZE(btcdec_valstr); i++)
+		test_btc_decimal(btcdec_valstr[i].v,
+				 btcdec_valstr[i].s);
+}
+
 int main (int argc, char *argv[])
 {
 	test_reverse_copy();
 	test_ipv4_mapped();
+	test_btc_decimals();
 	return 0;
 }
 

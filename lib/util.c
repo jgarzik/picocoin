@@ -183,7 +183,7 @@ void btc_decimal(char *valstr, size_t valstr_sz, int64_t val)
 	int64_t q = val_abs / COIN;
 	int64_t r = val_abs % COIN;
 
-	snprintf(valstr, valstr_sz, "%lld.%lld",
+	snprintf(valstr, valstr_sz, "%lld.%08lld",
 		 (long long) q,
 		 (long long) r);
 	valstr[valstr_sz - 1] = 0;
