@@ -1,5 +1,5 @@
 
-INCLUDES	= @GLIB_CFLAGS@ -I$(top_srcdir)/include
+AM_CPPFLAGS	= @GLIB_CFLAGS@ -I$(top_srcdir)/include
 
 bin_PROGRAMS	= brd picocoin blkscan blkstats rawtx
 
@@ -32,4 +32,4 @@ blkscan_LDADD	= ../lib/libccoin.a \
 blkstats_LDADD	= ../lib/libccoin.a \
 		  @GLIB_LIBS@ @CRYPTO_LIBS@
 rawtx_LDADD	= ../lib/libccoin.a \
-		  @GLIB_LIBS@ @CRYPTO_LIBS@ @JANSSON_LIBS@
+		  @GLIB_LIBS@ @CRYPTO_LIBS@ @ARGP_LIBS@ @JANSSON_LIBS@

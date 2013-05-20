@@ -20,7 +20,7 @@ dnl Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 AC_INIT(picocoin, 0.1git, [Jeff Garzik <jgarzik@exmulti.com>])
 AC_PREREQ(2.52)
 AC_CONFIG_SRCDIR([src/main.c])
-AM_INIT_AUTOMAKE([gnu])
+AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_HEADERS([picocoin-config.h])
 
 dnl Make sure anyone changing configure.ac/Makefile.am has a clue
@@ -72,6 +72,9 @@ AC_CHECK_LIB(event_core, event_base_new, EVENT_LIBS=-levent_core,
   [AC_MSG_ERROR([Missing required libevent])])
 AC_CHECK_LIB(jansson, json_loads, JANSSON_LIBS=-ljansson,
   [AC_MSG_ERROR([Missing required libjansson])])
+AC_CHECK_LIB(argp, argp_parse, ARGP_LIBS=-lARGP,
+  [AC_MSG_ERROR([Missing required libargp])])
+
 
 dnl -------------------------------------
 dnl Checks for optional library functions
@@ -92,6 +95,7 @@ AC_SUBST(MATH_LIBS)
 AC_SUBST(CRYPTO_LIBS)
 AC_SUBST(EVENT_LIBS)
 AC_SUBST(JANSSON_LIBS)
+AC_SUBST(ARGP_LIBS)
 
 AC_CONFIG_FILES([
 	Makefile
