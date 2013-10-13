@@ -127,7 +127,7 @@ static bool is_RFC6145(const unsigned char *ipaddr)
 static bool is_local(const unsigned char *ipaddr)
 {
 	if (is_ipv4_mapped(ipaddr) &&
-	    (ipaddr[GB(3)] == 127 || ipaddr[GB(3)] == 0));
+	    (ipaddr[GB(3)] == 127 || ipaddr[GB(3)] == 0))
 		return true;
 
 	static const unsigned char pchLocal[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
