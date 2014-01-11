@@ -31,6 +31,9 @@ static struct argp_option options[] = {
 	{ "blocks", 'b', "FILE", 0,
 	  "Load blockchain data from mkbootstrap-produced FILE.  Default filename \"addresses.txt\"." },
 
+	{ "no-decimal", 'N', NULL, 0,
+	  "Print values as integers (satoshis), not decimal numbers" },
+
 	{ "quiet", 'q', NULL, 0,
 	  "Silence informational messages" },
 
@@ -43,6 +46,7 @@ static const char doc[] =
 static char *blocks_fn = "blocks.dat";
 static char *address_fn = "addresses.txt";
 static bool opt_quiet = false;
+static bool opt_decimal = true;
 
 static struct bp_keyset bpks;
 static GHashTable *tx_idx = NULL;
@@ -60,6 +64,9 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
 		break;
 	case 'b':
 		blocks_fn = arg;
+		break;
+	case 'N':
+		opt_decimal = false;
 		break;
 	case 'q':
 		opt_quiet = true;
@@ -216,7 +223,11 @@ static int block_fd = -1;
 static void print_txout(bool show_from, unsigned int i, struct bp_txout *txout)
 {
 	char valstr[VALSTR_SZ];
-	btc_decimal(valstr, VALSTR_SZ, txout->nValue);
+	if (opt_decimal)
+		btc_decimal(valstr, VALSTR_SZ, txout->nValue);
+	else
+		snprintf(valstr, sizeof(valstr), "%lld",
+			 (long long) txout->nValue);
 
 	printf("\t%s %u: %s",
 		show_from ? "\tFrom" : "Output",
