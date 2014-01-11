@@ -198,7 +198,7 @@ bool bsp_addr_parse(struct bscript_addr *addr,
 	case TX_PUBKEYHASH: {
 		struct bscript_op *op = g_ptr_array_index(ops, 2);
 		struct buffer *buf = buffer_copy(op->data.p, op->data.len);
-		addr->pubhash = g_list_append(addr->pub, buf);
+		addr->pubhash = g_list_append(addr->pubhash, buf);
 		break;
 	}
 
