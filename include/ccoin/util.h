@@ -6,6 +6,7 @@
  */
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 #include <glib.h>
 #include <openssl/bn.h>
