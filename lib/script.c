@@ -17,6 +17,9 @@ static const unsigned char stdscr_pubkey[] = {
 static const unsigned char stdscr_pubkeyhash[] = {
 	OP_DUP, OP_HASH160, OP_PUBKEYHASH, OP_EQUALVERIFY, OP_CHECKSIG,
 };
+static const unsigned char stdscr_scripthash[] = {
+	OP_HASH160, OP_PUBKEYHASH, OP_EQUAL,
+};
 
 static const struct {
 	enum txnouttype		txtype;
@@ -25,6 +28,7 @@ static const struct {
 } std_scripts[] = {
 	{ TX_PUBKEY, sizeof(stdscr_pubkey), stdscr_pubkey, },
 	{ TX_PUBKEYHASH, sizeof(stdscr_pubkeyhash), stdscr_pubkeyhash, },
+	{ TX_SCRIPTHASH, sizeof(stdscr_scripthash), stdscr_scripthash, },
 };
 
 bool bsp_getop(struct bscript_op *op, struct bscript_parser *bp)
