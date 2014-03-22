@@ -15,6 +15,8 @@
 const char *argp_program_version = PACKAGE_VERSION;
 
 static struct argp_option options[] = {
+	{ "blank", 1003, NULL, 0,
+	  "Start new, blank transaction. Do not read any input data." },
 	{ "locktime", 1001, "LOCKTIME", 0,
 	  "Set transaction lock time" },
 	{ "nversion", 1002, "VERSION", 0,
@@ -26,6 +28,7 @@ static struct argp_option options[] = {
 static char *opt_locktime;
 static char *opt_version;
 static char *opt_hexdata;
+static bool opt_blank = false;
 static struct bp_tx tx;
 
 static const char doc[] =
@@ -41,11 +44,14 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
 {
 	switch(key) {
 
-	case 1001:
+	case 1001:			// --locktime=NNNNN
 		opt_locktime = arg;
 		break;
-	case 1002:
+	case 1002:			// --nversion=NNNNN
 		opt_version = arg;
+		break;
+	case 1003:			// --blank
+		opt_blank = true;
 		break;
 
 	case ARGP_KEY_ARG:
@@ -115,7 +121,8 @@ static void read_data(void)
 
 static void write_data(void)
 {
-	GString *s = g_string_sized_new(strlen(opt_hexdata));
+	size_t alloc_len = opt_hexdata ? strlen(opt_hexdata) : 512;
+	GString *s = g_string_sized_new(alloc_len);
 	ser_bp_tx(s, &tx);
 
 	char hexstr[(s->len * 2) + 1];
@@ -135,14 +142,10 @@ int main (int argc, char *argv[])
 		return 1;
 	}
 
-	if (!opt_locktime && !opt_version) {
-		fprintf(stderr, "nothing to do\n");
-		return 1;
-	}
-
 	bp_tx_init(&tx);
 
-	read_data();
+	if (!opt_blank)
+		read_data();
 	apply_mutations();
 	write_data();
 
