@@ -242,6 +242,7 @@ void bp_txout_copy(struct bp_txout *dest, const struct bp_txout *src)
 void bp_tx_init(struct bp_tx *tx)
 {
 	memset(tx, 0, sizeof(*tx));
+	tx->nVersion = 1;
 }
 
 bool deser_bp_tx(struct bp_tx *tx, struct const_buffer *buf)
