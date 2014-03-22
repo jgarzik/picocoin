@@ -6,7 +6,9 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <argp.h>
+#include <ctype.h>
 #include <glib.h>
 #include <ccoin/core.h>
 #include <ccoin/util.h>
@@ -21,6 +23,8 @@ static struct argp_option options[] = {
 	  "Set transaction lock time" },
 	{ "nversion", 1002, "VERSION", 0,
 	  "Set transaction version" },
+	{ "txin", 1004, "TXID:VOUT", 0,
+	  "Append a transaction input" },
 
 	{ }
 };
@@ -28,8 +32,9 @@ static struct argp_option options[] = {
 static char *opt_locktime;
 static char *opt_version;
 static char *opt_hexdata;
-static bool opt_blank = false;
+static bool opt_blank;
 static struct bp_tx tx;
+static GList *opt_txin;
 
 static const char doc[] =
 "txmod - command line interface to modify bitcoin transactions";
@@ -39,6 +44,19 @@ static const char args_doc[] =
 static error_t parse_opt (int key, char *arg, struct argp_state *state);
 
 static const struct argp argp = { options, parse_opt, args_doc, doc };
+
+static bool is_digitstr(const char *s)
+{
+	if (!*s)
+		return false;
+	while (*s) {
+		if (!isdigit(*s))
+			return false;
+		s++;
+	}
+
+	return true;
+}
 
 static error_t parse_opt (int key, char *arg, struct argp_state *state)
 {
@@ -53,6 +71,24 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
 	case 1003:			// --blank
 		opt_blank = true;
 		break;
+	case 1004: {			// --txin=TXID:VOUT
+		char *colon = strchr(arg, ':');
+		if (!colon)
+			return ARGP_ERR_UNKNOWN;
+		if ((colon - arg) != 64)
+			return ARGP_ERR_UNKNOWN;
+		if (!is_digitstr(colon + 1))
+			return ARGP_ERR_UNKNOWN;
+
+		char hexstr[65];
+		memcpy(hexstr, arg, 64);
+		hexstr[64] = 0;
+		if (!is_hexstr(hexstr, false))
+			return ARGP_ERR_UNKNOWN;
+
+		opt_txin = g_list_append(opt_txin, strdup(arg));
+		break;
+	 }
 
 	case ARGP_KEY_ARG:
 		if (opt_hexdata)
@@ -89,12 +125,63 @@ static void mutate_version(void)
 	tx.nVersion = (uint32_t) nVersion;
 }
 
+static void append_input(char *txid_str, char *vout_str)
+{
+	bu256_t txid;
+	if (!hex_bu256(&txid, txid_str)) {
+		fprintf(stderr, "invalid txid hex\n");
+		exit(1);
+	}
+
+	unsigned int vout = atoi(vout_str);
+
+	struct bp_txin *txin = calloc(1, sizeof(struct bp_txin));
+	if (!txin) {
+		fprintf(stderr, "OOM\n");
+		exit(1);
+	}
+	bp_txin_init(txin);
+
+	bu256_copy(&txin->prevout.hash, &txid);
+	txin->prevout.n = vout;
+	txin->scriptSig = g_string_new(NULL);
+	txin->nSequence = 0xffffffffU;
+
+	g_ptr_array_add(tx.vin, txin);
+}
+
+static void mutate_inputs(void)
+{
+	if (!tx.vin)
+		tx.vin = g_ptr_array_new_full(8, g_bp_txin_free);
+
+	GList *tmp = opt_txin;
+	while (tmp) {
+		char *arg = tmp->data;
+		tmp = tmp->next;
+
+		size_t alloc_len = strlen(arg) + 1;
+		char txid_str[alloc_len];
+		strcpy(txid_str, arg);
+
+		char *colon = strchr(txid_str, ':');
+		*colon = 0;
+
+		char vout_str[alloc_len];
+		strcpy(vout_str, colon + 1);
+
+		append_input(txid_str, vout_str);
+	}
+}
+
 static void apply_mutations(void)
 {
 	if (opt_locktime)
 		mutate_locktime();
 	if (opt_version)
 		mutate_version();
+	if (opt_txin)
+		mutate_inputs();
 }
 
 static void read_data(void)
