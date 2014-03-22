@@ -19,6 +19,7 @@ install-sh
 missing
 push
 stamp-h1
+test-driver
 
 # app-specific
 picocoin*.tar.gz

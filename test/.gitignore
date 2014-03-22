@@ -17,3 +17,6 @@ tx-valid
 util
 wallet-basics
 
+*.trs
+*.log
+

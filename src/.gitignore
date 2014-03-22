@@ -2,6 +2,7 @@
 libnode.a
 
 blkscan
+blkstats
 
 brd
 brd.peers
