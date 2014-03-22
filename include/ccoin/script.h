@@ -218,6 +218,10 @@ extern bool bsp_addr_parse(struct bscript_addr *addr,
 		    const void *data, size_t data_len);
 extern void bsp_addr_free(struct bscript_addr *addr);
 extern bool is_bsp_pushonly(struct const_buffer *buf);
+extern bool is_bsp_pubkey(GPtrArray *ops);
+extern bool is_bsp_pubkeyhash(GPtrArray *ops);
+extern bool is_bsp_scripthash(GPtrArray *ops);
+extern bool is_bsp_multisig(GPtrArray *ops);
 
 static inline bool is_bsp_pushdata(enum opcodetype op)
 {

@@ -11,26 +11,6 @@
 #include <ccoin/buffer.h>
 #include <ccoin/compat.h>		/* for g_ptr_array_new_full */
 
-static const unsigned char stdscr_pubkey[] = {
-	OP_PUBKEY, OP_CHECKSIG,
-};
-static const unsigned char stdscr_pubkeyhash[] = {
-	OP_DUP, OP_HASH160, OP_PUBKEYHASH, OP_EQUALVERIFY, OP_CHECKSIG,
-};
-static const unsigned char stdscr_scripthash[] = {
-	OP_HASH160, OP_PUBKEYHASH, OP_EQUAL,
-};
-
-static const struct {
-	enum txnouttype		txtype;
-	size_t			len;
-	const unsigned char	*script;
-} std_scripts[] = {
-	{ TX_PUBKEY, sizeof(stdscr_pubkey), stdscr_pubkey, },
-	{ TX_PUBKEYHASH, sizeof(stdscr_pubkeyhash), stdscr_pubkeyhash, },
-	{ TX_SCRIPTHASH, sizeof(stdscr_scripthash), stdscr_scripthash, },
-};
-
 bool bsp_getop(struct bscript_op *op, struct bscript_parser *bp)
 {
 	if (bp->buf->len == 0)
@@ -120,62 +100,90 @@ bool is_bsp_pushonly(struct const_buffer *buf)
 	return true;
 }
 
-static bool bsp_match_op(const struct bscript_op *op, unsigned char template)
+static bool is_bsp_op(const struct bscript_op *op, enum opcodetype opcode)
 {
-	switch (template) {
+	return (op->op == opcode);
+}
 
-	case OP_PUBKEY:
-		if (!is_bsp_pushdata(op->op))
-			return false;
-		if (op->data.len < 33 || op->data.len > 120)
-			return false;
-		return true;
+static bool is_bsp_op_smallint(const struct bscript_op *op)
+{
+	return ((op->op == OP_0) ||
+		(op->op >= OP_1 && op->op <= OP_16));
+}
 
-	case OP_PUBKEYHASH:
-		if (!is_bsp_pushdata(op->op))
-			return false;
-		if (op->data.len != 20)
-			return false;
-		return true;
+static bool is_bsp_op_pubkey(const struct bscript_op *op)
+{
+	if (!is_bsp_pushdata(op->op))
+		return false;
+	if (op->data.len < 33 || op->data.len > 120)
+		return false;
+	return true;
+}
 
-	default:
-		if (is_bsp_pushdata(op->op))
+static bool is_bsp_op_pubkeyhash(const struct bscript_op *op)
+{
+	if (!is_bsp_pushdata(op->op))
+		return false;
+	if (op->data.len != 20)
+		return false;
+	return true;
+}
+
+// OP_PUBKEY, OP_CHECKSIG
+bool is_bsp_pubkey(GPtrArray *ops)
+{
+	return ((ops->len == 2) &&
+	        is_bsp_op(g_ptr_array_index(ops, 0), OP_CHECKSIG) &&
+	        is_bsp_op_pubkey(g_ptr_array_index(ops, 1)));
+}
+
+// OP_DUP, OP_HASH160, OP_PUBKEYHASH, OP_EQUALVERIFY, OP_CHECKSIG,
+bool is_bsp_pubkeyhash(GPtrArray *ops)
+{
+	return ((ops->len == 5) &&
+	        is_bsp_op(g_ptr_array_index(ops, 0), OP_DUP) &&
+	        is_bsp_op(g_ptr_array_index(ops, 1), OP_HASH160) &&
+	        is_bsp_op_pubkeyhash(g_ptr_array_index(ops, 2)) &&
+	        is_bsp_op(g_ptr_array_index(ops, 3), OP_EQUALVERIFY) &&
+	        is_bsp_op(g_ptr_array_index(ops, 4), OP_CHECKSIG));
+}
+
+// OP_HASH160, OP_PUBKEYHASH, OP_EQUAL
+bool is_bsp_scripthash(GPtrArray *ops)
+{
+	return ((ops->len == 3) &&
+	        is_bsp_op(g_ptr_array_index(ops, 0), OP_HASH160) &&
+	        is_bsp_op_pubkeyhash(g_ptr_array_index(ops, 1)) &&
+	        is_bsp_op(g_ptr_array_index(ops, 2), OP_EQUAL));
+}
+
+// OP_SMALLINTEGER, OP_PUBKEYS, OP_SMALLINTEGER, OP_CHECKMULTISIG
+bool is_bsp_multisig(GPtrArray *ops)
+{
+	if ((ops->len < 3) || (ops->len > (16 + 3)) ||
+	    !is_bsp_op_smallint(g_ptr_array_index(ops, 0)) ||
+	    !is_bsp_op_smallint(g_ptr_array_index(ops, ops->len - 2)) ||
+	    !is_bsp_op(g_ptr_array_index(ops, ops->len - 1), OP_CHECKMULTISIG))
+		return false;
+
+	unsigned int i;
+	for (i = 1; i < (ops->len - 2); i++)
+		if (!is_bsp_op_pubkey(g_ptr_array_index(ops, i)))
 			return false;
 
-		return (op->op == template);
-	}
+	return true;
 }
 
 enum txnouttype bsp_classify(GPtrArray *ops)
 {
-	unsigned int n_scr;
-
-	for (n_scr = 0; n_scr < ARRAY_SIZE(std_scripts); n_scr++) {
-		const unsigned char *script = std_scripts[n_scr].script;
-		size_t slen = std_scripts[n_scr].len;
-
-		/* easy check: varying script length */
-		if (ops->len != slen)
-			continue;
-
-		/* verify each op matches template character's op */
-		unsigned int i;
-		bool match = true;
-		for (i = 0; i < slen; i++) {
-			struct bscript_op *op;
-
-			op = g_ptr_array_index(ops, i);
-
-			match = bsp_match_op(op, script[i]);
-			if (!match)
-				break;
-		}
-
-		if (!match)
-			continue;
-
-		return std_scripts[n_scr].txtype;
-	}
+	if (is_bsp_pubkeyhash(ops))
+		return TX_PUBKEYHASH;
+	if (is_bsp_scripthash(ops))
+		return TX_SCRIPTHASH;
+	if (is_bsp_pubkey(ops))
+		return TX_PUBKEY;
+	if (is_bsp_multisig(ops))
+		return TX_MULTISIG;
 
 	return TX_NONSTANDARD;
 }

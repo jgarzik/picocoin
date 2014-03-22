@@ -146,13 +146,14 @@ static void scan_txout(struct bp_txout *txout)
 	case TX_SCRIPTHASH:
 		incstat(STA_SCRIPTHASH);
 		break;
+	case TX_MULTISIG:
+		incstat(STA_MULTISIG);
+		break;
 	default: {
 		if (match_op_pos(script, OP_RETURN, 0))
 			incstat(STA_OP_RETURN);
 		else if (match_op_pos(script, OP_DROP, 1))
 			incstat(STA_OP_DROP);
-		else if (match_op_pos(script, OP_CHECKMULTISIG, script->len-1))
-			incstat(STA_MULTISIG);
 		else
 			incstat(STA_UNKNOWN);
 		break;
