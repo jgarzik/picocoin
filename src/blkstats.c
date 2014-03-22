@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
@@ -45,6 +46,46 @@ static char *blocks_fn = "blocks.dat";
 static bool opt_quiet = false;
 static bool opt_decimal = true;
 
+enum stat_type {
+	STA_BLOCK,
+	STA_TX,
+	STA_TXOUT,
+	STA_MULTISIG,
+	STA_OP_DROP,
+	STA_OP_RETURN,
+	STA_PUBKEY,
+	STA_PUBKEYHASH,
+	STA_SCRIPTHASH,
+	STA_UNKNOWN,
+
+	STA_LAST = STA_UNKNOWN
+};
+
+static const char *stat_names[STA_LAST + 1] = {
+	"block",
+	"tx",
+	"txout",
+	"multisig",
+	"op_drop",
+	"op_return",
+	"pubkey",
+	"pubkeyhash",
+	"scripthash",
+	"unknown",
+};
+
+static unsigned long gbl_stats[STA_LAST + 1];
+
+static inline void incstat(enum stat_type stype)
+{
+	gbl_stats[stype]++;
+}
+
+static inline unsigned long getstat(enum stat_type stype)
+{
+	return gbl_stats[stype];
+}
+
 static error_t parse_opt (int key, char *arg, struct argp_state *state);
 
 static const struct argp argp = { options, parse_opt, NULL, doc };
@@ -72,9 +113,53 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
 
 static int block_fd = -1;
 
+static bool match_op_pos(GPtrArray *script, enum opcodetype opcode,
+			 unsigned int pos)
+{
+	if (pos >= script->len)
+		return false;
+	
+	struct bscript_op *op = g_ptr_array_index(script, pos);
+	return (op->op == opcode);
+}
+
 static void scan_txout(struct bp_txout *txout)
 {
-	// FIXME
+	incstat(STA_TXOUT);
+
+	GPtrArray *script = bsp_parse_all(txout->scriptPubKey->str,
+					  txout->scriptPubKey->len);
+	if (!script) {
+		fprintf(stderr, "error at txout %lu\n", getstat(STA_TXOUT)-1);
+		return;
+	}
+
+	enum txnouttype outtype = bsp_classify(script);
+
+	switch (outtype) {
+	case TX_PUBKEY:
+		incstat(STA_PUBKEY);
+		break;
+	case TX_PUBKEYHASH:
+		incstat(STA_PUBKEYHASH);
+		break;
+	case TX_SCRIPTHASH:
+		incstat(STA_SCRIPTHASH);
+		break;
+	default: {
+		if (match_op_pos(script, OP_RETURN, 0))
+			incstat(STA_OP_RETURN);
+		else if (match_op_pos(script, OP_DROP, 1))
+			incstat(STA_OP_DROP);
+		else if (match_op_pos(script, OP_CHECKMULTISIG, script->len-1))
+			incstat(STA_MULTISIG);
+		else
+			incstat(STA_UNKNOWN);
+		break;
+	 }
+	}
+
+	g_ptr_array_free(script, TRUE);
 }
 
 static void scan_tx(struct bp_tx *tx)
@@ -87,9 +172,11 @@ static void scan_tx(struct bp_tx *tx)
 
 		scan_txout(txout);
 	}
+
+	incstat(STA_TX);
 }
 
-static void scan_block(unsigned int height, struct bp_block *block)
+static void scan_block(struct bp_block *block)
 {
 	unsigned int n;
 	for (n = 0; n < block->vtx->len; n++) {
@@ -99,10 +186,11 @@ static void scan_block(unsigned int height, struct bp_block *block)
 
 		scan_tx(tx);
 	}
+
+	incstat(STA_BLOCK);
 }
 
-static void scan_decode_block(unsigned int height, struct p2p_message *msg,
-			      uint64_t *fpos)
+static void scan_decode_block(struct p2p_message *msg, uint64_t *fpos)
 {
 	struct bp_block block;
 	bp_block_init(&block);
@@ -111,11 +199,12 @@ static void scan_decode_block(unsigned int height, struct p2p_message *msg,
 
 	bool rc = deser_bp_block(&block, &buf);
 	if (!rc) {
-		fprintf(stderr, "block deser failed at height %u\n", height);
+		fprintf(stderr, "block deser failed at block %lu\n",
+			getstat(STA_BLOCK));
 		exit(1);
 	}
 
-	scan_block(height, &block);
+	scan_block(&block);
 
 	uint64_t pos_tmp = msg->hdr.data_len;
 	*fpos += (pos_tmp + 8);
@@ -134,18 +223,16 @@ static void scan_blocks(void)
 	struct p2p_message msg = {};
 	bool read_ok = false;
 
-	unsigned int height = 0;
 	uint64_t fpos = 0;
 
 	block_fd = fd;
 
 	while (fread_block(fd, &msg, &read_ok)) {
-		scan_decode_block(height, &msg, &fpos);
-		height++;
+		scan_decode_block(&msg, &fpos);
 
-		if ((height % 10000 == 0) && (!opt_quiet))
-			fprintf(stderr, "Scanned at height %u\n",
-				height);
+		if ((getstat(STA_BLOCK) % 10000 == 0) && (!opt_quiet))
+			fprintf(stderr, "Scanned block %lu\n",
+				getstat(STA_BLOCK));
 	}
 
 	block_fd = -1;
@@ -161,6 +248,11 @@ static void scan_blocks(void)
 
 static void show_report(void)
 {
+	unsigned int i;
+	for (i = 0; i < ARRAY_SIZE(gbl_stats); i++)
+		printf("%lu %s\n",
+		       getstat(i),
+		       stat_names[i]);
 }
 
 int main (int argc, char *argv[])
