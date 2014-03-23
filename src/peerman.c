@@ -389,8 +389,10 @@ void peerman_addstr(struct peer_manager *peers,
 	/* import seed data into peerman */
 	tmp = seedlist;
 	while (tmp) {
-		__peerman_add(peers, tmp->data, true);
+		struct bp_address *addr = tmp->data;
 		tmp = tmp->next;
+
+		peerman_add_addr(peers, addr, true);
 	}
 	g_list_free(seedlist);
 }
