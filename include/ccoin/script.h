@@ -274,6 +274,8 @@ extern bool bp_sign_sig(struct bp_keystore *ks, const struct bp_utxo *txFrom,
  * script building
  */
 
+extern GString *bsp_make_pubkeyhash(GString *hash);
+extern GString *bsp_make_scripthash(GString *hash);
 extern void bsp_push_data(GString *s, const void *data, size_t data_len);
 extern void bsp_push_int64(GString *s, int64_t v);
 extern void bsp_push_uint64(GString *s, uint64_t v);

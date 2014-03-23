@@ -339,3 +339,27 @@ void bsp_push_uint64(GString *s, uint64_t n)
 	BN_clear_free(&bn_lo);
 }
 
+GString *bsp_make_scripthash(GString *hash)
+{
+	GString *script_out = g_string_sized_new(32);
+
+	bsp_push_op(script_out, OP_HASH160);
+	bsp_push_data(script_out, hash->str, hash->len);
+	bsp_push_op(script_out, OP_EQUAL);
+
+	return script_out;
+}
+
+GString *bsp_make_pubkeyhash(GString *hash)
+{
+	GString *script_out = g_string_sized_new(32);
+
+	bsp_push_op(script_out, OP_DUP);
+	bsp_push_op(script_out, OP_HASH160);
+	bsp_push_data(script_out, hash->str, hash->len);
+	bsp_push_op(script_out, OP_EQUALVERIFY);
+	bsp_push_op(script_out, OP_CHECKSIG);
+
+	return script_out;
+}
+
