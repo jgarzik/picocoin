@@ -24,6 +24,7 @@
 #include <ccoin/mbr.h>
 #include <ccoin/script.h>
 #include <ccoin/net.h>
+#include <ccoin/hexcode.h>
 #include "peerman.h"
 #include "brd.h"
 
@@ -106,6 +107,8 @@ static bool nc_conn_read_enable(struct nc_conn *conn);
 static bool nc_conn_read_disable(struct nc_conn *conn);
 static bool nc_conn_write_enable(struct nc_conn *conn);
 static bool nc_conn_write_disable(struct nc_conn *conn);
+
+static bool process_block(const struct bp_block *block, int64_t fpos);
 
 static void nc_conn_build_iov(GList *write_q, unsigned int partial,
 			      struct iovec **iov_, unsigned int *iov_len_)
@@ -473,14 +476,20 @@ static bool nc_msg_block(struct nc_conn *conn)
 	if (!deser_bp_block(&block, &buf))
 		goto out;
 	bp_block_calc_sha256(&block);
+	char hexstr[BU256_STRSZ];
+	bu256_hex(hexstr, &block.sha256);
 
 	if (debugging) {
-		char hexstr[BU256_STRSZ];
-		bu256_hex(hexstr, &block.sha256);
-
 		fprintf(plog, "net: %s block %s\n",
 			conn->addr_str,
 			hexstr);
+	}
+
+	if (!bp_block_valid(&block)) {
+		fprintf(plog, "net: %s invalid block %s\n",
+			conn->addr_str,
+			hexstr);
+		goto out;
 	}
 
 	/* check for duplicate block */
@@ -488,7 +497,35 @@ static bool nc_msg_block(struct nc_conn *conn)
 	    g_hash_table_lookup(orphans, &block.sha256))
 		goto out_ok;
 
-	// TODO: we haven't seen this block before...
+	struct iovec iov[2];
+	iov[0].iov_base = &conn->msg.hdr;	// TODO: endian bug?
+	iov[0].iov_len = sizeof(conn->msg.hdr);
+	iov[1].iov_base = (void *) buf.p;	// cast away 'const'
+	iov[1].iov_len = buf.len;
+	size_t total_write = iov[0].iov_len + iov[1].iov_len;
+
+	/* store current file position */
+	off64_t fpos64 = lseek64(blocks_fd, 0, SEEK_CUR);
+	if (fpos64 == (off64_t)-1) {
+		fprintf(plog, "blocks: lseek64 failed %s\n",
+			strerror(errno));
+		goto out;
+	}
+
+	/* write new block to disk */
+	errno = 0;
+	ssize_t bwritten = writev(blocks_fd, iov, ARRAY_SIZE(iov));
+	if (bwritten != total_write) {
+		fprintf(plog, "blocks: write failed %s\n",
+			strerror(errno));
+		goto out;
+	}
+
+	/* process block */
+	if (!process_block(&block, fpos64)) {
+		fprintf(plog, "blocks: process-block failed\n");
+		goto out;
+	}
 
 out_ok:
 	rc = true;
@@ -1191,6 +1228,52 @@ static void init_blkdb(void)
 	}
 }
 
+static const char *genesis_bitcoin =
+"0100000000000000000000000000000000000000000000000000000000000000000000003ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51323a9fb8aa4b1e5e4a29ab5f49ffff001d1dac2b7c0101000000010000000000000000000000000000000000000000000000000000000000000000ffffffff4d04ffff001d0104455468652054696d65732030332f4a616e2f32303039204368616e63656c6c6f72206f6e206272696e6b206f66207365636f6e64206261696c6f757420666f722062616e6b73ffffffff0100f2052a01000000434104678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5fac00000000";
+
+static void init_block0(void)
+{
+	const char *genesis_hex = NULL;
+
+	switch (chain->chain_id) {
+	case CHAIN_BITCOIN:
+		genesis_hex = genesis_bitcoin;
+		break;
+	case CHAIN_TESTNET3:
+		fprintf(plog, "unsupported chain.  add genesis block here!\n");
+		break;
+	default:
+		fprintf(plog, "unsupported chain.  add genesis block here!\n");
+		exit(1);
+		break;
+	}
+
+	size_t olen = 0;
+	size_t genesis_rawlen = strlen(genesis_hex) / 2;
+	char genesis_raw[genesis_rawlen];
+	if (!decode_hex(genesis_raw, sizeof(genesis_raw), genesis_hex, &olen)) {
+		fprintf(plog, "chain hex decode fail\n");
+		exit(1);
+	}
+
+	GString *msg0 = message_str(chain->netmagic, "block",
+				    genesis_raw, genesis_rawlen);
+	ssize_t bwritten = write(blocks_fd, msg0->str, msg0->len);
+	if (bwritten != msg0->len) {
+		fprintf(plog, "blocks write0 failed: %s\n", strerror(errno));
+		exit(1);
+	}
+	g_string_free(msg0, TRUE);
+
+	off64_t fpos64 = lseek64(blocks_fd, 0, SEEK_SET);
+	if (fpos64 == (off64_t)-1) {
+		fprintf(plog, "blocks lseek0 failed: %s\n", strerror(errno));
+		exit(1);
+	}
+
+	fprintf(plog, "blocks: genesis block written\n");
+}
+
 static void init_blocks(void)
 {
 	char *blocks_fn = setting("blocks");
@@ -1202,6 +1285,15 @@ static void init_blocks(void)
 		fprintf(plog, "blocks file open failed: %s\n", strerror(errno));
 		exit(1);
 	}
+
+	off64_t flen = lseek64(blocks_fd, 0, SEEK_END);
+	if (flen == (off64_t)-1) {
+		fprintf(plog, "blocks file lseek64 failed: %s\n", strerror(errno));
+		exit(1);
+	}
+
+	if (flen == 0)
+		init_block0();
 }
 
 static bool spend_tx(struct bp_utxo_set *uset, const struct bp_tx *tx,
