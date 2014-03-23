@@ -13,6 +13,8 @@
 #include <ccoin/core.h>
 #include <ccoin/util.h>
 #include <ccoin/hexcode.h>
+#include <ccoin/base58.h>
+#include <ccoin/script.h>
 
 const char *argp_program_version = PACKAGE_VERSION;
 
@@ -25,6 +27,8 @@ static struct argp_option options[] = {
 	  "Set transaction version" },
 	{ "txin", 1004, "TXID:VOUT", 0,
 	  "Append a transaction input" },
+	{ "txout", 1005, "ADDRESS:AMOUNT-IN-SATOSHIS", 0,
+	  "Append a transaction output" },
 
 	{ }
 };
@@ -35,6 +39,7 @@ static char *opt_hexdata;
 static bool opt_blank;
 static struct bp_tx tx;
 static GList *opt_txin;
+static GList *opt_txout;
 
 static const char doc[] =
 "txmod - command line interface to modify bitcoin transactions";
@@ -87,6 +92,27 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
 			return ARGP_ERR_UNKNOWN;
 
 		opt_txin = g_list_append(opt_txin, strdup(arg));
+		break;
+	 }
+
+	case 1005: {			// --txout=ADDRESS:AMOUNT
+		char *colon = strchr(arg, ':');
+		if (!colon)
+			return ARGP_ERR_UNKNOWN;
+		unsigned int partlen = colon - arg;
+		if (!is_digitstr(colon + 1))
+			return ARGP_ERR_UNKNOWN;
+
+		char addrstr[partlen + 1];
+		memcpy(addrstr, arg, partlen);
+		addrstr[partlen] = 0;
+
+		GString *payload = base58_decode_check(NULL, addrstr);
+		if (!payload || (payload->len != 21))
+			return ARGP_ERR_UNKNOWN;
+		g_string_free(payload, TRUE);
+
+		opt_txout = g_list_append(opt_txout, strdup(arg));
 		break;
 	 }
 
@@ -174,6 +200,65 @@ static void mutate_inputs(void)
 	}
 }
 
+static bool is_script_addr(unsigned char addrtype)
+{
+	switch (addrtype) {
+	case 5:		// mainnet
+	case 196:	// testnet
+		return true;
+	default:
+		return false;
+	}
+}
+
+static void append_output(char *addr_str, char *amount_str)
+{
+	unsigned char addrtype = 0;
+	GString *payload = base58_decode_check(&addrtype, addr_str);
+	bool is_script = is_script_addr(addrtype);
+
+	uint64_t amt = (uint64_t) strtoull(amount_str, NULL, 10);
+
+	struct bp_txout *txout = calloc(1, sizeof(struct bp_txout));
+	if (!txout) {
+		fprintf(stderr, "OOM\n");
+		exit(1);
+	}
+
+	txout->nValue = amt;
+
+	if (is_script)
+		txout->scriptPubKey = bsp_make_scripthash(payload);
+	else
+		txout->scriptPubKey = bsp_make_pubkeyhash(payload);
+
+	g_ptr_array_add(tx.vout, txout);
+}
+
+static void mutate_outputs(void)
+{
+	if (!tx.vout)
+		tx.vout = g_ptr_array_new_full(8, g_bp_txout_free);
+
+	GList *tmp = opt_txout;
+	while (tmp) {
+		char *arg = tmp->data;
+		tmp = tmp->next;
+
+		size_t alloc_len = strlen(arg) + 1;
+		char addr_str[alloc_len];
+		strcpy(addr_str, arg);
+
+		char *colon = strchr(addr_str, ':');
+		*colon = 0;
+
+		char amount_str[alloc_len];
+		strcpy(amount_str, colon + 1);
+
+		append_output(addr_str, amount_str);
+	}
+}
+
 static void apply_mutations(void)
 {
 	if (opt_locktime)
@@ -182,6 +267,8 @@ static void apply_mutations(void)
 		mutate_version();
 	if (opt_txin)
 		mutate_inputs();
+	if (opt_txout)
+		mutate_outputs();
 }
 
 static void read_data(void)
