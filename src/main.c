@@ -319,12 +319,12 @@ int main (int argc, char *argv[])
 
 	RAND_bytes((unsigned char *)&instance_nonce, sizeof(instance_nonce));
 
-	bool done_command = 0;
+	bool done_command = false;
 	unsigned int arg;
 	for (arg = 1; arg < argc; arg++) {
 		const char *argstr = argv[arg];
 		if (is_command(argstr)) {
-			done_command = 1;
+			done_command = true;
 			if (!do_command(argstr))
 				return 1;
 		} else {
