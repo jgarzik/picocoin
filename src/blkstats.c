@@ -9,19 +9,14 @@
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
-#include <ctype.h>
 #include <argp.h>
 #include <glib.h>
-#include <openssl/ripemd.h>
 #include <ccoin/coredefs.h>
-#include <ccoin/base58.h>
 #include <ccoin/buffer.h>
-#include <ccoin/key.h>
 #include <ccoin/core.h>
 #include <ccoin/util.h>
 #include <ccoin/mbr.h>
 #include <ccoin/script.h>
-#include <ccoin/addr_match.h>
 #include <ccoin/message.h>
 
 const char *argp_program_version = PACKAGE_VERSION;
