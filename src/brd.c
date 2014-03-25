@@ -109,6 +109,8 @@ static bool nc_conn_write_enable(struct nc_conn *conn);
 static bool nc_conn_write_disable(struct nc_conn *conn);
 
 static bool process_block(const struct bp_block *block, int64_t fpos);
+static bool have_orphan(const bu256_t *v);
+static bool add_orphan(const bu256_t *hash_in, struct const_buffer *buf_in);
 
 static void nc_conn_build_iov(GList *write_q, unsigned int partial,
 			      struct iovec **iov_, unsigned int *iov_len_)
@@ -437,7 +439,7 @@ static bool nc_msg_inv(struct nc_conn *conn)
 		switch (inv->type) {
 		case MSG_BLOCK:
 			if (!blkdb_lookup(&db, &inv->hash) &&
-			    !g_hash_table_lookup(orphans, &inv->hash))
+			    !have_orphan(&inv->hash))
 				msg_vinv_push(&mv_out, MSG_BLOCK, &inv->hash);
 			break;
 
@@ -494,7 +496,7 @@ static bool nc_msg_block(struct nc_conn *conn)
 
 	/* check for duplicate block */
 	if (blkdb_lookup(&db, &block.sha256) ||
-	    g_hash_table_lookup(orphans, &block.sha256))
+	    have_orphan(&block.sha256))
 		goto out_ok;
 
 	struct iovec iov[2];
@@ -1508,7 +1510,35 @@ static void readprep_blocks_file(void)
 static void init_orphans(void)
 {
 	orphans = g_hash_table_new_full(g_bu256_hash, g_bu256_equal,
-					NULL, g_bp_block_free);
+					g_bu256_free, g_buffer_free);
+}
+
+static bool have_orphan(const bu256_t *v)
+{
+	return g_hash_table_lookup(orphans, v);
+}
+
+static bool add_orphan(const bu256_t *hash_in, struct const_buffer *buf_in)
+{
+	if (have_orphan(hash_in))
+		return false;
+
+	bu256_t *hash = bu256_new(hash_in);
+	if (!hash) {
+		fprintf(plog, "OOM\n");
+		return false;
+	}
+
+	struct buffer *buf = buffer_copy(buf_in->p, buf_in->len);
+	if (!buf) {
+		bu256_free(hash);
+		fprintf(plog, "OOM\n");
+		return false;
+	}
+
+	g_hash_table_insert(orphans, hash, buf);
+	
+	return true;
 }
 
 static void init_peers(struct net_child_info *nci)
