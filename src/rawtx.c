@@ -537,7 +537,8 @@ int main (int argc, char *argv[])
 
 	output_data();
 
-	bp_tx_free(&tx);
+	if (opt_strict_free)
+		bp_tx_free(&tx);
 
 	return 0;
 }
