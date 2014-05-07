@@ -3,7 +3,7 @@ libnode.a
 
 blkscan
 blkstats
-txmod
+rawtx
 
 brd
 brd.peers

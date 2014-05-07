@@ -1,7 +1,7 @@
 
 INCLUDES	= @GLIB_CFLAGS@ -I$(top_srcdir)/include
 
-bin_PROGRAMS	= brd picocoin blkscan blkstats txmod
+bin_PROGRAMS	= brd picocoin blkscan blkstats rawtx
 
 noinst_LIBRARIES= libnode.a
 
@@ -31,5 +31,5 @@ blkscan_LDADD	= ../lib/libccoin.a \
 		  @GLIB_LIBS@ @CRYPTO_LIBS@
 blkstats_LDADD	= ../lib/libccoin.a \
 		  @GLIB_LIBS@ @CRYPTO_LIBS@
-txmod_LDADD	= ../lib/libccoin.a \
+rawtx_LDADD	= ../lib/libccoin.a \
 		  @GLIB_LIBS@ @CRYPTO_LIBS@
