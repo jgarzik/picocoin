@@ -32,4 +32,4 @@ blkscan_LDADD	= ../lib/libccoin.a \
 blkstats_LDADD	= ../lib/libccoin.a \
 		  @GLIB_LIBS@ @CRYPTO_LIBS@
 rawtx_LDADD	= ../lib/libccoin.a \
-		  @GLIB_LIBS@ @CRYPTO_LIBS@
+		  @GLIB_LIBS@ @CRYPTO_LIBS@ @JANSSON_LIBS@
