@@ -21,14 +21,21 @@ const char *argp_program_version = PACKAGE_VERSION;
 static struct argp_option options[] = {
 	{ "blank", 1003, NULL, 0,
 	  "Start new, blank transaction. Do not read any input data." },
+
 	{ "locktime", 1001, "LOCKTIME", 0,
 	  "Set transaction lock time" },
 	{ "nversion", 1002, "VERSION", 0,
 	  "Set transaction version" },
-	{ "txin", 1004, "TXID:VOUT", 0,
+
+	{ "txin", 1010, "TXID:VOUT", 0,
 	  "Append a transaction input" },
-	{ "txout", 1005, "ADDRESS:AMOUNT-IN-SATOSHIS", 0,
+	{ "delete-txin", 1011, "INDEX", 0,
+	  "Delete transaction input at INDEX" },
+
+	{ "txout", 1020, "ADDRESS:AMOUNT-IN-SATOSHIS", 0,
 	  "Append a transaction output" },
+	{ "delete-txout", 1021, "INDEX", 0,
+	  "Delete transaction output at INDEX" },
 
 	{ }
 };
@@ -39,7 +46,9 @@ static char *opt_hexdata;
 static bool opt_blank;
 static struct bp_tx tx;
 static GList *opt_txin;
+static GList *opt_del_txin;
 static GList *opt_txout;
+static GList *opt_del_txout;
 
 static const char doc[] =
 "txmod - command line interface to modify bitcoin transactions";
@@ -76,7 +85,8 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
 	case 1003:			// --blank
 		opt_blank = true;
 		break;
-	case 1004: {			// --txin=TXID:VOUT
+
+	case 1010: {			// --txin=TXID:VOUT
 		char *colon = strchr(arg, ':');
 		if (!colon)
 			return ARGP_ERR_UNKNOWN;
@@ -94,8 +104,16 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
 		opt_txin = g_list_append(opt_txin, strdup(arg));
 		break;
 	 }
+	case 1011: {			// --delete-txin=INDEX
+		if (!is_digitstr(arg))
+			return ARGP_ERR_UNKNOWN;
 
-	case 1005: {			// --txout=ADDRESS:AMOUNT
+		opt_del_txin = g_list_append(opt_del_txin,
+					     GINT_TO_POINTER(atoi(arg)));
+		break;
+	 }
+
+	case 1020: {			// --txout=ADDRESS:AMOUNT
 		char *colon = strchr(arg, ':');
 		if (!colon)
 			return ARGP_ERR_UNKNOWN;
@@ -115,6 +133,15 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
 		opt_txout = g_list_append(opt_txout, strdup(arg));
 		break;
 	 }
+	case 1021: {			// --delete-txout=INDEX
+		if (!is_digitstr(arg))
+			return ARGP_ERR_UNKNOWN;
+
+		opt_del_txout = g_list_append(opt_del_txout,
+					      GINT_TO_POINTER(atoi(arg)));
+		break;
+	 }
+
 
 	case ARGP_KEY_ARG:
 		if (opt_hexdata)
@@ -181,7 +208,18 @@ static void mutate_inputs(void)
 	if (!tx.vin)
 		tx.vin = g_ptr_array_new_full(8, g_bp_txin_free);
 
-	GList *tmp = opt_txin;
+	// delete inputs
+	GList *tmp = opt_del_txin;
+	while (tmp) {
+		int idx = GPOINTER_TO_INT(tmp->data);
+		tmp = tmp->next;
+
+		if ((idx >= 0) && (idx < tx.vin->len))
+			g_ptr_array_remove_index(tx.vin, idx);
+	}
+
+	// append new inputs
+	tmp = opt_txin;
 	while (tmp) {
 		char *arg = tmp->data;
 		tmp = tmp->next;
@@ -240,7 +278,18 @@ static void mutate_outputs(void)
 	if (!tx.vout)
 		tx.vout = g_ptr_array_new_full(8, g_bp_txout_free);
 
-	GList *tmp = opt_txout;
+	// delete outputs
+	GList *tmp = opt_del_txout;
+	while (tmp) {
+		int idx = GPOINTER_TO_INT(tmp->data);
+		tmp = tmp->next;
+
+		if ((idx >= 0) && (idx < tx.vin->len))
+			g_ptr_array_remove_index(tx.vout, idx);
+	}
+
+	// append new outputs
+	tmp = opt_txout;
 	while (tmp) {
 		char *arg = tmp->data;
 		tmp = tmp->next;
@@ -265,9 +314,9 @@ static void apply_mutations(void)
 		mutate_locktime();
 	if (opt_version)
 		mutate_version();
-	if (opt_txin)
+	if (opt_txin || opt_del_txin)
 		mutate_inputs();
-	if (opt_txout)
+	if (opt_txout || opt_del_txout)
 		mutate_outputs();
 }
 
