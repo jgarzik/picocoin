@@ -1,5 +1,6 @@
 
-INCLUDES	= @GLIB_CFLAGS@ -I$(top_srcdir)/include
+INCLUDES	= @GLIB_CFLAGS@ -I$(top_srcdir)/include \
+                  -I$(top_srcdir)/jansson/src
 
 bin_PROGRAMS	= brd picocoin blkscan blkstats rawtx
 
@@ -25,11 +26,13 @@ picocoin_SOURCES=	\
 	wallet.c wallet.h
 
 picocoin_LDADD	= libnode.a ../lib/libccoin.a \
-		  @GLIB_LIBS@ @CRYPTO_LIBS@ @EVENT_LIBS@ @JANSSON_LIBS@
+                  $(top_srcdir)/jansson/src/.libs/libjansson.a \
+		  @GLIB_LIBS@ @CRYPTO_LIBS@ @EVENT_LIBS@
 
 blkscan_LDADD	= ../lib/libccoin.a \
 		  @GLIB_LIBS@ @CRYPTO_LIBS@
 blkstats_LDADD	= ../lib/libccoin.a \
 		  @GLIB_LIBS@ @CRYPTO_LIBS@
 rawtx_LDADD	= ../lib/libccoin.a \
-		  @GLIB_LIBS@ @CRYPTO_LIBS@ @JANSSON_LIBS@
+                  $(top_srcdir)/jansson/src/.libs/libjansson.a \
+		  @GLIB_LIBS@ @CRYPTO_LIBS@

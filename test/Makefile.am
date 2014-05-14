@@ -1,6 +1,7 @@
 
 INCLUDES	= @GLIB_CFLAGS@ -DTEST_SRCDIR=\"$(top_srcdir)/test\" \
-		  -I$(top_srcdir)/include
+		  -I$(top_srcdir)/include \
+                  -I$(top_srcdir)/jansson/src
 
 EXTRA_DIST	= \
 	base58_encode_decode.json	\
@@ -27,7 +28,8 @@ TESTS		= hex base58 fileio util keyset bloom \
 		  tx-valid wallet-basics chain-verf
 
 COMMON_LDADD	= libtest.a ../lib/libccoin.a \
-		  @GLIB_LIBS@ @CRYPTO_LIBS@ @JANSSON_LIBS@ @MATH_LIBS@
+		  $(top_srcdir)/jansson/src/.libs/libjansson.a \
+		  @GLIB_LIBS@ @CRYPTO_LIBS@ @MATH_LIBS@
 
 base58_LDADD		= $(COMMON_LDADD)
 blkdb_LDADD		= $(COMMON_LDADD)
