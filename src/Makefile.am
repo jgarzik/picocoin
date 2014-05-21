@@ -1,5 +1,6 @@
 
-INCLUDES	= @GLIB_CFLAGS@ -I$(top_srcdir)/include
+INCLUDES	= @GLIB_CFLAGS@ -I$(top_srcdir)/include \
+                  -I$(top_srcdir)/libevent/include
 
 bin_PROGRAMS	= brd picocoin blkscan blkstats rawtx
 
@@ -14,7 +15,8 @@ brd_SOURCES=		\
 	brd.h
 
 brd_LDADD	= libnode.a ../lib/libccoin.a \
-		  @GLIB_LIBS@ @CRYPTO_LIBS@ @EVENT_LIBS@
+                  $(top_srcdir)/libevent/.libs/libevent.a \
+		  @GLIB_LIBS@ @CRYPTO_LIBS@
 
 picocoin_SOURCES=	\
 	aes.c		\
@@ -25,7 +27,8 @@ picocoin_SOURCES=	\
 	wallet.c wallet.h
 
 picocoin_LDADD	= libnode.a ../lib/libccoin.a \
-		  @GLIB_LIBS@ @CRYPTO_LIBS@ @EVENT_LIBS@ @JANSSON_LIBS@
+                  $(top_srcdir)/libevent/.libs/libevent.a \
+		  @GLIB_LIBS@ @CRYPTO_LIBS@ @JANSSON_LIBS@
 
 blkscan_LDADD	= ../lib/libccoin.a \
 		  @GLIB_LIBS@ @CRYPTO_LIBS@

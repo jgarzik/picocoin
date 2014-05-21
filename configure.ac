@@ -68,8 +68,6 @@ AC_CHECK_LIB(m, log, MATH_LIBS=-lm,
   [AC_MSG_ERROR([Missing required libm])])
 AC_CHECK_LIB(crypto, MD5_Init, CRYPTO_LIBS=-lcrypto,
   [AC_MSG_ERROR([Missing required libcrypto])])
-AC_CHECK_LIB(event_core, event_base_new, EVENT_LIBS=-levent_core,
-  [AC_MSG_ERROR([Missing required libevent])])
 AC_CHECK_LIB(jansson, json_loads, JANSSON_LIBS=-ljansson,
   [AC_MSG_ERROR([Missing required libjansson])])
 
@@ -90,7 +88,6 @@ AM_PATH_GLIB_2_0(2.0.0, , exit 1)
 
 AC_SUBST(MATH_LIBS)
 AC_SUBST(CRYPTO_LIBS)
-AC_SUBST(EVENT_LIBS)
 AC_SUBST(JANSSON_LIBS)
 
 AC_CONFIG_FILES([
@@ -102,5 +99,7 @@ AC_CONFIG_FILES([
 	src/Makefile
 	test/Makefile
 	])
-AC_OUTPUT
 
+AC_CONFIG_SUBDIRS(libevent)
+
+AC_OUTPUT
