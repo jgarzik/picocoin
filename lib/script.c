@@ -133,8 +133,8 @@ static bool is_bsp_op_pubkeyhash(const struct bscript_op *op)
 bool is_bsp_pubkey(GPtrArray *ops)
 {
 	return ((ops->len == 2) &&
-	        is_bsp_op(g_ptr_array_index(ops, 0), OP_CHECKSIG) &&
-	        is_bsp_op_pubkey(g_ptr_array_index(ops, 1)));
+	        is_bsp_op(g_ptr_array_index(ops, 1), OP_CHECKSIG) &&
+	        is_bsp_op_pubkey(g_ptr_array_index(ops, 0)));
 }
 
 // OP_DUP, OP_HASH160, OP_PUBKEYHASH, OP_EQUALVERIFY, OP_CHECKSIG,
