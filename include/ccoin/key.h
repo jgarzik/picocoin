@@ -46,7 +46,7 @@ struct bp_keystore {
 extern void bkeys_init(struct bp_keystore *ks);
 extern void bkeys_free(struct bp_keystore *ks);
 extern bool bkeys_add(struct bp_keystore *ks, struct bp_key *key);
-extern bool bkeys_privkey_get(struct bp_keystore *ks, const bu160_t *key_id,
+extern bool bkeys_key_get(struct bp_keystore *ks, const bu160_t *key_id,
 		      struct bp_key *key);
 extern bool bkeys_pubkey_append(struct bp_keystore *ks, const bu160_t *key_id,
 			GString *scriptSig);
