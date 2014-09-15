@@ -18,7 +18,7 @@ static bool sign1(const bu160_t *key_id, struct bp_keystore *ks,
 	bp_key_init(&key);
 
 	/* find private key in keystore */
-	if (!bkeys_privkey_get(ks, key_id, &key))
+	if (!bkeys_key_get(ks, key_id, &key))
 		goto out;
 
 	void *sig = NULL;
