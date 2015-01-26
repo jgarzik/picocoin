@@ -1,5 +1,4 @@
-
-
+#Picocoin
 
 Tiny bitcoin library, with lightweight client and utils
 
