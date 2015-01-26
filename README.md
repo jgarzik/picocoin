@@ -28,18 +28,15 @@ parameters may be specified on the command line, or in a configuration file.
 
 The command line is processed in-order.  For example
 
-    ```
-	$ ./picocoin value=1 list-settings value=2 list-settings
-    ```
+`$ ./picocoin value=1 list-settings value=2 list-settings`
 
 will execute the "list-settings" command twice, each with "value" setting
 initialized to a different parameter.
 
 Similarly, you may read multiple configuration files into the settings map:
 
-    ```
-	$ ./picocoin config=file1 config=file2 config=file3
-    ```
+`$ ./picocoin config=file1 config=file2 config=file3`
+
 
 Recognized parameters
 =====================
