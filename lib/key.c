@@ -212,8 +212,24 @@ bool bp_sign(struct bp_key *key, const void *data, size_t data_len,
 }
 
 bool bp_verify(struct bp_key *key, const void *data, size_t data_len,
-	       const void *sig, size_t sig_len)
+	       const void *sig_, size_t sig_len)
 {
-	return ECDSA_verify(0, data, data_len, sig, sig_len, key->k) == 1;
+	const unsigned char *sig = sig_;
+	ECDSA_SIG *esig;
+	bool b = false;
+
+	esig = ECDSA_SIG_new();
+	if (!esig)
+		goto out;
+
+	if (!d2i_ECDSA_SIG(&esig, &sig, sig_len))
+		goto out_free;
+
+	b = ECDSA_do_verify(data, data_len, esig, key->k) == 1;
+
+out_free:
+	ECDSA_SIG_free(esig);
+out:
+	return b;
 }
 
