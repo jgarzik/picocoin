@@ -298,8 +298,6 @@ void cur_wallet_free(void)
 		return;
 
 	wallet_free(cur_wallet);
-	free(cur_wallet);
-
 	cur_wallet = NULL;
 }
 
