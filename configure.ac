@@ -72,6 +72,7 @@ AC_CHECK_LIB(event_core, event_base_new, EVENT_LIBS=-levent_core,
   [AC_MSG_ERROR([Missing required libevent])])
 AC_CHECK_LIB(jansson, json_loads, JANSSON_LIBS=-ljansson,
   [AC_MSG_ERROR([Missing required libjansson])])
+AC_CHECK_LIB(argp, argp_parse, ARGP_LIBS=-lARGP)
 
 dnl -------------------------------------
 dnl Checks for optional library functions
@@ -92,6 +93,7 @@ AC_SUBST(MATH_LIBS)
 AC_SUBST(CRYPTO_LIBS)
 AC_SUBST(EVENT_LIBS)
 AC_SUBST(JANSSON_LIBS)
+AC_SUBST(ARGP_LIBS)
 
 AC_CONFIG_FILES([
 	Makefile
