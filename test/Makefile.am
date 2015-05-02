@@ -1,5 +1,5 @@
 
-INCLUDES	= @GLIB_CFLAGS@ -DTEST_SRCDIR=\"$(top_srcdir)/test\" \
+AM_CPPFLAGS	= @GLIB_CFLAGS@ -DTEST_SRCDIR=\"$(top_srcdir)/test\" \
 		  -I$(top_srcdir)/include
 
 EXTRA_DIST	= \

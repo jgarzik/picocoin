@@ -1,5 +1,5 @@
 
-INCLUDES	= @GLIB_CFLAGS@ -I$(top_srcdir)/include
+AM_CPPFLAGS	= @GLIB_CFLAGS@ -I$(top_srcdir)/include
 
 bin_PROGRAMS	= brd picocoin blkscan blkstats rawtx
 
