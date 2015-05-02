@@ -9,6 +9,11 @@ enum {
 	PROTO_VERSION		= 60002,
 };
 
+#ifdef __APPLE__
+#  define off64_t off_t
+#  define lseek64 lseek
+#endif
+
 /* main.c */
 extern GHashTable *settings;
 extern const struct chain_info *chain;

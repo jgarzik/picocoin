@@ -60,6 +60,7 @@ case "${host}" in
 		;;
 esac
 
+
 dnl -----------------------------
 dnl Checks for required libraries
 dnl -----------------------------
@@ -72,8 +73,11 @@ AC_CHECK_LIB(event_core, event_base_new, EVENT_LIBS=-levent_core,
   [AC_MSG_ERROR([Missing required libevent])])
 AC_CHECK_LIB(jansson, json_loads, JANSSON_LIBS=-ljansson,
   [AC_MSG_ERROR([Missing required libjansson])])
-AC_CHECK_LIB(argp, argp_parse, ARGP_LIBS=-lARGP)
-
+AC_CHECK_LIB(glib-2.0, argp_parse, HAVE_GLIB="yes")
+if test "x$HAVE_GLIB" != xyes ; then
+  AC_CHECK_LIB(argp, argp_parse, ARGP_LIBS=-lARGP,
+    [AC_MSG_ERROR([Missing required libargp])])
+fi
 dnl -------------------------------------
 dnl Checks for optional library functions
 dnl -------------------------------------
