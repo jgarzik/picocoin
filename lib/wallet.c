@@ -111,13 +111,13 @@ struct wallet *wallet_new(const struct chain_info *chain)
 
 void wallet_free(struct wallet *wlt)
 {
-	struct bp_key *key;
+	struct wallet_key *wkey;
 
 	if (!wlt)
 		return;
 
-	wallet_for_each_key(wlt, key)
-		bp_key_free(key);
+	wallet_for_each_key(wlt, wkey)
+		wallet_key_free(wkey);
 
 	parr_free(wlt->keys, true);
 	wlt->keys = NULL;
@@ -128,25 +128,15 @@ void wallet_free(struct wallet *wlt)
 
 cstring *wallet_new_address(struct wallet *wlt)
 {
-	struct bp_key *key;
+	struct wallet_key *wkey;
 
-	key = calloc(1, sizeof(*key));
-	if (!bp_key_init(key)) {
-		free(key);
-		fprintf(stderr, "wallet: key init failed\n");
+	wkey = wallet_key_new_generate();
+	if (!wkey)
 		return NULL;
-	}
 
-	if (!bp_key_generate(key)) {
-		bp_key_free(key);
-		free(key);
-		fprintf(stderr, "wallet: key gen failed\n");
-		return NULL;
-	}
+	parr_add(wlt->keys, wkey);
 
-	parr_add(wlt->keys, key);
-
-	return bp_pubkey_get_address(key, wlt->chain->addr_pubkey);
+	return bp_pubkey_get_address(&wkey->key, wlt->chain->addr_pubkey);
 }
 
 static cstring *ser_wallet_root(const struct wallet *wlt)
@@ -161,7 +151,7 @@ static cstring *ser_wallet_root(const struct wallet *wlt)
 
 cstring *ser_wallet(const struct wallet *wlt)
 {
-	struct bp_key *key;
+	struct wallet_key *wkey;
 
 	cstring *rs = cstr_new_sz(20 * 1024);
 
@@ -176,16 +166,16 @@ cstring *ser_wallet(const struct wallet *wlt)
 	cstr_free(s_root, true);
 
 	/* ser "privkey" records */
-	wallet_for_each_key(wlt, key) {
-		void *privkey = NULL;
-		size_t pk_len = 0;
-
-		bp_privkey_get(key, &privkey, &pk_len);
+	wallet_for_each_key(wlt, wkey) {
+		cstring *keydata = ser_wallet_key(wkey);
+		if (!keydata)
+			continue;
 
 		cstring *recdata = message_str(wlt->chain->netmagic,
 					       "privkey",
-					       privkey, pk_len);
-		free(privkey);
+					       keydata->str,
+					       keydata->len);
+		cstr_free(keydata, true);
 
 		cstr_append_buf(rs, recdata->str, recdata->len);
 		cstr_free(recdata, true);
@@ -211,24 +201,24 @@ static bool deser_wallet_root(struct wallet *wlt, struct const_buffer *buf)
 	return true;
 }
 
-static bool load_rec_privkey(struct wallet *wlt, const void *privkey, size_t pk_len)
+static bool load_rec_privkey(struct wallet *wlt, const void *data, size_t data_len)
 {
-	struct bp_key *key;
+	struct const_buffer buf = { data, data_len };
+	struct wallet_key *wkey;
 
-	key = calloc(1, sizeof(*key));
-	if (!bp_key_init(key))
-		goto err_out;
-	if (!bp_privkey_set(key, privkey, pk_len))
-		goto err_out_kf;
+	wkey = wallet_key_new();
+	if (!wkey)
+		return false;
 
-	parr_add(wlt->keys, key);
+	if (!deser_wallet_key(wkey, &buf))
+		goto err_out_wkf;
+
+	parr_add(wlt->keys, wkey);
 
 	return true;
 
-err_out_kf:
-	bp_key_free(key);
-err_out:
-	free(key);
+err_out_wkf:
+	wallet_key_free(wkey);
 	return false;
 }
 
