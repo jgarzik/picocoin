@@ -138,7 +138,7 @@ err_out:
 	return false;
 }
 
-bool bp_privkey_get(struct bp_key *key, void **privkey, size_t *pk_len)
+bool bp_privkey_get(const struct bp_key *key, void **privkey, size_t *pk_len)
 {
 	if (!EC_KEY_check_key(key->k))
 		return false;
@@ -154,7 +154,7 @@ bool bp_privkey_get(struct bp_key *key, void **privkey, size_t *pk_len)
 	return true;
 }
 
-bool bp_pubkey_get(struct bp_key *key, void **pubkey, size_t *pk_len)
+bool bp_pubkey_get(const struct bp_key *key, void **pubkey, size_t *pk_len)
 {
 	if (!EC_KEY_check_key(key->k))
 		return false;
@@ -192,7 +192,7 @@ bool bp_key_secret_get(void *p, size_t len, const struct bp_key *key)
 	return true;
 }
 
-bool bp_sign(struct bp_key *key, const void *data, size_t data_len,
+bool bp_sign(const struct bp_key *key, const void *data, size_t data_len,
 	     void **sig_, size_t *sig_len_)
 {
 	size_t sig_sz = ECDSA_size(key->k);
@@ -211,7 +211,7 @@ bool bp_sign(struct bp_key *key, const void *data, size_t data_len,
 	return true;
 }
 
-bool bp_verify(struct bp_key *key, const void *data, size_t data_len,
+bool bp_verify(const struct bp_key *key, const void *data, size_t data_len,
 	       const void *sig_, size_t sig_len)
 {
 	const unsigned char *sig = sig_;
