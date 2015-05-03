@@ -22,5 +22,8 @@ extern void wallet_info(void);
 extern void wallet_dump(void);
 extern void wallet_addresses(void);
 extern void cur_wallet_free(void);
+extern time_t wallet_oldest_key_time(void);
 
+/* check if there is a key in wallet (bu_Hash160 comp. against buf) */
+extern bool wallet_lookup_pubkey(const void *data, size_t data_len);
 #endif /* __PICOCOIN_WALLET_H__ */

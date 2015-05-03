@@ -21,6 +21,7 @@
 #include <ccoin/mbr.h>
 #include <ccoin/hexcode.h>
 #include <ccoin/compat.h>		/* for g_ptr_array_new_full */
+#include <ccoin/base58.h>
 
 static struct wallet *wallet_new(void)
 {
@@ -80,16 +81,23 @@ static GString *ser_wallet_root(const struct wallet *wlt)
 	return rs;
 }
 
-static bool load_rec_privkey(struct wallet *wlt, const void *privkey, size_t pk_len)
+static bool load_rec_privkey(struct wallet *wlt, const void *privkey, size_t msg_len)
 {
 	struct bp_key *key;
+
+    size_t pk_len = msg_len-sizeof(uint32_t);
 
 	key = calloc(1, sizeof(*key));
 	if (!bp_key_init(key))
 		goto err_out;
 	if (!bp_privkey_set(key, privkey, pk_len))
 		goto err_out_kf;
-
+    
+    struct const_buffer buf;
+    buf.p = (void *)privkey+pk_len;
+    buf.len = sizeof(uint32_t);
+    deser_u32((uint32_t *)&key->c_time, &buf);
+    
 	g_ptr_array_add(wlt->keys, key);
 
 	return true;
@@ -207,16 +215,27 @@ static GString *ser_wallet(struct wallet *wlt)
 			key = g_ptr_array_index(wlt->keys, i);
 
 			void *privkey = NULL;
+            
 			size_t pk_len = 0;
 
 			bp_privkey_get(key, &privkey, &pk_len);
 
+            void *privkey_ctime = calloc(1, pk_len+sizeof(uint32_t));
+            memcpy(privkey_ctime, privkey, pk_len);
+            
+            GString *c_time_ser = g_string_sized_new(sizeof(uint32_t)+1);
+            ser_u32(c_time_ser, (uint32_t)key->c_time);
+            memcpy(privkey_ctime+pk_len, c_time_ser->str, sizeof(uint32_t));
+            g_string_free(c_time_ser, TRUE);
+            
 			GString *recdata = message_str(wlt->netmagic,
 						       "privkey",
-						       privkey, pk_len);
+						       privkey_ctime, pk_len+sizeof(uint32_t));
+            
 			free(privkey);
 
 			g_string_append_len(rs, recdata->str, recdata->len);
+
 			g_string_free(recdata, TRUE);
 		}
 	}
@@ -286,8 +305,14 @@ void wallet_new_address(void)
 	store_wallet(wlt);
 
 	GString *btc_addr = bp_pubkey_get_address(key, chain->addr_pubkey);
-
-	printf("%s\n", btc_addr->str);
+    
+    char *c_time = ctime(&key->c_time);
+    char *p = strchr(c_time, '\n');
+    if(p) {
+        *p = 0;
+    }
+	
+    printf("%s (%s)\n", btc_addr->str, c_time);
 
 	g_string_free(btc_addr, TRUE);
 }
@@ -418,6 +443,13 @@ static void wallet_dump_keys(json_t *keys_a, struct wallet *wlt)
 			json_object_set_new(o, "privkey", json_string(privkey_str));
 			free(privkey_str);
 			free(privkey);
+            
+            char *c_time = ctime(&key->c_time);
+            char *p = strchr(c_time, '\n');
+            if(p) {
+                *p = 0;
+            }
+			json_object_set_new(o, "c_time", json_string(c_time));
 		}
 
 		if (!bp_pubkey_get(key, &pubkey, &pub_len)) {
@@ -473,3 +505,56 @@ void wallet_dump(void)
 	printf("\n");
 }
 
+time_t wallet_oldest_key_time(void) {
+    if (!cur_wallet_load())
+		return false;
+
+	struct wallet *wlt = cur_wallet;
+    
+    unsigned int i=0;
+    struct bp_key *oldest_key = NULL;
+    for (i = 0; i < wlt->keys->len; i++) {
+		struct bp_key *key;
+        key = g_ptr_array_index(wlt->keys, i);
+        if(!oldest_key || key->c_time < oldest_key->c_time) {
+            oldest_key = key;
+        }
+    }
+    return oldest_key->c_time;
+}
+
+bool wallet_lookup_pubkey(const void *data, size_t data_len) {
+    if (!cur_wallet_load())
+		return false;
+    
+    int rc = false;
+    
+	struct wallet *wlt = cur_wallet;
+    
+    unsigned int i=0;
+    for (i = 0; i < wlt->keys->len; i++) {
+		struct bp_key *key;
+        
+		key = g_ptr_array_index(wlt->keys, i);
+        
+        void *pubkey = NULL;
+        size_t pk_len = 0;
+    
+        bp_pubkey_get(key, &pubkey, &pk_len);
+        
+        unsigned char md160[RIPEMD160_DIGEST_LENGTH];
+
+        bu_Hash160(md160, pubkey, pk_len);
+        if(memcmp(md160, data, data_len) == 0) {
+            // key found
+            free(pubkey);
+            rc = true;
+            goto out_ok;
+        }
+        
+        free(pubkey);
+    }
+    
+out_ok:
+    return rc;
+}
