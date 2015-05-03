@@ -880,7 +880,7 @@ static void nc_conns_open(struct net_child_info *nci)
 			nci->conns->len,
 			NC_MAX_CONN - nci->conns->len);
 
-	while ((g_hash_table_size(nci->peers->map_addr) > 0) &&
+	while ((bp_hashtab_size(nci->peers->map_addr) > 0) &&
 	       (nci->conns->len < NC_MAX_CONN)) {
 
 		/* delete peer from front of address list.  it will be
@@ -1000,7 +1000,7 @@ static void network_child(int read_fd, int write_fd)
 
 	if (debugging)
 		fprintf(stderr, "net: have %u/%u peers\n",
-			g_hash_table_size(peers->map_addr),
+			bp_hashtab_size(peers->map_addr),
 			g_list_length(peers->addrlist));
 
 	/*

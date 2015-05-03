@@ -24,6 +24,7 @@
 #include <ccoin/mbr.h>
 #include <ccoin/script.h>
 #include <ccoin/net.h>
+#include <ccoin/hashtab.h>
 #include <ccoin/hexcode.h>
 #include "peerman.h"
 #include "brd.h"
@@ -1010,7 +1011,7 @@ static void nc_conns_open(struct net_child_info *nci)
 			nci->conns->len,
 			NC_MAX_CONN - nci->conns->len);
 
-	while ((g_hash_table_size(nci->peers->map_addr) > 0) &&
+	while ((bp_hashtab_size(nci->peers->map_addr) > 0) &&
 	       (nci->conns->len < NC_MAX_CONN)) {
 
 		/* delete peer from front of address list.  it will be
@@ -1567,7 +1568,7 @@ static void init_peers(struct net_child_info *nci)
 
 	if (debugging)
 		fprintf(plog, "net: have %u/%u peers\n",
-			g_hash_table_size(peers->map_addr),
+			bp_hashtab_size(peers->map_addr),
 			g_list_length(peers->addrlist));
 
 	nci->peers = peers;
@@ -1617,7 +1618,7 @@ static void shutdown_daemon(struct net_child_info *nci)
 	bool rc = peerman_write(nci->peers);
 	fprintf(plog, "net: %s %u/%u peers\n",
 		rc ? "wrote" : "failed to write",
-		g_hash_table_size(nci->peers->map_addr),
+		bp_hashtab_size(nci->peers->map_addr),
 		g_list_length(nci->peers->addrlist));
 
 	if (plog != stdout && plog != stderr) {

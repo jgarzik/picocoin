@@ -14,12 +14,12 @@
 #include <ccoin/compat.h>
 #include "picocoin.h"
 
-static guint addr_hash(gconstpointer key)
+static unsigned long addr_hash(const void *key)
 {
 	return djb2_hash(0x1721, key, 16);
 }
 
-static gboolean addr_equal(gconstpointer a, gconstpointer b)
+static bool addr_equal(const void *a, const void *b)
 {
 	return memcmp(a, b, 16) == 0 ? TRUE : FALSE;
 }
@@ -70,7 +70,11 @@ static struct peer_manager *peerman_new(void)
 	if (!peers)
 		return NULL;
 
-	peers->map_addr = g_hash_table_new(addr_hash, addr_equal);
+	peers->map_addr = bp_hashtab_new(addr_hash, addr_equal);
+	if (!peers->map_addr) {
+		free(peers);
+		return NULL;
+	}
 
 	return peers;
 }
@@ -90,8 +94,7 @@ void peerman_free(struct peer_manager *peers)
 	if (!peers)
 		return;
 
-	if (peers->map_addr)
-		g_hash_table_unref(peers->map_addr);
+	bp_hashtab_unref(peers->map_addr);
 
 	g_list_free_full(peers->addrlist, peer_ent_free);
 
@@ -109,12 +112,12 @@ static void __peerman_add(struct peer_manager *peers, struct peer *peer,
 	else
 		peers->addrlist = g_list_append(peers->addrlist, peer);
 
-	g_hash_table_insert(peers->map_addr, peer->addr.ip, peer);
+	bp_hashtab_put(peers->map_addr, peer->addr.ip, peer);
 }
 
 static bool peerman_has_addr(struct peer_manager *peers,const unsigned char *ip)
 {
-	return g_hash_table_lookup_extended(peers->map_addr, ip, NULL, NULL);
+	return bp_hashtab_get_ext(peers->map_addr, ip, NULL, NULL);
 }
 
 static bool peerman_read_rec(struct peer_manager *peers,
@@ -316,7 +319,7 @@ struct peer *peerman_pop(struct peer_manager *peers)
 
 	peers->addrlist = g_list_delete_link(tmp, tmp);
 
-	g_hash_table_remove(peers->map_addr, peer->addr.ip);
+	bp_hashtab_del(peers->map_addr, peer->addr.ip);
 
 	return peer;
 }

@@ -8,6 +8,7 @@ bloom
 blkdb
 chain-verf
 fileio
+hashtab
 hex
 keyset
 script

@@ -9,6 +9,7 @@
 #include <string.h>
 #include <glib.h>
 #include <ccoin/core.h>
+#include <ccoin/hashtab.h>
 
 struct peer {
 	/* serialized */
@@ -46,7 +47,7 @@ extern bool deser_peer(unsigned int protover,
 extern void ser_peer(GString *s, unsigned int protover, const struct peer *peer);
 
 struct peer_manager {
-	GHashTable	*map_addr;	/* binary IP addr -> struct peer */
+	struct bp_hashtab *map_addr;	/* binary IP addr -> struct peer */
 	GList		*addrlist;	/* of struct bp_address */
 };
 
