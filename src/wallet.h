@@ -23,4 +23,15 @@ extern void wallet_dump(void);
 extern void wallet_addresses(void);
 extern void cur_wallet_free(void);
 
+#define wallet_for_each_key_numbered(_wlt, _key, _num)			\
+	(_num) = 0;							\
+	for ((_key) = g_ptr_array_index((_wlt)->keys, (_num));		\
+		(_wlt)->keys && (_num) < (_wlt)->keys->len;		\
+		(_key) = g_ptr_array_index((_wlt)->keys, ++(_num)))
+
+#define wallet_for_each_key(_wlt, _key)				\
+	unsigned int ___i;					\
+	wallet_for_each_key_numbered(_wlt, _key, ___i)
+
+
 #endif /* __PICOCOIN_WALLET_H__ */

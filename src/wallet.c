@@ -34,21 +34,16 @@ static struct wallet *wallet_new(void)
 
 static void wallet_free(struct wallet *wlt)
 {
+	struct bp_key *key;
+
 	if (!wlt)
 		return;
 
-	if (wlt->keys) {
-		unsigned int i;
-		for (i = 0; i < wlt->keys->len; i++) {
-			struct bp_key *key;
+	wallet_for_each_key(wlt, key)
+		bp_key_free(key);
 
-			key = g_ptr_array_index(wlt->keys, i);
-			bp_key_free(key);
-		}
-
-		g_ptr_array_free(wlt->keys, TRUE);
-		wlt->keys = NULL;
-	}
+	g_ptr_array_free(wlt->keys, TRUE);
+	wlt->keys = NULL;
 
 	memset(wlt, 0, sizeof(*wlt));
 	free(wlt);
@@ -185,7 +180,7 @@ err_out:
 
 static GString *ser_wallet(struct wallet *wlt)
 {
-	unsigned int i;
+	struct bp_key *key;
 
 	GString *rs = g_string_sized_new(20 * 1024);
 
@@ -200,25 +195,19 @@ static GString *ser_wallet(struct wallet *wlt)
 	g_string_free(s_root, TRUE);
 
 	/* ser "privkey" records */
-	if (wlt->keys) {
-		for (i = 0; i < wlt->keys->len; i++) {
-			struct bp_key *key;
+	wallet_for_each_key(wlt, key) {
+		void *privkey = NULL;
+		size_t pk_len = 0;
 
-			key = g_ptr_array_index(wlt->keys, i);
+		bp_privkey_get(key, &privkey, &pk_len);
 
-			void *privkey = NULL;
-			size_t pk_len = 0;
+		GString *recdata = message_str(wlt->netmagic,
+					       "privkey",
+					       privkey, pk_len);
+		free(privkey);
 
-			bp_privkey_get(key, &privkey, &pk_len);
-
-			GString *recdata = message_str(wlt->netmagic,
-						       "privkey",
-						       privkey, pk_len);
-			free(privkey);
-
-			g_string_append_len(rs, recdata->str, recdata->len);
-			g_string_free(recdata, TRUE);
-		}
+		g_string_append_len(rs, recdata->str, recdata->len);
+		g_string_free(recdata, TRUE);
 	}
 
 	return rs;
@@ -346,18 +335,13 @@ void wallet_addresses(void)
 	if (!cur_wallet_load())
 		return;
 	struct wallet *wlt = cur_wallet;
+	struct bp_key *key;
+	unsigned int i;
 
 	printf("[\n");
 
-	if (!wlt->keys)
-		goto out;
-
-	unsigned int i;
-	for (i = 0; i < wlt->keys->len; i++) {
-		struct bp_key *key;
+	wallet_for_each_key_numbered(wlt, key, i) {
 		GString *btc_addr;
-
-		key = g_ptr_array_index(wlt->keys, i);
 
 		btc_addr = bp_pubkey_get_address(key, chain->addr_pubkey);
 
@@ -368,7 +352,6 @@ void wallet_addresses(void)
 		g_string_free(btc_addr, TRUE);
 	}
 
-out:
 	printf("]\n");
 }
 
@@ -393,14 +376,9 @@ void wallet_info(void)
 
 static void wallet_dump_keys(json_t *keys_a, struct wallet *wlt)
 {
-	if (!wlt->keys)
-		return;
+	struct bp_key *key;
 
-	unsigned int i;
-	for (i = 0; i < wlt->keys->len; i++) {
-		struct bp_key *key;
-
-		key = g_ptr_array_index(wlt->keys, i);
+	wallet_for_each_key(wlt, key) {
 
 		void *privkey = NULL, *pubkey = NULL;
 		size_t priv_len = 0, pub_len = 0;
