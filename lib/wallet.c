@@ -14,6 +14,90 @@
 #include <ccoin/wallet.h>
 #include <ccoin/serialize.h>
 
+struct wallet_key *wallet_key_new(void)
+{
+	struct wallet_key *wkey;
+
+	wkey = calloc(1, sizeof(*wkey));
+	if (!wkey)
+		return NULL;
+
+	if (!bp_key_init(&wkey->key))
+		goto err_free;
+
+	return wkey;
+
+err_free:
+	free(wkey);
+	return NULL;
+}
+
+struct wallet_key *wallet_key_new_generate(void)
+{
+	struct wallet_key *wkey;
+
+	wkey = wallet_key_new();
+	if (!wkey)
+		goto err_free;
+
+	if (!bp_key_generate(&wkey->key))
+		goto err_free;
+
+	wkey->birthday = time(NULL);
+
+	return wkey;
+
+err_free:
+	free(wkey);
+	return NULL;
+}
+
+void wallet_key_free(struct wallet_key *wkey)
+{
+	if (!wkey)
+		return;
+
+	free(wkey);
+}
+
+cstring *ser_wallet_key(const struct wallet_key *wkey)
+{
+	void *privkey;
+	size_t pk_len;
+	cstring *rs;
+
+	if (!bp_privkey_get(&wkey->key, &privkey, &pk_len))
+		goto err_out;
+
+	rs = cstr_new_sz(sizeof(uint64_t) + pk_len);
+	if (!rs)
+		goto err_free;
+
+	ser_u64(rs, wkey->birthday);
+	cstr_append_buf(rs, privkey, pk_len);
+
+	free(privkey);
+	return rs;
+
+err_free:
+	free(privkey);
+err_out:
+	return NULL;
+}
+
+bool deser_wallet_key(struct wallet_key *wkey, struct const_buffer *buf)
+{
+	if (!deser_u64(&wkey->birthday, buf))
+		return false;
+
+	if (!bp_privkey_set(&wkey->key, buf->p, buf->len))
+		return false;
+
+	buf->p += buf->len;
+	buf->len = 0;
+	return true;
+}
+
 struct wallet *wallet_new(const struct chain_info *chain)
 {
 	struct wallet *wlt;
