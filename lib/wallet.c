@@ -272,3 +272,15 @@ err_out:
 	fprintf(stderr, "wallet: invalid data found\n");
 	return false;
 }
+
+uint64_t wallet_oldest_key_time(const struct wallet *wlt)
+{
+	struct wallet_key *wkey, *oldest_wkey = NULL;
+
+	wallet_for_each_key(wlt, wkey)
+		if (!oldest_wkey ||
+		    wkey->birthday < oldest_wkey->birthday)
+			oldest_wkey = wkey;
+
+	return oldest_wkey ? oldest_wkey->birthday : 0;
+}

@@ -40,6 +40,7 @@ extern void wallet_free(struct wallet *wlt);
 extern cstring *wallet_new_address(struct wallet *wlt);
 extern cstring *ser_wallet(const struct wallet *wlt);
 extern bool deser_wallet(struct wallet *wlt, struct const_buffer *buf);
+extern uint64_t wallet_oldest_key_time(const struct wallet *wlt);
 
 #define wallet_for_each_key_numbered(_wlt, _key, _num)			\
 	(_num) = 0;							\
