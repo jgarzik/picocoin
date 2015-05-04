@@ -30,6 +30,7 @@ libccoin_a_SOURCES=	\
 	memmem.c	\
 	message.c	\
 	net.c		\
+	parr.c		\
 	script.c	\
 	script_eval.c	\
 	script_names.c	\

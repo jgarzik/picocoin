@@ -19,6 +19,7 @@ EXTRA_DIST = \
 	mbr.h		\
 	message.h	\
 	net.h		\
+	parr.h		\
 	script.h	\
 	serialize.h	\
 	util.h
