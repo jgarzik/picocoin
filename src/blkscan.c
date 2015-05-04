@@ -22,6 +22,7 @@
 #include <ccoin/script.h>
 #include <ccoin/addr_match.h>
 #include <ccoin/message.h>
+#include <ccoin/hashtab.h>
 
 const char *argp_program_version = PACKAGE_VERSION;
 
@@ -49,7 +50,7 @@ static bool opt_quiet = false;
 static bool opt_decimal = true;
 
 static struct bp_keyset bpks;
-static GHashTable *tx_idx = NULL;
+static struct bp_hashtab *tx_idx = NULL;
 
 static error_t parse_opt (int key, char *arg, struct argp_state *state);
 
@@ -96,7 +97,7 @@ static void load_address(unsigned int line_no, const char *line)
 	}
 
 	struct buffer *buf_pkhash = buffer_copy(s->str,RIPEMD160_DIGEST_LENGTH);
-	g_hash_table_replace(bpks.pubhash, buf_pkhash, buf_pkhash);
+	bp_hashtab_put(bpks.pubhash, buf_pkhash, buf_pkhash);
 
 	g_string_free(s, TRUE);
 }
@@ -131,7 +132,7 @@ static void load_addresses(void)
 
 	if (!opt_quiet)
 		fprintf(stderr, "%d addresses loaded\n",
-			g_hash_table_size(bpks.pubhash));
+			bp_hashtab_size(bpks.pubhash));
 }
 
 /* file pos -> block lookup */
@@ -298,7 +299,7 @@ static void print_txin(unsigned int i, struct bp_txin *txin)
 	printf("\tInput %u: %s %u\n",
 		i, hexstr, txin->prevout.n);
 
-	uint64_t *fpos_p = g_hash_table_lookup(tx_idx, &txin->prevout.hash);
+	uint64_t *fpos_p = bp_hashtab_get(tx_idx, &txin->prevout.hash);
 	if (!fpos_p) {
 		printf("\t\tINPUT NOT FOUND!\n");
 		return;
@@ -345,7 +346,7 @@ static void index_block(unsigned int height, struct bp_block *block,
 		bp_tx_calc_sha256(tx);
 
 		bu256_t *hash = bu256_new(&tx->sha256);
-		g_hash_table_replace(tx_idx, hash, fpos_copy);
+		bp_hashtab_put(tx_idx, hash, fpos_copy);
 	}
 }
 
@@ -421,7 +422,7 @@ static void scan_blocks(void)
 
 		if ((height % 10000 == 0) && (!opt_quiet))
 			fprintf(stderr, "Scanned %u transactions at height %u\n",
-				(unsigned int) g_hash_table_size(tx_idx),
+				bp_hashtab_size(tx_idx),
 				height);
 	}
 
@@ -453,8 +454,8 @@ int main (int argc, char *argv[])
 
 	bpks_init(&bpks);
 
-	tx_idx = g_hash_table_new_full(g_bu256_hash, g_bu256_equal,
-				       g_bu256_free, NULL);
+	tx_idx = bp_hashtab_new_ext(bu256_hash, bu256_equal_,
+				    (bp_freefunc) bu256_free, NULL);
 
 	load_addresses();
 	scan_blocks();

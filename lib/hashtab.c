@@ -12,8 +12,8 @@
 struct bp_hashtab *bp_hashtab_new_ext(
 	unsigned long (*hash_f)(const void *p),
 	bool (*equal_f)(const void *a, const void *b),
-	void (*keyfree_f)(void *),
-	void (*valfree_f)(void *))
+	bp_freefunc keyfree_f,
+	bp_freefunc valfree_f)
 {
 	// alloc container ds
 	struct bp_hashtab *ht = calloc(1, sizeof(*ht));
@@ -81,8 +81,23 @@ static void bp_hashtab_free_tab(struct bp_hashtab *ht)
 
 	free(ht->tab);
 	ht->tab = NULL;
+	ht->tab_size = 0;
+	ht->size = 0;
 }
 
+bool bp_hashtab_clear(struct bp_hashtab *ht)
+{
+	bp_hashtab_free_tab(ht);
+
+	ht->tab_size = BP_HT_INIT_TAB_SZ;
+	ht->tab = calloc(ht->tab_size, sizeof(struct bp_ht_ent *));
+	if (!ht->tab) {
+		ht->tab_size = 0;
+		return false;
+	}
+
+	return true;
+}
 
 void bp_hashtab_unref(struct bp_hashtab *ht)
 {
@@ -283,5 +298,17 @@ bool bp_hashtab_put(struct bp_hashtab *ht, void *key, void *val)
 	}
 
 	return true;
+}
+
+void bp_hashtab_iter(struct bp_hashtab *ht, bp_kvu_func cb, void *priv)
+{
+	unsigned int bucket;
+	for (bucket = 0; bucket < ht->tab_size; bucket++) {
+		struct bp_ht_ent *ent = ht->tab[bucket];
+		while (ent) {
+			cb(ent->key, ent->value, priv);
+			ent = ent->next;
+		}
+	}
 }
 

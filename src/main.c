@@ -27,11 +27,12 @@
 #include "wallet.h"
 #include <ccoin/core.h>
 #include <ccoin/util.h>
+#include <ccoin/hashtab.h>
 #include <ccoin/net.h>
 #include <ccoin/compat.h>		/* for strndup */
 
 const char *prog_name = "picocoin";
-GHashTable *settings;
+struct bp_hashtab *settings;
 struct wallet *cur_wallet;
 const struct chain_info *chain = NULL;
 bu256_t chain_genesis;
@@ -93,7 +94,7 @@ static bool read_config_file(const char *cfg_fn)
 		if (!parse_kvstr(line, &key, &value))
 			continue;
 
-		g_hash_table_replace(settings, key, value);
+		bp_hashtab_put(settings, key, value);
 	}
 
 	rc = ferror(cfg) == 0;
@@ -109,7 +110,7 @@ static bool do_setting(const char *arg)
 	if (!parse_kvstr(arg, &key, &value))
 		return false;
 
-	g_hash_table_replace(settings, key, value);
+	bp_hashtab_put(settings, key, value);
 
 	/*
 	 * trigger special setting-specific behaviors
@@ -145,7 +146,7 @@ struct lsi_info {
 	unsigned int	iter_count;
 };
 
-static void list_setting_iter(gpointer key_, gpointer value_, gpointer lsi_)
+static void list_setting_iter(void *key_, void *value_, void *lsi_)
 {
 	char *key = key_;
 	char *value = value_;
@@ -161,11 +162,11 @@ static void list_setting_iter(gpointer key_, gpointer value_, gpointer lsi_)
 
 static void list_settings(void)
 {
-	struct lsi_info lsi = { g_hash_table_size(settings), };
+	struct lsi_info lsi = { bp_hashtab_size(settings), };
 
 	printf("{\n");
 
-	g_hash_table_foreach(settings, list_setting_iter, &lsi);
+	bp_hashtab_iter(settings, list_setting_iter, &lsi);
 
 	printf("}\n");
 }
@@ -310,8 +311,8 @@ static bool do_command(const char *s)
 int main (int argc, char *argv[])
 {
 	prog_name = argv[0];
-	settings = g_hash_table_new_full(g_str_hash, g_str_equal,
-					 g_free, g_free);
+	settings = bp_hashtab_new_ext(cstr_hash, cstr_equal,
+				      free, free);
 
 	if (!preload_settings())
 		return 1;

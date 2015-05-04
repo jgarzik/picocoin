@@ -12,6 +12,9 @@ enum {
 	BP_HT_MAX_BUCKET_SZ	= 3,
 };
 
+typedef void (*bp_freefunc)(void *);
+typedef void (*bp_kvu_func)(void *key, void *value, void *user_private);
+
 struct bp_ht_ent {
 	unsigned long		hash;	// hash_f() of key
 	void			*key;	// key pointer
@@ -32,15 +35,16 @@ struct bp_hashtab {
 	bool		(*equal_f)(const void *a, const void *b);
 
 					// key, value destruction
-	void		(*keyfree_f)(void *key);
-	void		(*valfree_f)(void *value);
+
+	bp_freefunc	keyfree_f;
+	bp_freefunc	valfree_f;
 };
 
 extern struct bp_hashtab *bp_hashtab_new_ext(
 	unsigned long (*hash_f)(const void *p),
 	bool (*equal_f)(const void *a, const void *b),
-	void (*keyfree_f)(void *),
-	void (*valfree_f)(void *));
+	bp_freefunc keyfree_f,
+	bp_freefunc valfree_f);
 
 static inline struct bp_hashtab *bp_hashtab_new(
 	unsigned long (*hash_f)(const void *p),
@@ -50,6 +54,7 @@ static inline struct bp_hashtab *bp_hashtab_new(
 }
 
 extern void bp_hashtab_unref(struct bp_hashtab *);
+extern bool bp_hashtab_clear(struct bp_hashtab *);
 
 static inline void bp_hashtab_ref(struct bp_hashtab *ht)
 {
@@ -76,5 +81,7 @@ static inline void *bp_hashtab_get(struct bp_hashtab *ht, const void *key)
 
 	return ret_val;
 }
+
+extern void bp_hashtab_iter(struct bp_hashtab *ht, bp_kvu_func f, void *priv);
 
 #endif /* __LIBCCOIN_HASHTAB_H__ */

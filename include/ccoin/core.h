@@ -12,6 +12,7 @@
 #include <ccoin/buffer.h>
 #include <ccoin/buint.h>
 #include <ccoin/coredefs.h>
+#include <ccoin/hashtab.h>
 
 enum service_bits {
 	NODE_NETWORK	= (1 << 0),
@@ -185,7 +186,7 @@ extern bool bp_utxo_from_tx(struct bp_utxo *coin, const struct bp_tx *tx,
 		     bool is_coinbase, unsigned int height);
 
 struct bp_utxo_set {
-	GHashTable	*map;
+	struct bp_hashtab	*map;
 };
 
 extern void bp_utxo_set_init(struct bp_utxo_set *uset);
@@ -196,13 +197,13 @@ extern bool bp_utxo_spend(struct bp_utxo_set *uset, const struct bp_outpt *outpt
 static inline void bp_utxo_set_add(struct bp_utxo_set *uset,
 				   struct bp_utxo *coin)
 {
-	g_hash_table_insert(uset->map, &coin->hash, coin);
+	bp_hashtab_put(uset->map, &coin->hash, coin);
 }
 
 static inline struct bp_utxo *bp_utxo_lookup(struct bp_utxo_set *uset,
 					     const bu256_t *hash)
 {
-	return g_hash_table_lookup(uset->map, hash);
+	return bp_hashtab_get(uset->map, hash);
 }
 
 

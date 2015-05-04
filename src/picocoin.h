@@ -12,6 +12,7 @@
 #include <ccoin/coredefs.h>
 #include <ccoin/buint.h>
 #include <ccoin/core.h>
+#include <ccoin/hashtab.h>
 
 struct wallet;
 
@@ -20,7 +21,7 @@ enum {
 };
 
 /* main.c */
-extern GHashTable *settings;
+extern struct bp_hashtab *settings;
 extern struct wallet *cur_wallet;
 extern const struct chain_info *chain;
 extern bu256_t chain_genesis;
@@ -38,7 +39,7 @@ extern bool write_aes_file(const char *filename, void *key, size_t key_len,
 
 static inline char *setting(const char *key)
 {
-	return g_hash_table_lookup(settings, key);
+	return bp_hashtab_get(settings, key);
 }
 
 #endif /* __PICOCOIN_H__ */

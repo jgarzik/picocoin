@@ -197,3 +197,19 @@ void btc_decimal(char *valstr, size_t valstr_sz, int64_t val)
 	}
 }
 
+unsigned long cstr_hash(const void *p)
+{
+	size_t slen = strlen(p ? p : "");
+	return djb2_hash(0x8088, p, slen);
+}
+
+bool cstr_equal(const void *a, const void *b)
+{
+	size_t a_len = strlen(a ? a : "");
+	size_t b_len = strlen(b ? b : "");
+	if (a_len != b_len)
+		return false;
+
+	return (memcmp(a, b, a_len) == 0);
+}
+

@@ -7,24 +7,25 @@
 #include <ccoin/hexcode.h>
 #include <ccoin/buint.h>
 #include <ccoin/script.h>
+#include <ccoin/hashtab.h>
 #include <ccoin/compat.h>		/* for g_ptr_array_new_full */
 #include "libtest.h"
 
 GPtrArray *comments = NULL;
 
-static guint input_hash(gconstpointer key_)
+static unsigned long input_hash(const void *key_)
 {
 	const struct bp_outpt *key = key_;
 
-	return (guint) key->hash.dword[4];
+	return key->hash.dword[4];
 }
 
-static gboolean input_equal(gconstpointer a, gconstpointer b)
+static bool input_equal(const void *a, const void *b)
 {
 	return bp_outpt_equal(a, b);
 }
 
-static void input_value_free(gpointer v)
+static void input_value_free(void *v)
 {
 	g_string_free(v, TRUE);
 }
@@ -38,7 +39,7 @@ static void dump_comments(void)
 	}
 }
 
-static void test_tx_valid(bool is_valid, GHashTable *input_map,
+static void test_tx_valid(bool is_valid, struct bp_hashtab *input_map,
 			  GString *tx_ser, bool enforce_p2sh)
 {
 	struct bp_tx tx;
@@ -70,8 +71,8 @@ static void test_tx_valid(bool is_valid, GHashTable *input_map,
 		txin = g_ptr_array_index(tx.vin, i);
 		assert(txin != NULL);
 
-		GString *scriptPubKey = g_hash_table_lookup(input_map,
-							    &txin->prevout);
+		GString *scriptPubKey = bp_hashtab_get(input_map,
+						       &txin->prevout);
 		if (scriptPubKey == NULL) {
 			if (!is_valid) {
 				/* if testing tx_invalid.json, missing input
@@ -119,9 +120,9 @@ static void runtest(bool is_valid, const char *basefn)
 	json_t *tests = read_json(fn);
 	assert(json_is_array(tests));
 
-	GHashTable *input_map = g_hash_table_new_full(
+	struct bp_hashtab *input_map = bp_hashtab_new_ext(
 		input_hash, input_equal,
-		g_free, input_value_free);
+		free, input_value_free);
 
 	comments = g_ptr_array_new_full(8, g_free);
 
@@ -145,7 +146,7 @@ static void runtest(bool is_valid, const char *basefn)
 		json_t *inputs = json_array_get(test, 0);
 		assert(json_is_array(inputs));
 
-		g_hash_table_remove_all(input_map);
+		bp_hashtab_clear(input_map);
 
 		unsigned int i;
 		for (i = 0; i < json_array_size(inputs); i++) {
@@ -171,7 +172,7 @@ static void runtest(bool is_valid, const char *basefn)
 			GString *script = parse_script_str(prev_pubkey_enc);
 			assert(script != NULL);
 
-			g_hash_table_insert(input_map, outpt, script);
+			bp_hashtab_put(input_map, outpt, script);
 		}
 
 		const char *tx_hexser =
@@ -196,7 +197,7 @@ static void runtest(bool is_valid, const char *basefn)
 	g_ptr_array_free(comments, TRUE);
 	comments = NULL;
 
-	g_hash_table_unref(input_map);
+	bp_hashtab_unref(input_map);
 	json_decref(tests);
 	free(fn);
 }

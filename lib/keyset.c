@@ -15,10 +15,10 @@ void bpks_init(struct bp_keyset *ks)
 {
 	memset(ks, 0, sizeof(*ks));
 
-	ks->pub = g_hash_table_new_full(g_buffer_hash, g_buffer_equal,
-					g_buffer_free, NULL);
-	ks->pubhash = g_hash_table_new_full(g_buffer_hash, g_buffer_equal,
-					    g_buffer_free, NULL);
+	ks->pub = bp_hashtab_new_ext(buffer_hash, buffer_equal,
+				     (bp_freefunc) buffer_free, NULL);
+	ks->pubhash = bp_hashtab_new_ext(buffer_hash, buffer_equal,
+					 (bp_freefunc) buffer_free, NULL);
 }
 
 bool bpks_add(struct bp_keyset *ks, struct bp_key *key)
@@ -38,8 +38,8 @@ bool bpks_add(struct bp_keyset *ks, struct bp_key *key)
 
 	struct buffer *buf_pkhash = buffer_copy(md160, RIPEMD160_DIGEST_LENGTH);
 
-	g_hash_table_replace(ks->pub, buf_pk, buf_pk);
-	g_hash_table_replace(ks->pubhash, buf_pkhash, buf_pkhash);
+	bp_hashtab_put(ks->pub, buf_pk, buf_pk);
+	bp_hashtab_put(ks->pubhash, buf_pkhash, buf_pkhash);
 
 	return true;
 }
@@ -48,19 +48,19 @@ bool bpks_lookup(const struct bp_keyset *ks, const void *data, size_t data_len,
 		 bool is_pubkeyhash)
 {
 	struct const_buffer buf = { data, data_len };
-	GHashTable *ht;
+	struct bp_hashtab *ht;
 
 	if (is_pubkeyhash)
 		ht = ks->pubhash;
 	else
 		ht = ks->pub;
 
-	return g_hash_table_lookup_extended(ht, &buf, NULL, NULL);
+	return bp_hashtab_get_ext(ht, &buf, NULL, NULL);
 }
 
 void bpks_free(struct bp_keyset *ks)
 {
-	g_hash_table_unref(ks->pub);
-	g_hash_table_unref(ks->pubhash);
+	bp_hashtab_unref(ks->pub);
+	bp_hashtab_unref(ks->pubhash);
 }
 

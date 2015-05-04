@@ -33,8 +33,7 @@ typedef struct bu256 {
 	uint32_t dword[BU256_WORDS];
 } bu256_t;
 
-extern guint g_bu160_hash(gconstpointer key_);
-extern gboolean g_bu160_equal(gconstpointer a_, gconstpointer b_);
+extern unsigned long bu160_hash(const void *key_);
 
 extern void bu256_bn(BIGNUM *vo, const bu256_t *vi);
 extern bool hex_bu256(bu256_t *vo, const char *hexstr);
@@ -44,8 +43,7 @@ extern void bu256_swap_dwords(bu256_t *v);
 extern void bu256_copy_swap(bu256_t *vo, const bu256_t *vi);
 extern void bu256_copy_swap_dwords(bu256_t *vo, const bu256_t *vi);
 extern void bu256_swap_dwords(bu256_t *v);
-extern guint g_bu256_hash(gconstpointer key_);
-extern gboolean g_bu256_equal(gconstpointer a_, gconstpointer b_);
+extern unsigned long bu256_hash(const void *key);
 extern void bu256_free(bu256_t *v);
 extern void g_bu256_free(gpointer data);
 
@@ -83,6 +81,11 @@ static inline bool bu256_equal(const bu256_t *a, const bu256_t *b)
 	return memcmp(a, b, sizeof(bu256_t)) == 0;
 }
 
+static inline bool bu256_equal_(const void *a, const void *b)
+{
+	return bu256_equal(a, b);
+}
+
 static inline void bu256_copy(bu256_t *vo, const bu256_t *vi)
 {
 	memcpy(vo, vi, sizeof(bu256_t));
@@ -104,6 +107,11 @@ static inline bu256_t *bu256_new(const bu256_t *init_val)
 static inline bool bu160_equal(const bu160_t *a, const bu160_t *b)
 {
 	return memcmp(a, b, sizeof(bu160_t)) == 0;
+}
+
+static inline bool bu160_equal_(const void *a, const void *b)
+{
+	return bu160_equal(a, b);
 }
 
 #endif /* __LIBCCOIN_BUINT_H__ */

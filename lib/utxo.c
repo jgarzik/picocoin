@@ -56,7 +56,7 @@ bool bp_utxo_from_tx(struct bp_utxo *coin, const struct bp_tx *tx,
 	return true;
 }
 
-void utxo_free_ent(gpointer data_)
+static void utxo_free_ent(void *data_)
 {
 	struct bp_utxo *coin = data_;
 	if (!coin)
@@ -70,8 +70,8 @@ void bp_utxo_set_init(struct bp_utxo_set *uset)
 {
 	memset(uset, 0, sizeof(*uset));
 
-	uset->map = g_hash_table_new_full(g_bu256_hash, g_bu256_equal,
-					  NULL, utxo_free_ent);
+	uset->map = bp_hashtab_new_ext(bu256_hash, bu256_equal_,
+				       NULL, utxo_free_ent);
 }
 
 void bp_utxo_set_free(struct bp_utxo_set *uset)
@@ -80,7 +80,7 @@ void bp_utxo_set_free(struct bp_utxo_set *uset)
 		return;
 
 	if (uset->map) {
-		g_hash_table_unref(uset->map);
+		bp_hashtab_unref(uset->map);
 		uset->map = NULL;
 	}
 }
@@ -135,7 +135,7 @@ bool bp_utxo_spend(struct bp_utxo_set *uset, const struct bp_outpt *outpt)
 
 	/* if coin entirely spent, free it */
 	if (bp_utxo_null(coin))
-		g_hash_table_remove(uset->map, &coin->hash);
+		bp_hashtab_del(uset->map, &coin->hash);
 
 	return true;
 }

@@ -29,7 +29,7 @@
 #include "peerman.h"
 #include "brd.h"
 
-GHashTable *settings;
+struct bp_hashtab *settings;
 const struct chain_info *chain = NULL;
 bu256_t chain_genesis;
 uint64_t instance_nonce;
@@ -37,7 +37,7 @@ bool debugging = false;
 FILE *plog = NULL;
 
 static struct blkdb db;
-static GHashTable *orphans;
+static struct bp_hashtab *orphans;
 static struct bp_utxo_set uset;
 static int blocks_fd = -1;
 static bool script_verf = false;
@@ -1127,7 +1127,7 @@ static bool read_config_file(const char *cfg_fn)
 		if (!parse_kvstr(line, &key, &value))
 			continue;
 
-		g_hash_table_replace(settings, key, value);
+		bp_hashtab_put(settings, key, value);
 	}
 
 	rc = ferror(cfg) == 0;
@@ -1143,7 +1143,7 @@ static bool do_setting(const char *arg)
 	if (!parse_kvstr(arg, &key, &value))
 		return false;
 
-	g_hash_table_replace(settings, key, value);
+	bp_hashtab_put(settings, key, value);
 
 	/*
 	 * trigger special setting-specific behaviors
@@ -1510,13 +1510,13 @@ static void readprep_blocks_file(void)
 
 static void init_orphans(void)
 {
-	orphans = g_hash_table_new_full(g_bu256_hash, g_bu256_equal,
-					g_bu256_free, g_buffer_free);
+	orphans = bp_hashtab_new_ext(bu256_hash, bu256_equal_,
+				     (bp_freefunc) bu256_free, (bp_freefunc) buffer_free);
 }
 
 static bool have_orphan(const bu256_t *v)
 {
-	return g_hash_table_lookup(orphans, v);
+	return bp_hashtab_get(orphans, v);
 }
 
 static bool add_orphan(const bu256_t *hash_in, struct const_buffer *buf_in)
@@ -1537,7 +1537,7 @@ static bool add_orphan(const bu256_t *hash_in, struct const_buffer *buf_in)
 		return false;
 	}
 
-	g_hash_table_insert(orphans, hash, buf);
+	bp_hashtab_put(orphans, hash, buf);
 	
 	return true;
 }
@@ -1628,8 +1628,8 @@ static void shutdown_daemon(struct net_child_info *nci)
 
 	if (setting("free")) {
 		shutdown_nci(nci);
-		g_hash_table_unref(orphans);
-		g_hash_table_unref(settings);
+		bp_hashtab_unref(orphans);
+		bp_hashtab_unref(settings);
 		blkdb_free(&db);
 		bp_utxo_set_free(&uset);
 	}
@@ -1643,8 +1643,8 @@ static void term_signal(int signo)
 
 int main (int argc, char *argv[])
 {
-	settings = g_hash_table_new_full(g_str_hash, g_str_equal,
-					 g_free, g_free);
+	settings = bp_hashtab_new_ext(cstr_hash, cstr_equal,
+				      free, free);
 
 	if (!preload_settings())
 		return 1;

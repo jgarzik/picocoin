@@ -9,6 +9,7 @@
 #include <glib.h>
 #include <openssl/ec.h>
 #include <ccoin/buint.h>
+#include <ccoin/hashtab.h>
 
 struct bp_key {
 	EC_KEY		*k;
@@ -29,8 +30,8 @@ extern bool bp_verify(struct bp_key *key, const void *data, size_t data_len,
 	       const void *sig, size_t sig_len);
 
 struct bp_keyset {
-	GHashTable	*pub;
-	GHashTable	*pubhash;
+	struct bp_hashtab	*pub;
+	struct bp_hashtab	*pubhash;
 };
 
 extern void bpks_init(struct bp_keyset *ks);
@@ -40,7 +41,7 @@ extern bool bpks_lookup(const struct bp_keyset *ks, const void *data, size_t dat
 extern void bpks_free(struct bp_keyset *ks);
 
 struct bp_keystore {
-	GHashTable	*keys;
+	struct bp_hashtab	*keys;
 };
 
 extern void bkeys_init(struct bp_keystore *ks);

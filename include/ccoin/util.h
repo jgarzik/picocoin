@@ -41,6 +41,9 @@ extern GList *bu_dns_seed_addrs(void);
 
 extern unsigned long djb2_hash(unsigned long hash, const void *_buf, size_t buflen);
 
+extern unsigned long cstr_hash(const void *p);
+extern bool cstr_equal(const void *a, const void *b);
+
 extern void g_list_shuffle(GList *l);
 
 #endif /* __LIBCCOIN_UTIL_H__ */

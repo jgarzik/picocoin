@@ -11,22 +11,6 @@
 #include <ccoin/hashtab.h>
 #include <ccoin/util.h>
 
-static unsigned long cstr_hash(const void *p)
-{
-	size_t slen = strlen(p ? p : "");
-	return djb2_hash(0x8088, p, slen);
-}
-
-static bool cstr_equal(const void *a, const void *b)
-{
-	size_t a_len = strlen(a ? a : "");
-	size_t b_len = strlen(b ? b : "");
-	if (a_len != b_len)
-		return false;
-
-	return (memcmp(a, b, a_len) == 0);
-}
-
 static void test_basics(void)
 {
 	struct bp_hashtab *ht;
@@ -61,8 +45,31 @@ static void test_basics(void)
 	void *dummy = bp_hashtab_get(ht, "dummy");
 	assert(dummy == NULL);
 
+	assert(bp_hashtab_size(ht) == 1);
+
+	rc = bp_hashtab_clear(ht);
+	assert(rc == true);
+
+	assert(bp_hashtab_size(ht) == 0);
+
 	bp_hashtab_unref(ht);
 	bp_hashtab_unref(ht);
+}
+
+struct iter_info {
+	unsigned int count;
+};
+
+static void test_generate_iter(void *key_, void *val_, void *priv)
+{
+	char *key = key_;
+	char *value = val_;
+	struct iter_info *ii = priv;
+
+	ii->count++;
+
+	(void) key;
+	(void) value;
 }
 
 static void test_generate(void)
@@ -99,6 +106,10 @@ static void test_generate(void)
 
 	void *dummy = bp_hashtab_get(ht, "dummy");
 	assert(dummy == NULL);
+
+	struct iter_info ii = {};
+	bp_hashtab_iter(ht, test_generate_iter, &ii);
+	assert(ii.count == n_values);
 
 	bp_hashtab_unref(ht);
 }
