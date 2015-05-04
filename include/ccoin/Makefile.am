@@ -8,6 +8,7 @@ EXTRA_DIST = \
 	buffer.h	\
 	buint.h		\
 	checkpoints.h	\
+	clist.h		\
 	compat.h	\
 	coredefs.h	\
 	core.h		\

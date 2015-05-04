@@ -7,6 +7,7 @@ blockfile
 bloom
 blkdb
 chain-verf
+clist
 cstr
 fileio
 hashtab

@@ -18,11 +18,11 @@ noinst_LIBRARIES= libtest.a
 
 libtest_a_SOURCES= libtest.h libtest.c
 
-noinst_PROGRAMS	= cstr hex hashtab base58 fileio util keyset bloom \
+noinst_PROGRAMS	= clist cstr hex hashtab base58 fileio util keyset bloom \
 		  script-parse tx block blockfile blkdb script \
 		  tx-valid wallet-basics chain-verf
 
-TESTS		= cstr hex hashtab base58 fileio util keyset bloom \
+TESTS		= clist cstr hex hashtab base58 fileio util keyset bloom \
 		  script-parse tx block blockfile blkdb script \
 		  tx-valid wallet-basics chain-verf
 
@@ -35,6 +35,7 @@ block_LDADD		= $(COMMON_LDADD)
 blockfile_LDADD		= $(COMMON_LDADD)
 bloom_LDADD		= $(COMMON_LDADD)
 chain_verf_LDADD	= $(COMMON_LDADD)
+clist_LDADD		= $(COMMON_LDADD)
 cstr_LDADD		= $(COMMON_LDADD)
 fileio_LDADD		= $(COMMON_LDADD)
 hex_LDADD		= $(COMMON_LDADD)

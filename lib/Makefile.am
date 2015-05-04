@@ -15,6 +15,7 @@ libccoin_a_SOURCES=	\
 	buffer.c	\
 	buint.c		\
 	checkpoints.c	\
+	clist.c		\
 	core.c		\
 	coredefs.c	\
 	cstr.c		\
