@@ -100,13 +100,13 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
 
 static int block_fd = -1;
 
-static bool match_op_pos(GPtrArray *script, enum opcodetype opcode,
+static bool match_op_pos(parr *script, enum opcodetype opcode,
 			 unsigned int pos)
 {
 	if (pos >= script->len)
 		return false;
 	
-	struct bscript_op *op = g_ptr_array_index(script, pos);
+	struct bscript_op *op = parr_idx(script, pos);
 	return (op->op == opcode);
 }
 
@@ -114,7 +114,7 @@ static void scan_txout(struct bp_txout *txout)
 {
 	incstat(STA_TXOUT);
 
-	GPtrArray *script = bsp_parse_all(txout->scriptPubKey->str,
+	parr *script = bsp_parse_all(txout->scriptPubKey->str,
 					  txout->scriptPubKey->len);
 	if (!script) {
 		fprintf(stderr, "error at txout %lu\n", getstat(STA_TXOUT)-1);
@@ -147,7 +147,7 @@ static void scan_txout(struct bp_txout *txout)
 	 }
 	}
 
-	g_ptr_array_free(script, TRUE);
+	parr_free(script, TRUE);
 }
 
 static void scan_tx(struct bp_tx *tx)
@@ -156,7 +156,7 @@ static void scan_tx(struct bp_tx *tx)
 	for (i = 0; i < tx->vout->len; i++) {
 		struct bp_txout *txout;
 
-		txout = g_ptr_array_index(tx->vout, i);
+		txout = parr_idx(tx->vout, i);
 
 		scan_txout(txout);
 	}
@@ -170,7 +170,7 @@ static void scan_block(struct bp_block *block)
 	for (n = 0; n < block->vtx->len; n++) {
 		struct bp_tx *tx;
 
-		tx = g_ptr_array_index(block->vtx, n);
+		tx = parr_idx(block->vtx, n);
 
 		scan_tx(tx);
 	}

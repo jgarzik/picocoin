@@ -25,7 +25,6 @@
 #include <assert.h>
 #include <signal.h>
 #include <errno.h>
-#include <glib.h>
 #include <event2/event.h>
 #include <ccoin/util.h>
 #include <ccoin/mbr.h>
@@ -60,7 +59,7 @@ struct net_child_info {
 	struct peer_manager	*peers;
 	struct blkdb		*db;
 
-	GPtrArray		*conns;
+	parr		*conns;
 	struct event_base	*eb;
 };
 
@@ -362,11 +361,11 @@ static bool nc_msg_addr(struct nc_conn *conn)
 	if (debugging) {
 		unsigned int old = 0;
 		for (i = 0; i < ma.addrs->len; i++) {
-			struct bp_address *addr = g_ptr_array_index(ma.addrs, i);
+			struct bp_address *addr = parr_idx(ma.addrs, i);
 			if (addr->nTime < cutoff)
 				old++;
 		}
-		fprintf(stderr, "net: %s addr(%u addresses, %u old)\n",
+		fprintf(stderr, "net: %s addr(%zu addresses, %u old)\n",
 			conn->addr_str, ma.addrs->len, old);
 	}
 
@@ -376,7 +375,7 @@ static bool nc_msg_addr(struct nc_conn *conn)
 
 	/* feed addresses to peer manager */
 	for (i = 0; i < ma.addrs->len; i++) {
-		struct bp_address *addr = g_ptr_array_index(ma.addrs, i);
+		struct bp_address *addr = parr_idx(ma.addrs, i);
 		if (addr->nTime > cutoff)
 			peerman_add_addr(conn->nci->peers, addr, false);
 	}
@@ -467,7 +466,7 @@ static bool nc_conn_ip_active(struct net_child_info *nci,
 	for (i = 0; i < nci->conns->len; i++) {
 		struct nc_conn *conn;
 
-		conn = g_ptr_array_index(nci->conns, i);
+		conn = parr_idx(nci->conns, i);
 		if (!memcmp(conn->peer.addr.ip, ip, 16))
 			return true;
 	}
@@ -486,7 +485,7 @@ static bool nc_conn_group_active(struct net_child_info *nci,
 	for (i = 0; i < nci->conns->len; i++) {
 		struct nc_conn *conn;
 
-		conn = g_ptr_array_index(nci->conns, i);
+		conn = parr_idx(nci->conns, i);
 		if ((group_len == conn->peer.group_len) &&
 		    !memcmp(peer->group, conn->peer.group, group_len))
 			return true;
@@ -851,7 +850,7 @@ static void nc_conns_gc(struct net_child_info *nci)
 	/* build list of dead connections */
 	unsigned int i;
 	for (i = 0; i < nci->conns->len; i++) {
-		struct nc_conn *conn = g_ptr_array_index(nci->conns, i);
+		struct nc_conn *conn = parr_idx(nci->conns, i);
 		if (conn->dead)
 			dead = clist_prepend(dead, conn);
 	}
@@ -862,7 +861,7 @@ static void nc_conns_gc(struct net_child_info *nci)
 		struct nc_conn *conn = tmp->data;
 		tmp = tmp->next;
 
-		g_ptr_array_remove(nci->conns, conn);
+		parr_remove(nci->conns, conn);
 		nc_conn_free(conn);
 		n_gc++;
 	}
@@ -876,7 +875,7 @@ static void nc_conns_gc(struct net_child_info *nci)
 static void nc_conns_open(struct net_child_info *nci)
 {
 	if (debugging)
-		fprintf(stderr, "net: open connections (have %u, want %u more)\n",
+		fprintf(stderr, "net: open connections (have %zu, want %zu more)\n",
 			nci->conns->len,
 			NC_MAX_CONN - nci->conns->len);
 
@@ -935,7 +934,7 @@ static void nc_conns_open(struct net_child_info *nci)
 		}
 
 		/* add to our list of active connections */
-		g_ptr_array_add(nci->conns, conn);
+		parr_add(nci->conns, conn);
 
 		continue;
 
@@ -1040,7 +1039,7 @@ static void network_child(int read_fd, int write_fd)
 	 * set up libevent dispatch
 	 */
 	struct net_child_info nci = { read_fd, write_fd, peers, &db };
-	nci.conns = g_ptr_array_sized_new(NC_MAX_CONN);
+	nci.conns = parr_new(NC_MAX_CONN, NULL);
 
 	struct event *pipe_evt;
 

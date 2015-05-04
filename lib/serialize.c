@@ -79,7 +79,7 @@ void ser_varstr(cstring *s, cstring *s_in)
 	ser_bytes(s, s_in->str, s_in->len);
 }
 
-void ser_u256_array(cstring *s, GPtrArray *arr)
+void ser_u256_array(cstring *s, parr *arr)
 {
 	unsigned int arr_len = arr ? arr->len : 0;
 
@@ -89,7 +89,7 @@ void ser_u256_array(cstring *s, GPtrArray *arr)
 	for (i = 0; i < arr_len; i++) {
 		bu256_t *av;
 
-		av = g_ptr_array_index(arr, i);
+		av = parr_idx(arr, i);
 		ser_u256(s, av);
 	}
 }
@@ -227,11 +227,11 @@ bool deser_varstr(cstring **so, struct const_buffer *buf)
 	return true;
 }
 
-bool deser_u256_array(GPtrArray **ao, struct const_buffer *buf)
+bool deser_u256_array(parr **ao, struct const_buffer *buf)
 {
-	GPtrArray *arr = *ao;
+	parr *arr = *ao;
 	if (arr) {
-		g_ptr_array_free(arr, TRUE);
+		parr_free(arr, TRUE);
 		*ao = arr = NULL;
 	}
 
@@ -241,7 +241,7 @@ bool deser_u256_array(GPtrArray **ao, struct const_buffer *buf)
 	if (!vlen)
 		return true;
 
-	arr = g_ptr_array_new_full(vlen, g_bu256_free);
+	arr = parr_new(vlen, g_bu256_free);
 	if (!arr)
 		return false;
 
@@ -255,14 +255,14 @@ bool deser_u256_array(GPtrArray **ao, struct const_buffer *buf)
 			goto err_out;
 		}
 
-		g_ptr_array_add(arr, n);
+		parr_add(arr, n);
 	}
 
 	*ao = arr;
 	return true;
 
 err_out:
-	g_ptr_array_free(arr, TRUE);
+	parr_free(arr, TRUE);
 	return false;
 }
 

@@ -184,7 +184,7 @@ static bool tx_from_block(struct bp_tx *dest, bu256_t *tx_hash,
 	for (n = 0; n < block->vtx->len; n++) {
 		struct bp_tx *tx;
 
-		tx = g_ptr_array_index(block->vtx, n);
+		tx = parr_idx(block->vtx, n);
 
 		bp_tx_calc_sha256(tx);
 
@@ -280,7 +280,7 @@ static void print_txouts(struct bp_tx *tx, int idx)
 	for (i = 0; i < tx->vout->len; i++) {
 		struct bp_txout *txout;
 
-		txout = g_ptr_array_index(tx->vout, i);
+		txout = parr_idx(tx->vout, i);
 
 		if (idx < 0)
 			print_txout(false, i, txout);
@@ -324,7 +324,7 @@ static void print_txins(struct bp_tx *tx)
 	for (i = 0; i < tx->vin->len; i++) {
 		struct bp_txin *txin;
 
-		txin = g_ptr_array_index(tx->vin, i);
+		txin = parr_idx(tx->vin, i);
 
 		print_txin(i, txin);
 	}
@@ -340,7 +340,7 @@ static void index_block(unsigned int height, struct bp_block *block,
 	for (n = 0; n < block->vtx->len; n++) {
 		struct bp_tx *tx;
 
-		tx = g_ptr_array_index(block->vtx, n);
+		tx = parr_idx(block->vtx, n);
 
 		bp_tx_calc_sha256(tx);
 
@@ -357,7 +357,7 @@ static void scan_block(unsigned int height, struct bp_block *block)
 	for (n = 0; n < block->vtx->len; n++) {
 		struct bp_tx *tx;
 
-		tx = g_ptr_array_index(block->vtx, n);
+		tx = parr_idx(block->vtx, n);
 
 		if (bp_tx_match(tx, &bpks)) {
 			char hashstr[BU256_STRSZ];

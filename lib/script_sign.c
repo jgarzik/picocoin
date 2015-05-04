@@ -52,7 +52,7 @@ bool bp_script_sign(struct bp_keystore *ks, const cstring *fromPubKey,
 	if (!txTo || !txTo->vin || nIn >= txTo->vin->len)
 		return false;
 
-	struct bp_txin *txin = g_ptr_array_index(txTo->vin, nIn);
+	struct bp_txin *txin = parr_idx(txTo->vin, nIn);
 
 	/* get signature hash */
 	bu256_t hash;
@@ -119,11 +119,11 @@ bool bp_sign_sig(struct bp_keystore *ks, const struct bp_utxo *txFrom,
 	    !txTo || !txTo->vin || nIn >= txTo->vin->len)
 		return false;
 
-	struct bp_txin *txin = g_ptr_array_index(txTo->vin, nIn);
+	struct bp_txin *txin = parr_idx(txTo->vin, nIn);
 
 	if (txin->prevout.n >= txFrom->vout->len)
 		return false;
-	struct bp_txout *txout = g_ptr_array_index(txFrom->vout,
+	struct bp_txout *txout = parr_idx(txFrom->vout,
 						   txin->prevout.n);
 
 	return bp_script_sign(ks, txout->scriptPubKey, txTo, nIn, nHashType);

@@ -25,7 +25,7 @@ extern void bbm_init(struct bp_block_match *match);
 extern struct bp_block_match *bbm_new(void);
 extern void bbm_free(struct bp_block_match *match);
 
-extern GPtrArray *bp_block_match(const struct bp_block *block,
+extern parr *bp_block_match(const struct bp_block *block,
 			  const struct bp_keyset *ks);
 
 #endif /* __LIBCCOIN_ADDR_MATCH_H__ */

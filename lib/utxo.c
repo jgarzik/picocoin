@@ -18,7 +18,7 @@ static void bp_utxo_free_vout(struct bp_utxo *coin)
 	if (!coin || !coin->vout)
 		return;
 
-	g_ptr_array_free(coin->vout, TRUE);
+	parr_free(coin->vout, TRUE);
 	coin->vout = NULL;
 }
 
@@ -41,16 +41,16 @@ bool bp_utxo_from_tx(struct bp_utxo *coin, const struct bp_tx *tx,
 	coin->height = height;
 	coin->version = tx->nVersion;
 
-	coin->vout = g_ptr_array_new_full(tx->vout->len, g_bp_txout_free);
+	coin->vout = parr_new(tx->vout->len, g_bp_txout_free);
 	unsigned int i;
 
 	for (i = 0; i < tx->vout->len; i++) {
 		struct bp_txout *old_out, *new_out;
 
-		old_out = g_ptr_array_index(tx->vout, i);
+		old_out = parr_idx(tx->vout, i);
 		new_out = malloc(sizeof(*new_out));
 		bp_txout_copy(new_out, old_out);
-		g_ptr_array_add(coin->vout, new_out);
+		parr_add(coin->vout, new_out);
 	}
 
 	return true;
@@ -92,7 +92,7 @@ bool bp_utxo_is_spent(struct bp_utxo_set *uset, const struct bp_outpt *outpt)
 	    (outpt->n >= coin->vout->len))
 		return true;
 
-	struct bp_txout *txout = g_ptr_array_index(coin->vout, outpt->n);
+	struct bp_txout *txout = parr_idx(coin->vout, outpt->n);
 	if (!txout)
 		return true;
 
@@ -108,7 +108,7 @@ static bool bp_utxo_null(const struct bp_utxo *coin)
 	for (i = 0; i < coin->vout->len; i++) {
 		struct bp_txout *txout;
 
-		txout = g_ptr_array_index(coin->vout, i);
+		txout = parr_idx(coin->vout, i);
 		if (txout)
 			return false;
 	}
@@ -124,12 +124,12 @@ bool bp_utxo_spend(struct bp_utxo_set *uset, const struct bp_outpt *outpt)
 		return false;
 
 	/* find txout, given index */
-	struct bp_txout *txout = g_ptr_array_index(coin->vout, outpt->n);
+	struct bp_txout *txout = parr_idx(coin->vout, outpt->n);
 	if (!txout)
 		return false;
 
 	/* free txout, replace with NULL marker indicating spent-ness */
-	coin->vout->pdata[outpt->n] = NULL;
+	coin->vout->data[outpt->n] = NULL;
 	bp_txout_free(txout);
 	free(txout);
 

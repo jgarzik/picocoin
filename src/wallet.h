@@ -7,13 +7,13 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <glib.h>
+#include <ccoin/parr.h>
 
 struct wallet {
 	uint32_t	version;
 	unsigned char	netmagic[4];
 
-	GPtrArray	*keys;
+	parr	*keys;
 };
 
 extern void wallet_new_address(void);
@@ -25,9 +25,9 @@ extern void cur_wallet_free(void);
 
 #define wallet_for_each_key_numbered(_wlt, _key, _num)			\
 	(_num) = 0;							\
-	for ((_key) = g_ptr_array_index((_wlt)->keys, (_num));		\
+	for ((_key) = parr_idx((_wlt)->keys, (_num));		\
 		(_wlt)->keys && (_num) < (_wlt)->keys->len;		\
-		(_key) = g_ptr_array_index((_wlt)->keys, ++(_num)))
+		(_key) = parr_idx((_wlt)->keys, ++(_num)))
 
 #define wallet_for_each_key(_wlt, _key)				\
 	unsigned int ___i;					\

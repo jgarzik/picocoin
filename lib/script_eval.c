@@ -10,7 +10,7 @@
 #include <ccoin/util.h>
 #include <ccoin/key.h>
 #include <ccoin/serialize.h>
-#include <ccoin/compat.h>		/* for g_ptr_array_new_full */
+#include <ccoin/compat.h>		/* for parr_new */
 
 static const size_t nMaxNumSize = 4;
 
@@ -70,7 +70,7 @@ void bp_tx_sighash(bu256_t *hash, const cstring *scriptCode,
 	unsigned int i;
 	struct bp_txin *txin;
 	for (i = 0; i < txTmp.vin->len; i++) {
-		txin = g_ptr_array_index(txTmp.vin, i);
+		txin = parr_idx(txTmp.vin, i);
 		cstr_resize(txin->scriptSig, 0);
 
 		if (i == nIn)
@@ -82,11 +82,11 @@ void bp_tx_sighash(bu256_t *hash, const cstring *scriptCode,
 	if ((nHashType & 0x1f) == SIGHASH_NONE) {
 		/* Wildcard payee */
 		bp_tx_free_vout(&txTmp);
-		txTmp.vout = g_ptr_array_new_full(1, g_bp_txout_free);
+		txTmp.vout = parr_new(1, g_bp_txout_free);
 
 		/* Let the others update at will */
 		for (i = 0; i < txTmp.vin->len; i++) {
-			txin = g_ptr_array_index(txTmp.vin, i);
+			txin = parr_idx(txTmp.vin, i);
 			if (i != nIn)
 				txin->nSequence = 0;
 		}
@@ -100,18 +100,18 @@ void bp_tx_sighash(bu256_t *hash, const cstring *scriptCode,
 			goto out;
 		}
 
-		g_ptr_array_set_size(txTmp.vout, nOut + 1);
+		parr_resize(txTmp.vout, nOut + 1);
 
 		for (i = 0; i < nOut; i++) {
 			struct bp_txout *txout;
 
-			txout = g_ptr_array_index(txTmp.vout, i);
+			txout = parr_idx(txTmp.vout, i);
 			bp_txout_set_null(txout);
 		}
 
 		/* Let the others update at will */
 		for (i = 0; i < txTmp.vin->len; i++) {
-			txin = g_ptr_array_index(txTmp.vin, i);
+			txin = parr_idx(txTmp.vin, i);
 			if (i != nIn)
 				txin->nSequence = 0;
 		}
@@ -121,8 +121,8 @@ void bp_tx_sighash(bu256_t *hash, const cstring *scriptCode,
 	   not recommended for open transactions */
 	if (nHashType & SIGHASH_ANYONECANPAY) {
 		if (nIn > 0)
-			g_ptr_array_remove_range(txTmp.vin, 0, nIn);
-		g_ptr_array_set_size(txTmp.vin, 1);
+			parr_remove_range(txTmp.vin, 0, nIn);
+		parr_resize(txTmp.vin, 1);
 	}
 
 	/* Serialize and hash */
@@ -187,49 +187,49 @@ static bool CastToBool(const struct buffer *buf)
 	return false;
 }
 
-static void stack_insert(GPtrArray *stack, const struct buffer *buf, int index_)
+static void stack_insert(parr *stack, const struct buffer *buf, int index_)
 {
 	int index = stack->len + index_;
-	g_ptr_array_add(stack, NULL);
-	memmove(&stack->pdata[index + 1], &stack->pdata[index],
+	parr_add(stack, NULL);
+	memmove(&stack->data[index + 1], &stack->data[index],
 		sizeof(gpointer) * (stack->len - index - 1));
-	stack->pdata[index] = buffer_copy(buf->p, buf->len);
+	stack->data[index] = buffer_copy(buf->p, buf->len);
 }
 
-static void stack_push(GPtrArray *stack, const struct buffer *buf)
+static void stack_push(parr *stack, const struct buffer *buf)
 {
-	g_ptr_array_add(stack, buffer_copy(buf->p, buf->len));
+	parr_add(stack, buffer_copy(buf->p, buf->len));
 }
 
-static void stack_push_nocopy(GPtrArray *stack, struct buffer *buf)
+static void stack_push_nocopy(parr *stack, struct buffer *buf)
 {
-	g_ptr_array_add(stack, buf);
+	parr_add(stack, buf);
 }
 
-static void stack_push_char(GPtrArray *stack, unsigned char ch)
+static void stack_push_char(parr *stack, unsigned char ch)
 {
-	g_ptr_array_add(stack, buffer_copy(&ch, 1));
+	parr_add(stack, buffer_copy(&ch, 1));
 }
 
-static void stack_push_str(GPtrArray *stack, cstring *s)
+static void stack_push_str(parr *stack, cstring *s)
 {
-	g_ptr_array_add(stack, buffer_copy(s->str, s->len));
+	parr_add(stack, buffer_copy(s->str, s->len));
 	cstr_free(s, true);
 }
 
-static void stack_copy(GPtrArray *dest, const GPtrArray *src)
+static void stack_copy(parr *dest, const parr *src)
 {
 	unsigned int i;
 	for (i = 0; i < src->len; i++)
-		stack_push(dest, g_ptr_array_index(src, i));
+		stack_push(dest, parr_idx(src, i));
 }
 
-static struct buffer *stacktop(GPtrArray *stack, int index)
+static struct buffer *stacktop(parr *stack, int index)
 {
-	return stack->pdata[stack->len + index];
+	return stack->data[stack->len + index];
 }
 
-static int stackint(GPtrArray *stack, int index)
+static int stackint(parr *stack, int index)
 {
 	struct buffer *buf = stacktop(stack, index);
 	BIGNUM bn;
@@ -253,25 +253,25 @@ out:
 	return ret;
 }
 
-static struct buffer *stack_take(GPtrArray *stack, int index)
+static struct buffer *stack_take(parr *stack, int index)
 {
-	struct buffer *ret = stack->pdata[stack->len + index];
-	stack->pdata[stack->len + index] = NULL;
+	struct buffer *ret = stack->data[stack->len + index];
+	stack->data[stack->len + index] = NULL;
 	return ret;
 }
 
-static void popstack(GPtrArray *stack)
+static void popstack(parr *stack)
 {
 	assert(stack->len > 0);
-	g_ptr_array_remove_index(stack, stack->len - 1);
+	parr_remove_idx(stack, stack->len - 1);
 }
 
-static void stack_swap(GPtrArray *stack, int idx1, int idx2)
+static void stack_swap(parr *stack, int idx1, int idx2)
 {
 	int len = stack->len;
-	struct buffer *tmp = stack->pdata[len + idx1];
-	stack->pdata[len + idx1] = stack->pdata[len + idx2];
-	stack->pdata[len + idx2] = tmp;
+	struct buffer *tmp = stack->data[len + idx1];
+	stack->data[len + idx1] = stack->data[len + idx2];
+	stack->data[len + idx2] = tmp;
 }
 
 static unsigned int count_false(GByteArray *vfExec)
@@ -346,7 +346,7 @@ static bool IsCanonicalPubKey(const struct buffer *vch)
 	return true;
 }
 
-static bool bp_script_eval(GPtrArray *stack, const cstring *script,
+static bool bp_script_eval(parr *stack, const cstring *script,
 			   const struct bp_tx *txTo, unsigned int nIn,
 			   unsigned int flags, int nHashType)
 {
@@ -356,7 +356,7 @@ static bool bp_script_eval(GPtrArray *stack, const cstring *script,
 	struct bscript_op op;
 	bool rc = false;
 	GByteArray *vfExec = g_byte_array_new();
-	GPtrArray *altstack = g_ptr_array_new_with_free_func(g_buffer_free);
+	parr *altstack = parr_new(0, buffer_free);
 	BIGNUM bn;
 	BN_init(&bn);
 
@@ -534,7 +534,7 @@ OP_NOP10:
 				goto out;
 			struct buffer *vch1 = stack_take(stack, -6);
 			struct buffer *vch2 = stack_take(stack, -5);
-			g_ptr_array_remove_range(stack, stack->len - 6, 2);
+			parr_remove_range(stack, stack->len - 6, 2);
 			stack_push(stack, vch1);
 			stack_push(stack, vch2);
 			break;
@@ -584,7 +584,7 @@ OP_NOP10:
 			// (x1 x2 -- x2)
 			if (stack->len < 2)
 				goto out;
-			g_ptr_array_remove_index(stack, stack->len - 2);
+			parr_remove_idx(stack, stack->len - 2);
 			break;
 
 		case OP_OVER: {
@@ -609,7 +609,7 @@ OP_NOP10:
 			struct buffer *vch = stacktop(stack, -n-1);
 			if (opcode == OP_ROLL) {
 				vch = buffer_copy(vch->p, vch->len);
-				g_ptr_array_remove_index(stack,
+				parr_remove_idx(stack,
 							 stack->len - n - 1);
 				stack_push_nocopy(stack, vch);
 			} else
@@ -1051,7 +1051,7 @@ OP_NOP10:
 
 out:
 	BN_clear_free(&bn);
-	g_ptr_array_free(altstack, TRUE);
+	parr_free(altstack, TRUE);
 	g_byte_array_unref(vfExec);
 	return rc;
 }
@@ -1061,15 +1061,15 @@ bool bp_script_verify(const cstring *scriptSig, const cstring *scriptPubKey,
 		      unsigned int flags, int nHashType)
 {
 	bool rc = false;
-	GPtrArray *stack = g_ptr_array_new_with_free_func(g_buffer_free);
+	parr *stack = parr_new(0, buffer_free);
 	cstring *pubkey2 = NULL;
-	GPtrArray *stackCopy = NULL;
+	parr *stackCopy = NULL;
 
 	if (!bp_script_eval(stack, scriptSig, txTo, nIn, flags, nHashType))
 		goto out;
 
 	if (flags & SCRIPT_VERIFY_P2SH) {
-		stackCopy = g_ptr_array_new_full(stack->len, g_buffer_free);
+		stackCopy = parr_new(stack->len, buffer_free);
 		stack_copy(stackCopy, stack);
 	}
 
@@ -1111,11 +1111,11 @@ bool bp_script_verify(const cstring *scriptSig, const cstring *scriptPubKey,
 	rc = true;
 
 out:
-	g_ptr_array_free(stack, TRUE);
+	parr_free(stack, TRUE);
 	if (pubkey2)
 		cstr_free(pubkey2, true);
 	if (stackCopy)
-		g_ptr_array_free(stackCopy, TRUE);
+		parr_free(stackCopy, TRUE);
 	return rc;
 }
 
@@ -1127,11 +1127,11 @@ bool bp_verify_sig(const struct bp_utxo *txFrom, const struct bp_tx *txTo,
 	    (txTo->vin->len <= nIn))
 		return false;
 
-	struct bp_txin *txin = g_ptr_array_index(txTo->vin, nIn);
+	struct bp_txin *txin = parr_idx(txTo->vin, nIn);
 	if (txin->prevout.n >= txFrom->vout->len)
 		return false;
 
-	struct bp_txout *txout = g_ptr_array_index(txFrom->vout,
+	struct bp_txout *txout = parr_idx(txFrom->vout,
 						   txin->prevout.n);
 	if (!txout)
 		return false;

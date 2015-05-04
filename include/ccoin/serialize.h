@@ -11,6 +11,7 @@
 #include <ccoin/buffer.h>
 #include <ccoin/buint.h>
 #include <ccoin/cstr.h>
+#include <ccoin/parr.h>
 
 extern void ser_bytes(cstring *s, const void *p, size_t len);
 extern void ser_u16(cstring *s, uint16_t v_);
@@ -36,7 +37,7 @@ static inline void ser_s64(cstring *s, int64_t v_)
 	ser_u64(s, (uint64_t) v_);
 }
 
-extern void ser_u256_array(cstring *s, GPtrArray *arr);
+extern void ser_u256_array(cstring *s, parr *arr);
 
 extern bool deser_skip(struct const_buffer *buf, size_t len);
 extern bool deser_bytes(void *po, struct const_buffer *buf, size_t len);
@@ -58,7 +59,7 @@ static inline bool deser_s64(int64_t *vo, struct const_buffer *buf)
 	return deser_u64((uint64_t *) vo, buf);
 }
 
-extern bool deser_u256_array(GPtrArray **ao, struct const_buffer *buf);
+extern bool deser_u256_array(parr **ao, struct const_buffer *buf);
 
 extern void u256_from_compact(BIGNUM *vo, uint32_t c);
 

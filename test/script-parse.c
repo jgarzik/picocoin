@@ -98,12 +98,12 @@ static void runtest(const char *ser_fn_base)
 
 	unsigned int n_tx, n_out;
 	for (n_tx = 0; n_tx < block.vtx->len; n_tx++) {
-		struct bp_tx *tx = g_ptr_array_index(block.vtx, n_tx);
+		struct bp_tx *tx = parr_idx(block.vtx, n_tx);
 
 		for (n_out = 0; n_out < tx->vout->len; n_out++) {
 			struct bp_txout *txout;
 
-			txout = g_ptr_array_index(tx->vout, n_out);
+			txout = parr_idx(tx->vout, n_out);
 			test_txout(txout);
 		}
 	}

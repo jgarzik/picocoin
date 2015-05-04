@@ -9,7 +9,7 @@
 #include <ccoin/key.h>
 #include <ccoin/clist.h>
 #include <ccoin/addr_match.h>
-#include <ccoin/compat.h>		/* for g_ptr_array_new_full */
+#include <ccoin/compat.h>		/* for parr_new */
 
 bool bp_txout_match(const struct bp_txout *txout,
 		    const struct bp_keyset *ks)
@@ -63,7 +63,7 @@ bool bp_tx_match(const struct bp_tx *tx, const struct bp_keyset *ks)
 	for (i = 0; i < tx->vout->len; i++) {
 		struct bp_txout *txout;
 
-		txout = g_ptr_array_index(tx->vout, i);
+		txout = parr_idx(tx->vout, i);
 		if (bp_txout_match(txout, ks))
 			return true;
 	}
@@ -83,7 +83,7 @@ bool bp_tx_match_mask(BIGNUM *mask, const struct bp_tx *tx,
 	for (i = 0; i < tx->vout->len; i++) {
 		struct bp_txout *txout;
 
-		txout = g_ptr_array_index(tx->vout, i);
+		txout = parr_idx(tx->vout, i);
 		if (bp_txout_match(txout, ks))
 			BN_set_bit(mask, i);
 	}
@@ -121,13 +121,13 @@ void bbm_free(struct bp_block_match *match)
 		free(match);
 }
 
-GPtrArray *bp_block_match(const struct bp_block *block,
+parr *bp_block_match(const struct bp_block *block,
 			  const struct bp_keyset *ks)
 {
 	if (!block || !block->vtx || !ks)
 		return NULL;
 
-	GPtrArray *arr = g_ptr_array_new_full(block->vtx->len,
+	parr *arr = parr_new(block->vtx->len,
 				(GDestroyNotify) bbm_free);
 	if (!arr)
 		return NULL;
@@ -139,7 +139,7 @@ GPtrArray *bp_block_match(const struct bp_block *block,
 	for (n = 0; n < block->vtx->len; n++) {
 		struct bp_tx *tx;
 
-		tx = g_ptr_array_index(block->vtx, n);
+		tx = parr_idx(block->vtx, n);
 		if (!bp_tx_match_mask(&tmp_mask, tx, ks))
 			goto err_out;
 
@@ -150,7 +150,7 @@ GPtrArray *bp_block_match(const struct bp_block *block,
 			match->n = n;
 			BN_copy(&match->mask, &tmp_mask);
 
-			g_ptr_array_add(arr, match);
+			parr_add(arr, match);
 		}
 	}
 
@@ -159,7 +159,7 @@ GPtrArray *bp_block_match(const struct bp_block *block,
 
 err_out:
 	BN_clear_free(&tmp_mask);
-	g_ptr_array_free(arr, TRUE);
+	parr_free(arr, TRUE);
 	return NULL;
 }
 

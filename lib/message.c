@@ -11,7 +11,7 @@
 #include <ccoin/message.h>
 #include <ccoin/serialize.h>
 #include <ccoin/util.h>
-#include <ccoin/compat.h>		/* for g_ptr_array_new_full */
+#include <ccoin/compat.h>		/* for parr_new */
 
 void parse_message_hdr(struct p2p_message_hdr *hdr, const unsigned char *data)
 {
@@ -78,7 +78,7 @@ bool deser_msg_addr(unsigned int protover, struct msg_addr *ma,
 	uint32_t vlen;
 	if (!deser_varlen(&vlen, buf)) return false;
 
-	ma->addrs = g_ptr_array_new_full(vlen, g_free);
+	ma->addrs = parr_new(vlen, free);
 
 	unsigned int i;
 	for (i = 0; i < vlen; i++) {
@@ -90,7 +90,7 @@ bool deser_msg_addr(unsigned int protover, struct msg_addr *ma,
 			goto err_out;
 		}
 
-		g_ptr_array_add(ma->addrs, addr);
+		parr_add(ma->addrs, addr);
 	}
 
 	return true;
@@ -115,7 +115,7 @@ cstring *ser_msg_addr(unsigned int protover, const struct msg_addr *ma)
 	for (i = 0; i < ma->addrs->len; i++) {
 		struct bp_address *addr;
 
-		addr = g_ptr_array_index(ma->addrs, i);
+		addr = parr_idx(ma->addrs, i);
 
 		ser_bp_addr(s, protover, addr);
 	}
@@ -126,7 +126,7 @@ cstring *ser_msg_addr(unsigned int protover, const struct msg_addr *ma)
 void msg_addr_free(struct msg_addr *ma)
 {
 	if (ma->addrs) {
-		g_ptr_array_free(ma->addrs, TRUE);
+		parr_free(ma->addrs, TRUE);
 		ma->addrs = NULL;
 	}
 }
@@ -157,7 +157,7 @@ bool deser_msg_headers(struct msg_headers *mh, struct const_buffer *buf)
 	uint32_t vlen;
 	if (!deser_varlen(&vlen, buf)) return false;
 
-	mh->headers = g_ptr_array_new_full(vlen, g_free);
+	mh->headers = parr_new(vlen, free);
 
 	unsigned int i;
 	for (i = 0; i < vlen; i++) {
@@ -169,7 +169,7 @@ bool deser_msg_headers(struct msg_headers *mh, struct const_buffer *buf)
 			goto err_out;
 		}
 
-		g_ptr_array_add(mh->headers, block);
+		parr_add(mh->headers, block);
 	}
 
 	return true;
@@ -194,7 +194,7 @@ cstring *ser_msg_headers(const struct msg_headers *mh)
 	for (i = 0; i < mh->headers->len; i++) {
 		struct bp_block *block;
 
-		block = g_ptr_array_index(mh->headers, i);
+		block = parr_idx(mh->headers, i);
 
 		ser_bp_block(s, block);
 	}
@@ -213,11 +213,11 @@ void msg_headers_free(struct msg_headers *mh)
 		for (i = 0; i < mh->headers->len; i++) {
 			struct bp_block *block;
 
-			block = g_ptr_array_index(mh->headers, i);
+			block = parr_idx(mh->headers, i);
 			bp_block_free(block);
 		}
 
-		g_ptr_array_free(mh->headers, TRUE);
+		parr_free(mh->headers, TRUE);
 		mh->headers = NULL;
 	}
 }
@@ -292,7 +292,7 @@ bool deser_msg_vinv(struct msg_vinv *mv, struct const_buffer *buf)
 	uint32_t vlen;
 	if (!deser_varlen(&vlen, buf)) return false;
 
-	mv->invs = g_ptr_array_new_full(vlen, g_free);
+	mv->invs = parr_new(vlen, free);
 
 	unsigned int i;
 	for (i = 0; i < vlen; i++) {
@@ -304,7 +304,7 @@ bool deser_msg_vinv(struct msg_vinv *mv, struct const_buffer *buf)
 			goto err_out;
 		}
 
-		g_ptr_array_add(mv->invs, inv);
+		parr_add(mv->invs, inv);
 	}
 
 	return true;
@@ -329,7 +329,7 @@ cstring *ser_msg_vinv(const struct msg_vinv *mv)
 	for (i = 0; i < mv->invs->len; i++) {
 		struct bp_inv *inv;
 
-		inv = g_ptr_array_index(mv->invs, i);
+		inv = parr_idx(mv->invs, i);
 
 		ser_bp_inv(s, inv);
 	}
@@ -343,7 +343,7 @@ void msg_vinv_free(struct msg_vinv *mv)
 		return;
 
 	if (mv->invs) {
-		g_ptr_array_free(mv->invs, TRUE);
+		parr_free(mv->invs, TRUE);
 		mv->invs = NULL;
 	}
 }
@@ -352,12 +352,12 @@ void msg_vinv_push(struct msg_vinv *mv, uint32_t msg_type,
 		   const bu256_t *hash_in)
 {
 	if (!mv->invs)
-		mv->invs = g_ptr_array_new_full(512, g_free);
+		mv->invs = parr_new(512, free);
 
 	struct bp_inv *inv = malloc(sizeof(struct bp_inv));
 	inv->type = msg_type;
 	bu256_copy(&inv->hash, hash_in);
 
-	g_ptr_array_add(mv->invs, inv);
+	parr_add(mv->invs, inv);
 }
 

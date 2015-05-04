@@ -14,6 +14,7 @@
 #include <ccoin/coredefs.h>
 #include <ccoin/hashtab.h>
 #include <ccoin/cstr.h>
+#include <ccoin/parr.h>
 
 enum service_bits {
 	NODE_NETWORK	= (1 << 0),
@@ -61,7 +62,7 @@ static inline void bp_inv_free(struct bp_inv *inv) {}
 
 struct bp_locator {
 	uint32_t	nVersion;
-	GPtrArray	*vHave;		/* of bu256_t */
+	parr	*vHave;		/* of bu256_t */
 };
 
 static inline void bp_locator_init(struct bp_locator *locator)
@@ -140,8 +141,8 @@ static inline bool bp_txout_valid(const struct bp_txout *txout)
 struct bp_tx {
 	/* serialized */
 	uint32_t	nVersion;
-	GPtrArray	*vin;			/* of bp_txin */
-	GPtrArray	*vout;			/* of bp_txout */
+	parr	*vin;			/* of bp_txin */
+	parr	*vout;			/* of bp_txout */
 	uint32_t	nLockTime;
 
 	/* used at runtime */
@@ -164,7 +165,7 @@ static inline bool bp_tx_coinbase(const struct bp_tx *tx)
 	if (!tx->vin || tx->vin->len != 1)
 		return false;
 
-	struct bp_txin *txin = g_ptr_array_index(tx->vin, 0);
+	struct bp_txin *txin = parr_idx(tx->vin, 0);
 	if (!bp_outpt_null(&txin->prevout))
 		return false;
 
@@ -178,7 +179,7 @@ struct bp_utxo {
 	uint32_t	height;
 
 	uint32_t	version;
-	GPtrArray	*vout;		/* of bp_txout */
+	parr	*vout;		/* of bp_txout */
 };
 
 extern void bp_utxo_init(struct bp_utxo *coin);
@@ -216,7 +217,7 @@ struct bp_block {
 	uint32_t	nTime;
 	uint32_t	nBits;
 	uint32_t	nNonce;
-	GPtrArray	*vtx;			/* of bp_tx */
+	parr	*vtx;			/* of bp_tx */
 
 	/* used at runtime */
 	bool		sha256_valid;

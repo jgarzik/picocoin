@@ -6,7 +6,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <glib.h>
 #include <ccoin/util.h>
 #include <ccoin/buffer.h>
 
@@ -35,11 +34,6 @@ void buffer_free(void *struct_buffer)
 
 	free(buf->p);
 	free(buf);
-}
-
-void g_buffer_free(gpointer data)
-{
-	buffer_free(data);
 }
 
 struct buffer *buffer_copy(const void *data, size_t data_len)

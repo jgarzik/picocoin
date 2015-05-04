@@ -213,16 +213,16 @@ extern enum opcodetype GetOpType(const char *opname);
  */
 
 extern bool bsp_getop(struct bscript_op *op, struct bscript_parser *bp);
-extern GPtrArray *bsp_parse_all(const void *data_, size_t data_len);
-extern enum txnouttype bsp_classify(GPtrArray *ops);
+extern parr *bsp_parse_all(const void *data_, size_t data_len);
+extern enum txnouttype bsp_classify(parr *ops);
 extern bool bsp_addr_parse(struct bscript_addr *addr,
 		    const void *data, size_t data_len);
 extern void bsp_addr_free(struct bscript_addr *addr);
 extern bool is_bsp_pushonly(struct const_buffer *buf);
-extern bool is_bsp_pubkey(GPtrArray *ops);
-extern bool is_bsp_pubkeyhash(GPtrArray *ops);
-extern bool is_bsp_scripthash(GPtrArray *ops);
-extern bool is_bsp_multisig(GPtrArray *ops);
+extern bool is_bsp_pubkey(parr *ops);
+extern bool is_bsp_pubkeyhash(parr *ops);
+extern bool is_bsp_scripthash(parr *ops);
+extern bool is_bsp_multisig(parr *ops);
 
 static inline bool is_bsp_pushdata(enum opcodetype op)
 {

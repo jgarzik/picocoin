@@ -11,7 +11,7 @@
 #include <ccoin/util.h>
 #include <ccoin/coredefs.h>
 #include <ccoin/serialize.h>
-#include <ccoin/compat.h>		/* for g_ptr_array_new_full */
+#include <ccoin/compat.h>		/* for parr_new */
 
 bool deser_bp_addr(unsigned int protover,
 		struct bp_address *addr, struct const_buffer *buf)
@@ -77,7 +77,7 @@ void bp_locator_free(struct bp_locator *locator)
 		return;
 
 	if (locator->vHave) {
-		g_ptr_array_free(locator->vHave, TRUE);
+		parr_free(locator->vHave, TRUE);
 		locator->vHave = NULL;
 	}
 }
@@ -86,10 +86,10 @@ void bp_locator_push(struct bp_locator *locator, const bu256_t *hash_in)
 {
 	/* TODO: replace '16' with number based on real world usage */
 	if (!locator->vHave)
-		locator->vHave = g_ptr_array_new_full(16, g_bu256_free);
+		locator->vHave = parr_new(16, g_bu256_free);
 
 	bu256_t *hash = bu256_new(hash_in);
-	g_ptr_array_add(locator->vHave, hash);
+	parr_add(locator->vHave, hash);
 }
 
 void bp_outpt_init(struct bp_outpt *outpt)
@@ -249,8 +249,8 @@ bool deser_bp_tx(struct bp_tx *tx, struct const_buffer *buf)
 {
 	bp_tx_free(tx);
 
-	tx->vin = g_ptr_array_new_full(8, g_bp_txin_free);
-	tx->vout = g_ptr_array_new_full(8, g_bp_txout_free);
+	tx->vin = parr_new(8, g_bp_txin_free);
+	tx->vout = parr_new(8, g_bp_txout_free);
 
 	if (!deser_u32(&tx->nVersion, buf)) return false;
 
@@ -268,7 +268,7 @@ bool deser_bp_tx(struct bp_tx *tx, struct const_buffer *buf)
 			goto err_out;
 		}
 
-		g_ptr_array_add(tx->vin, txin);
+		parr_add(tx->vin, txin);
 	}
 
 	if (!deser_varlen(&vlen, buf)) return false;
@@ -283,7 +283,7 @@ bool deser_bp_tx(struct bp_tx *tx, struct const_buffer *buf)
 			goto err_out;
 		}
 
-		g_ptr_array_add(tx->vout, txout);
+		parr_add(tx->vout, txout);
 	}
 
 	if (!deser_u32(&tx->nLockTime, buf)) return false;
@@ -305,7 +305,7 @@ void ser_bp_tx(cstring *s, const struct bp_tx *tx)
 		for (i = 0; i < tx->vin->len; i++) {
 			struct bp_txin *txin;
 
-			txin = g_ptr_array_index(tx->vin, i);
+			txin = parr_idx(tx->vin, i);
 			ser_bp_txin(s, txin);
 		}
 	}
@@ -316,7 +316,7 @@ void ser_bp_tx(cstring *s, const struct bp_tx *tx)
 		for (i = 0; i < tx->vout->len; i++) {
 			struct bp_txout *txout;
 
-			txout = g_ptr_array_index(tx->vout, i);
+			txout = parr_idx(tx->vout, i);
 			ser_bp_txout(s, txout);
 		}
 	}
@@ -329,7 +329,7 @@ void bp_tx_free_vout(struct bp_tx *tx)
 	if (!tx || !tx->vout)
 		return;
 
-	g_ptr_array_free(tx->vout, TRUE);
+	parr_free(tx->vout, TRUE);
 	tx->vout = NULL;
 }
 
@@ -339,7 +339,7 @@ void bp_tx_free(struct bp_tx *tx)
 		return;
 
 	if (tx->vin) {
-		g_ptr_array_free(tx->vin, TRUE);
+		parr_free(tx->vin, TRUE);
 		tx->vin = NULL;
 	}
 
@@ -392,15 +392,15 @@ void bp_tx_copy(struct bp_tx *dest, const struct bp_tx *src)
 	else {
 		unsigned int i;
 
-		dest->vin = g_ptr_array_new_full(src->vin->len, g_bp_txin_free);
+		dest->vin = parr_new(src->vin->len, g_bp_txin_free);
 
 		for (i = 0; i < src->vin->len; i++) {
 			struct bp_txin *txin_old, *txin_new;
 
-			txin_old = g_ptr_array_index(src->vin, i);
+			txin_old = parr_idx(src->vin, i);
 			txin_new = malloc(sizeof(*txin_new));
 			bp_txin_copy(txin_new, txin_old);
-			g_ptr_array_add(dest->vin, txin_new);
+			parr_add(dest->vin, txin_new);
 		}
 	}
 
@@ -409,16 +409,16 @@ void bp_tx_copy(struct bp_tx *dest, const struct bp_tx *src)
 	else {
 		unsigned int i;
 
-		dest->vout = g_ptr_array_new_full(src->vout->len,
+		dest->vout = parr_new(src->vout->len,
 						  g_bp_txout_free);
 
 		for (i = 0; i < src->vout->len; i++) {
 			struct bp_txout *txout_old, *txout_new;
 
-			txout_old = g_ptr_array_index(src->vout, i);
+			txout_old = parr_idx(src->vout, i);
 			txout_new = malloc(sizeof(*txout_new));
 			bp_txout_copy(txout_new, txout_old);
-			g_ptr_array_add(dest->vout, txout_new);
+			parr_add(dest->vout, txout_new);
 		}
 	}
 }
@@ -443,7 +443,7 @@ bool deser_bp_block(struct bp_block *block, struct const_buffer *buf)
 	if (buf->len == 0)
 		return true;
 
-	block->vtx = g_ptr_array_new_full(512, g_free);
+	block->vtx = parr_new(512, free);
 
 	uint32_t vlen;
 	if (!deser_varlen(&vlen, buf)) return false;
@@ -459,7 +459,7 @@ bool deser_bp_block(struct bp_block *block, struct const_buffer *buf)
 			goto err_out;
 		}
 
-		g_ptr_array_add(block->vtx, tx);
+		parr_add(block->vtx, tx);
 	}
 
 	return true;
@@ -490,7 +490,7 @@ void ser_bp_block(cstring *s, const struct bp_block *block)
 		for (i = 0; i < block->vtx->len; i++) {
 			struct bp_tx *tx;
 
-			tx = g_ptr_array_index(block->vtx, i);
+			tx = parr_idx(block->vtx, i);
 			ser_bp_tx(s, tx);
 		}
 	}
@@ -504,11 +504,11 @@ void bp_block_vtx_free(struct bp_block *block)
 		for (i = 0; i < block->vtx->len; i++) {
 			struct bp_tx *tx;
 
-			tx = g_ptr_array_index(block->vtx, i);
+			tx = parr_idx(block->vtx, i);
 			bp_tx_free(tx);
 		}
 
-		g_ptr_array_free(block->vtx, TRUE);
+		parr_free(block->vtx, TRUE);
 
 		block->vtx = NULL;
 	}

@@ -22,15 +22,11 @@ extern void parr_free(parr *pa, bool free_array);
 extern bool parr_add(parr *pa, void *data);
 extern bool parr_remove(parr *pa, void *data);
 extern void parr_remove_idx(parr *pa, size_t idx);
+extern void parr_remove_range(parr *pa, size_t idx, size_t len);
 extern bool parr_resize(parr *pa, size_t newsz);
 
 extern ssize_t parr_find(parr *pa, void *data);
 
-static inline void *parr_idx(parr *pa, size_t idx)
-{
-	if (idx >= pa->len)
-		return NULL;
-	return pa->data[idx];
-}
+#define parr_idx(pa, idx) ((pa)->data[(idx)])
 
 #endif /* __LIBCCOIN_PARR_H__ */

@@ -8,7 +8,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <openssl/ripemd.h>
-#include <glib.h>
 #include <jansson.h>
 #include <ccoin/coredefs.h>
 #include "picocoin.h"
@@ -20,14 +19,14 @@
 #include <ccoin/util.h>
 #include <ccoin/mbr.h>
 #include <ccoin/hexcode.h>
-#include <ccoin/compat.h>		/* for g_ptr_array_new_full */
+#include <ccoin/compat.h>		/* for parr_new */
 
 static struct wallet *wallet_new(void)
 {
 	struct wallet *wlt;
 
 	wlt = calloc(1, sizeof(*wlt));
-	wlt->keys = g_ptr_array_new_full(1000, g_free);
+	wlt->keys = parr_new(1000, g_free);
 
 	return wlt;
 }
@@ -42,7 +41,7 @@ static void wallet_free(struct wallet *wlt)
 	wallet_for_each_key(wlt, key)
 		bp_key_free(key);
 
-	g_ptr_array_free(wlt->keys, TRUE);
+	parr_free(wlt->keys, TRUE);
 	wlt->keys = NULL;
 
 	memset(wlt, 0, sizeof(*wlt));
@@ -85,7 +84,7 @@ static bool load_rec_privkey(struct wallet *wlt, const void *privkey, size_t pk_
 	if (!bp_privkey_set(key, privkey, pk_len))
 		goto err_out_kf;
 
-	g_ptr_array_add(wlt->keys, key);
+	parr_add(wlt->keys, key);
 
 	return true;
 
@@ -270,7 +269,7 @@ void wallet_new_address(void)
 		return;
 	}
 
-	g_ptr_array_add(wlt->keys, key);
+	parr_add(wlt->keys, key);
 
 	store_wallet(wlt);
 
@@ -364,7 +363,7 @@ void wallet_info(void)
 	printf("{\n");
 
 	printf("  \"version\": %u,\n", wlt->version);
-	printf("  \"n_privkeys\": %u,\n", wlt->keys ? wlt->keys->len : 0U);
+	printf("  \"n_privkeys\": %zu,\n", wlt->keys ? wlt->keys->len : 0);
 	printf("  \"netmagic\": %02x%02x%02x%02x\n",
 	       wlt->netmagic[0],
 	       wlt->netmagic[1],

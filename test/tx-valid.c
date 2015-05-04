@@ -8,10 +8,10 @@
 #include <ccoin/buint.h>
 #include <ccoin/script.h>
 #include <ccoin/hashtab.h>
-#include <ccoin/compat.h>		/* for g_ptr_array_new_full */
+#include <ccoin/compat.h>		/* for parr_new */
 #include "libtest.h"
 
-GPtrArray *comments = NULL;
+parr *comments = NULL;
 
 static unsigned long input_hash(const void *key_)
 {
@@ -35,7 +35,7 @@ static void dump_comments(void)
 	unsigned int i;
 	for (i = 0; i < comments->len; i++) {
 		fprintf(stderr, "tx-valid cmt: %s\n",
-			(char *)g_ptr_array_index(comments, i));
+			(char *)parr_idx(comments, i));
 	}
 }
 
@@ -68,7 +68,7 @@ static void test_tx_valid(bool is_valid, struct bp_hashtab *input_map,
 	for (i = 0; i < tx.vin->len; i++) {
 		struct bp_txin *txin;
 
-		txin = g_ptr_array_index(tx.vin, i);
+		txin = parr_idx(tx.vin, i);
 		assert(txin != NULL);
 
 		cstring *scriptPubKey = bp_hashtab_get(input_map,
@@ -124,7 +124,7 @@ static void runtest(bool is_valid, const char *basefn)
 		input_hash, input_equal,
 		free, input_value_free);
 
-	comments = g_ptr_array_new_full(8, g_free);
+	comments = parr_new(8, free);
 
 	unsigned int idx;
 	for (idx = 0; idx < json_array_size(tests); idx++) {
@@ -134,7 +134,7 @@ static void runtest(bool is_valid, const char *basefn)
 			const char *cmt =
 				json_string_value(json_array_get(test, 0));
 			if (cmt)
-				g_ptr_array_add(comments, strdup(cmt));
+				parr_add(comments, strdup(cmt));
 			continue;			/* comments */
 		}
 
@@ -189,12 +189,12 @@ static void runtest(bool is_valid, const char *basefn)
 		cstr_free(tx_ser, true);
 
 		if (comments->len > 0) {
-			g_ptr_array_free(comments, TRUE);
-			comments = g_ptr_array_new_full(8, g_free);
+			parr_free(comments, TRUE);
+			comments = parr_new(8, free);
 		}
 	}
 
-	g_ptr_array_free(comments, TRUE);
+	parr_free(comments, TRUE);
 	comments = NULL;
 
 	bp_hashtab_unref(input_map);

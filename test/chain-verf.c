@@ -40,7 +40,7 @@ static bool spend_tx(struct bp_utxo_set *uset, const struct bp_tx *tx,
 			struct bp_txin *txin;
 			struct bp_txout *txout;
 
-			txin = g_ptr_array_index(tx->vin, i);
+			txin = parr_idx(tx->vin, i);
 
 			coin = bp_utxo_lookup(uset, &txin->prevout.hash);
 			if (!coin || !coin->vout)
@@ -53,7 +53,7 @@ static bool spend_tx(struct bp_utxo_set *uset, const struct bp_tx *tx,
 			txout = NULL;
 			if (txin->prevout.n >= coin->vout->len)
 				return false;
-			txout = g_ptr_array_index(coin->vout, txin->prevout.n);
+			txout = parr_idx(coin->vout, txin->prevout.n);
 			total_in += txout->nValue;
 
 			bool check_script;
@@ -79,7 +79,7 @@ static bool spend_tx(struct bp_utxo_set *uset, const struct bp_tx *tx,
 	for (i = 0; i < tx->vout->len; i++) {
 		struct bp_txout *txout;
 
-		txout = g_ptr_array_index(tx->vout, i);
+		txout = parr_idx(tx->vout, i);
 		total_out += txout->nValue;
 	}
 
@@ -111,7 +111,7 @@ static bool spend_block(struct bp_utxo_set *uset, const struct bp_block *block,
 	for (i = 0; i < block->vtx->len; i++) {
 		struct bp_tx *tx;
 
-		tx = g_ptr_array_index(block->vtx, i);
+		tx = parr_idx(block->vtx, i);
 		if (!spend_tx(uset, tx, i, height, ckpt_height)) {
 			char hexstr[BU256_STRSZ];
 			bu256_hex(hexstr, &tx->sha256);

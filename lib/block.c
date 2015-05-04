@@ -20,11 +20,11 @@ static bool bp_has_dup_inputs(const struct bp_tx *tx)
 	struct bp_txin *txin, *txin_tmp;
 	unsigned int i, j;
 	for (i = 0; i < tx->vin->len; i++) {
-		txin = g_ptr_array_index(tx->vin, i);
+		txin = parr_idx(tx->vin, i);
 		for (j = 0; j < tx->vin->len; j++) {
 			if (i == j)
 				continue;
-			txin_tmp = g_ptr_array_index(tx->vin, j);
+			txin_tmp = parr_idx(tx->vin, j);
 
 			if (bp_outpt_equal(&txin->prevout,
 					   &txin_tmp->prevout))
@@ -48,7 +48,7 @@ bool bp_tx_valid(const struct bp_tx *tx)
 		return false;
 
 	if (bp_tx_coinbase(tx)) {
-		struct bp_txin *txin = g_ptr_array_index(tx->vin, 0);
+		struct bp_txin *txin = parr_idx(tx->vin, 0);
 
 		if (txin->scriptSig->len < 2 ||
 		    txin->scriptSig->len > 100)
@@ -57,7 +57,7 @@ bool bp_tx_valid(const struct bp_tx *tx)
 		for (i = 0; i < tx->vin->len; i++) {
 			struct bp_txin *txin;
 
-			txin = g_ptr_array_index(tx->vin, i);
+			txin = parr_idx(tx->vin, i);
 			if (!bp_txin_valid(txin))
 				return false;
 		}
@@ -67,7 +67,7 @@ bool bp_tx_valid(const struct bp_tx *tx)
 	for (i = 0; i < tx->vout->len; i++) {
 		struct bp_txout *txout;
 
-		txout = g_ptr_array_index(tx->vout, i);
+		txout = parr_idx(tx->vout, i);
 		if (!bp_txout_valid(txout))
 			return false;
 
@@ -94,7 +94,7 @@ GArray *bp_block_merkle_tree(const struct bp_block *block)
 	for (i = 0; i < block->vtx->len; i++) {
 		struct bp_tx *tx;
 
-		tx = g_ptr_array_index(block->vtx, i);
+		tx = parr_idx(block->vtx, i);
 		bp_tx_calc_sha256(tx);
 
 		g_array_append_val(arr, tx->sha256);
@@ -226,7 +226,7 @@ bool bp_block_valid(struct bp_block *block)
 	for (i = 0; i < block->vtx->len; i++) {
 		struct bp_tx *tx;
 
-		tx = g_ptr_array_index(block->vtx, i);
+		tx = parr_idx(block->vtx, i);
 		if (!bp_tx_valid(tx))
 			return false;
 

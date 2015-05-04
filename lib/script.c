@@ -9,7 +9,6 @@
 #include <ccoin/serialize.h>
 #include <ccoin/util.h>
 #include <ccoin/buffer.h>
-#include <ccoin/compat.h>		/* for g_ptr_array_new_full */
 
 bool bsp_getop(struct bscript_op *op, struct bscript_parser *bp)
 {
@@ -63,24 +62,24 @@ err_out:
 	return false;
 }
 
-GPtrArray *bsp_parse_all(const void *data_, size_t data_len)
+parr *bsp_parse_all(const void *data_, size_t data_len)
 {
 	struct const_buffer buf = { data_, data_len };
 	struct bscript_parser bp;
 	struct bscript_op op;
-	GPtrArray *arr = g_ptr_array_new_full(16, g_free);
+	parr *arr = parr_new(16, g_free);
 
 	bsp_start(&bp, &buf);
 
 	while (bsp_getop(&op, &bp))
-		g_ptr_array_add(arr, g_memdup(&op, sizeof(op)));
+		parr_add(arr, g_memdup(&op, sizeof(op)));
 	if (bp.error)
 		goto err_out;
 
 	return arr;
 
 err_out:
-	g_ptr_array_free(arr, TRUE);
+	parr_free(arr, TRUE);
 	return NULL;
 }
 
@@ -130,51 +129,51 @@ static bool is_bsp_op_pubkeyhash(const struct bscript_op *op)
 }
 
 // OP_PUBKEY, OP_CHECKSIG
-bool is_bsp_pubkey(GPtrArray *ops)
+bool is_bsp_pubkey(parr *ops)
 {
 	return ((ops->len == 2) &&
-	        is_bsp_op(g_ptr_array_index(ops, 1), OP_CHECKSIG) &&
-	        is_bsp_op_pubkey(g_ptr_array_index(ops, 0)));
+	        is_bsp_op(parr_idx(ops, 1), OP_CHECKSIG) &&
+	        is_bsp_op_pubkey(parr_idx(ops, 0)));
 }
 
 // OP_DUP, OP_HASH160, OP_PUBKEYHASH, OP_EQUALVERIFY, OP_CHECKSIG,
-bool is_bsp_pubkeyhash(GPtrArray *ops)
+bool is_bsp_pubkeyhash(parr *ops)
 {
 	return ((ops->len == 5) &&
-	        is_bsp_op(g_ptr_array_index(ops, 0), OP_DUP) &&
-	        is_bsp_op(g_ptr_array_index(ops, 1), OP_HASH160) &&
-	        is_bsp_op_pubkeyhash(g_ptr_array_index(ops, 2)) &&
-	        is_bsp_op(g_ptr_array_index(ops, 3), OP_EQUALVERIFY) &&
-	        is_bsp_op(g_ptr_array_index(ops, 4), OP_CHECKSIG));
+	        is_bsp_op(parr_idx(ops, 0), OP_DUP) &&
+	        is_bsp_op(parr_idx(ops, 1), OP_HASH160) &&
+	        is_bsp_op_pubkeyhash(parr_idx(ops, 2)) &&
+	        is_bsp_op(parr_idx(ops, 3), OP_EQUALVERIFY) &&
+	        is_bsp_op(parr_idx(ops, 4), OP_CHECKSIG));
 }
 
 // OP_HASH160, OP_PUBKEYHASH, OP_EQUAL
-bool is_bsp_scripthash(GPtrArray *ops)
+bool is_bsp_scripthash(parr *ops)
 {
 	return ((ops->len == 3) &&
-	        is_bsp_op(g_ptr_array_index(ops, 0), OP_HASH160) &&
-	        is_bsp_op_pubkeyhash(g_ptr_array_index(ops, 1)) &&
-	        is_bsp_op(g_ptr_array_index(ops, 2), OP_EQUAL));
+	        is_bsp_op(parr_idx(ops, 0), OP_HASH160) &&
+	        is_bsp_op_pubkeyhash(parr_idx(ops, 1)) &&
+	        is_bsp_op(parr_idx(ops, 2), OP_EQUAL));
 }
 
 // OP_SMALLINTEGER, OP_PUBKEYS, OP_SMALLINTEGER, OP_CHECKMULTISIG
-bool is_bsp_multisig(GPtrArray *ops)
+bool is_bsp_multisig(parr *ops)
 {
 	if ((ops->len < 3) || (ops->len > (16 + 3)) ||
-	    !is_bsp_op_smallint(g_ptr_array_index(ops, 0)) ||
-	    !is_bsp_op_smallint(g_ptr_array_index(ops, ops->len - 2)) ||
-	    !is_bsp_op(g_ptr_array_index(ops, ops->len - 1), OP_CHECKMULTISIG))
+	    !is_bsp_op_smallint(parr_idx(ops, 0)) ||
+	    !is_bsp_op_smallint(parr_idx(ops, ops->len - 2)) ||
+	    !is_bsp_op(parr_idx(ops, ops->len - 1), OP_CHECKMULTISIG))
 		return false;
 
 	unsigned int i;
 	for (i = 1; i < (ops->len - 2); i++)
-		if (!is_bsp_op_pubkey(g_ptr_array_index(ops, i)))
+		if (!is_bsp_op_pubkey(parr_idx(ops, i)))
 			return false;
 
 	return true;
 }
 
-enum txnouttype bsp_classify(GPtrArray *ops)
+enum txnouttype bsp_classify(parr *ops)
 {
 	if (is_bsp_pubkeyhash(ops))
 		return TX_PUBKEYHASH;
@@ -193,7 +192,7 @@ bool bsp_addr_parse(struct bscript_addr *addr,
 {
 	memset(addr, 0, sizeof(*addr));
 
-	GPtrArray *ops = bsp_parse_all(data, data_len);
+	parr *ops = bsp_parse_all(data, data_len);
 	if (!ops)
 		return false;
 
@@ -201,14 +200,14 @@ bool bsp_addr_parse(struct bscript_addr *addr,
 	switch (txtype) {
 
 	case TX_PUBKEY: {
-		struct bscript_op *op = g_ptr_array_index(ops, 0);
+		struct bscript_op *op = parr_idx(ops, 0);
 		struct buffer *buf = buffer_copy(op->data.p, op->data.len);
 		addr->pub = clist_append(addr->pub, buf);
 		break;
 	}
 
 	case TX_PUBKEYHASH: {
-		struct bscript_op *op = g_ptr_array_index(ops, 2);
+		struct bscript_op *op = parr_idx(ops, 2);
 		struct buffer *buf = buffer_copy(op->data.p, op->data.len);
 		addr->pubhash = clist_append(addr->pubhash, buf);
 		break;
@@ -221,7 +220,7 @@ bool bsp_addr_parse(struct bscript_addr *addr,
 
 	addr->txtype = txtype;
 
-	g_ptr_array_free(ops, TRUE);
+	parr_free(ops, TRUE);
 	return true;
 }
 

@@ -43,7 +43,7 @@ extern cstring *message_str(const unsigned char netmagic[4],
 		     const void *data, uint32_t data_len);
 
 struct msg_addr {
-	GPtrArray	*addrs;		/* of bp_address */
+	parr	*addrs;		/* of bp_address */
 };
 
 static inline void msg_addr_init(struct msg_addr *ma)
@@ -80,7 +80,7 @@ static inline void msg_getblocks_free(struct msg_getblocks *gb)
 }
 
 struct msg_headers {
-	GPtrArray	*headers;
+	parr	*headers;
 };
 
 static inline void msg_headers_init(struct msg_headers *mh)
@@ -135,7 +135,7 @@ static inline void msg_version_free(struct msg_version *mv) {}
  */
 
 struct msg_vinv {
-	GPtrArray	*invs;		/* of bp_inv */
+	parr	*invs;		/* of bp_inv */
 };
 
 static inline void msg_vinv_init(struct msg_vinv *mv)

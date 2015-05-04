@@ -217,13 +217,13 @@ static void append_input(char *txid_str, char *vout_str)
 	txin->scriptSig = cstr_new(NULL);
 	txin->nSequence = 0xffffffffU;
 
-	g_ptr_array_add(tx.vin, txin);
+	parr_add(tx.vin, txin);
 }
 
 static void mutate_inputs(void)
 {
 	if (!tx.vin)
-		tx.vin = g_ptr_array_new_full(8, g_bp_txin_free);
+		tx.vin = parr_new(8, g_bp_txin_free);
 
 	// delete inputs
 	clist *tmp = opt_del_txin;
@@ -232,7 +232,7 @@ static void mutate_inputs(void)
 		tmp = tmp->next;
 
 		if ((idx >= 0) && (idx < tx.vin->len))
-			g_ptr_array_remove_index(tx.vin, idx);
+			parr_remove_idx(tx.vin, idx);
 	}
 
 	// append new inputs
@@ -287,13 +287,13 @@ static void append_output(char *addr_str, char *amount_str)
 	else
 		txout->scriptPubKey = bsp_make_pubkeyhash(payload);
 
-	g_ptr_array_add(tx.vout, txout);
+	parr_add(tx.vout, txout);
 }
 
 static void mutate_outputs(void)
 {
 	if (!tx.vout)
-		tx.vout = g_ptr_array_new_full(8, g_bp_txout_free);
+		tx.vout = parr_new(8, g_bp_txout_free);
 
 	// delete outputs
 	clist *tmp = opt_del_txout;
@@ -302,7 +302,7 @@ static void mutate_outputs(void)
 		tmp = tmp->next;
 
 		if ((idx >= 0) && (idx < tx.vin->len))
-			g_ptr_array_remove_index(tx.vout, idx);
+			parr_remove_idx(tx.vout, idx);
 	}
 
 	// append new outputs
@@ -432,7 +432,7 @@ static void output_json_vin(json_t *obj)
 
 	unsigned int i;
 	for (i = 0; i < tx.vin->len; i++) {
-		struct bp_txin *txin = g_ptr_array_index(tx.vin, i);
+		struct bp_txin *txin = parr_idx(tx.vin, i);
 		output_json_txin(arr, txin);
 	}
 }
@@ -472,7 +472,7 @@ static void output_json_vout(json_t *obj)
 
 	unsigned int i;
 	for (i = 0; i < tx.vout->len; i++) {
-		struct bp_txout *txout = g_ptr_array_index(tx.vout, i);
+		struct bp_txout *txout = parr_idx(tx.vout, i);
 		output_json_txout(arr, txout, i);
 	}
 }

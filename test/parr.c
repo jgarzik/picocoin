@@ -44,15 +44,12 @@ static void test_basic(void)
 
 	assert(strcmp(parr_idx(pa, 0), "foo") == 0);
 	assert(strcmp(parr_idx(pa, 1), "bar") == 0);
-	assert(parr_idx(pa, 2) == NULL);
 
 	parr_remove_idx(pa, 0);
 
 	assert(pa->len == 1);
 
 	assert(strcmp(parr_idx(pa, 0), "bar") == 0);
-	assert(parr_idx(pa, 1) == NULL);
-	assert(parr_idx(pa, 2) == NULL);
 
 	parr_free(pa, true);
 }
@@ -82,7 +79,6 @@ static void test_resize(void)
 
 	assert(strcmp(parr_idx(pa, 0), "foo") == 0);
 	assert(strcmp(parr_idx(pa, 1), "bar") == 0);
-	assert(parr_idx(pa, 2) == NULL);
 
 	rc = parr_resize(pa, 10);
 	assert(rc == true);

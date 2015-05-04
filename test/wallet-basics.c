@@ -99,16 +99,16 @@ static void runtest(const char *json_base_fn, const char *ser_in_fn,
 	assert(bpks_add(&ks, &key) == true);
 
 	/* find key matches in block */
-	GPtrArray *matches;
+	parr *matches;
 	matches = bp_block_match(&block_in, &ks);
 	assert(matches != NULL);
 	assert(matches->len == 1);
 
-	struct bp_block_match *match = g_ptr_array_index(matches, 0);
+	struct bp_block_match *match = parr_idx(matches, 0);
 	assert(match->n == 1);			/* match 2nd tx, index 1 */
 
 	/* get matching transaction */
-	struct bp_tx *tx = g_ptr_array_index(block_in.vtx, match->n);
+	struct bp_tx *tx = parr_idx(block_in.vtx, match->n);
 	bp_tx_calc_sha256(tx);
 
 	/* verify txid matches expected */
@@ -138,7 +138,7 @@ static void runtest(const char *json_base_fn, const char *ser_in_fn,
 	g_array_free(mtree, TRUE);
 	g_array_free(mbranch, TRUE);
 	BN_clear_free(&tmp_mask);
-	g_ptr_array_free(matches, TRUE);
+	parr_free(matches, TRUE);
 	bpks_free(&ks);
 	bp_key_free(&key);
 	bp_block_free(&block_in);

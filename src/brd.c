@@ -61,7 +61,7 @@ struct net_child_info {
 
 	struct peer_manager	*peers;
 
-	GPtrArray		*conns;
+	parr		*conns;
 	struct event_base	*eb;
 
 	time_t			last_getblocks;
@@ -324,11 +324,11 @@ static bool nc_msg_addr(struct nc_conn *conn)
 	if (debugging) {
 		unsigned int old = 0;
 		for (i = 0; i < ma.addrs->len; i++) {
-			struct bp_address *addr = g_ptr_array_index(ma.addrs, i);
+			struct bp_address *addr = parr_idx(ma.addrs, i);
 			if (addr->nTime < cutoff)
 				old++;
 		}
-		fprintf(plog, "net: %s addr(%u addresses, %u old)\n",
+		fprintf(plog, "net: %s addr(%zu addresses, %u old)\n",
 			conn->addr_str, ma.addrs->len, old);
 	}
 
@@ -338,7 +338,7 @@ static bool nc_msg_addr(struct nc_conn *conn)
 
 	/* feed addresses to peer manager */
 	for (i = 0; i < ma.addrs->len; i++) {
-		struct bp_address *addr = g_ptr_array_index(ma.addrs, i);
+		struct bp_address *addr = parr_idx(ma.addrs, i);
 		if (addr->nTime > cutoff)
 			peerman_add_addr(conn->nci->peers, addr, false);
 	}
@@ -411,7 +411,7 @@ static bool nc_msg_inv(struct nc_conn *conn)
 		goto out;
 
 	if (debugging && mv.invs && mv.invs->len == 1) {
-		struct bp_inv *inv = g_ptr_array_index(mv.invs, 0);
+		struct bp_inv *inv = parr_idx(mv.invs, 0);
 		char hexstr[BU256_STRSZ];
 		bu256_hex(hexstr, &inv->hash);
 
@@ -426,7 +426,7 @@ static bool nc_msg_inv(struct nc_conn *conn)
 			conn->addr_str, typestr, hexstr);
 	}
 	else if (debugging && mv.invs) {
-		fprintf(plog, "net: %s inv (%u sz)\n",
+		fprintf(plog, "net: %s inv (%zu sz)\n",
 			conn->addr_str, mv.invs->len);
 	}
 
@@ -436,7 +436,7 @@ static bool nc_msg_inv(struct nc_conn *conn)
 	/* scan incoming inv's for interesting material */
 	unsigned int i;
 	for (i = 0; i < mv.invs->len; i++) {
-		struct bp_inv *inv = g_ptr_array_index(mv.invs, i);
+		struct bp_inv *inv = parr_idx(mv.invs, i);
 		switch (inv->type) {
 		case MSG_BLOCK:
 			if (!blkdb_lookup(&db, &inv->hash) &&
@@ -599,7 +599,7 @@ static bool nc_conn_ip_active(struct net_child_info *nci,
 	for (i = 0; i < nci->conns->len; i++) {
 		struct nc_conn *conn;
 
-		conn = g_ptr_array_index(nci->conns, i);
+		conn = parr_idx(nci->conns, i);
 		if (!memcmp(conn->peer.addr.ip, ip, 16))
 			return true;
 	}
@@ -618,7 +618,7 @@ static bool nc_conn_group_active(struct net_child_info *nci,
 	for (i = 0; i < nci->conns->len; i++) {
 		struct nc_conn *conn;
 
-		conn = g_ptr_array_index(nci->conns, i);
+		conn = parr_idx(nci->conns, i);
 		if ((group_len == conn->peer.group_len) &&
 		    !memcmp(peer->group, conn->peer.group, group_len))
 			return true;
@@ -982,7 +982,7 @@ static void nc_conns_gc(struct net_child_info *nci, bool free_all)
 	/* build list of dead connections */
 	unsigned int i;
 	for (i = 0; i < nci->conns->len; i++) {
-		struct nc_conn *conn = g_ptr_array_index(nci->conns, i);
+		struct nc_conn *conn = parr_idx(nci->conns, i);
 		if (free_all || conn->dead)
 			dead = clist_prepend(dead, conn);
 	}
@@ -993,7 +993,7 @@ static void nc_conns_gc(struct net_child_info *nci, bool free_all)
 		struct nc_conn *conn = tmp->data;
 		tmp = tmp->next;
 
-		g_ptr_array_remove(nci->conns, conn);
+		parr_remove(nci->conns, conn);
 		nc_conn_free(conn);
 		n_gc++;
 	}
@@ -1007,7 +1007,7 @@ static void nc_conns_gc(struct net_child_info *nci, bool free_all)
 static void nc_conns_open(struct net_child_info *nci)
 {
 	if (debugging)
-		fprintf(plog, "net: open connections (have %u, want %u more)\n",
+		fprintf(plog, "net: open connections (have %zu, want %zu more)\n",
 			nci->conns->len,
 			NC_MAX_CONN - nci->conns->len);
 
@@ -1066,7 +1066,7 @@ static void nc_conns_open(struct net_child_info *nci)
 		}
 
 		/* add to our list of active connections */
-		g_ptr_array_add(nci->conns, conn);
+		parr_add(nci->conns, conn);
 
 		continue;
 
@@ -1318,7 +1318,7 @@ static bool spend_tx(struct bp_utxo_set *uset, const struct bp_tx *tx,
 			struct bp_txin *txin;
 			struct bp_txout *txout;
 
-			txin = g_ptr_array_index(tx->vin, i);
+			txin = parr_idx(tx->vin, i);
 
 			coin = bp_utxo_lookup(uset, &txin->prevout.hash);
 			if (!coin || !coin->vout)
@@ -1331,7 +1331,7 @@ static bool spend_tx(struct bp_utxo_set *uset, const struct bp_tx *tx,
 			txout = NULL;
 			if (txin->prevout.n >= coin->vout->len)
 				return false;
-			txout = g_ptr_array_index(coin->vout, txin->prevout.n);
+			txout = parr_idx(coin->vout, txin->prevout.n);
 			total_in += txout->nValue;
 
 			if (script_verf &&
@@ -1347,7 +1347,7 @@ static bool spend_tx(struct bp_utxo_set *uset, const struct bp_tx *tx,
 	for (i = 0; i < tx->vout->len; i++) {
 		struct bp_txout *txout;
 
-		txout = g_ptr_array_index(tx->vout, i);
+		txout = parr_idx(tx->vout, i);
 		total_out += txout->nValue;
 	}
 
@@ -1377,7 +1377,7 @@ static bool spend_block(struct bp_utxo_set *uset, const struct bp_block *block,
 	for (i = 0; i < block->vtx->len; i++) {
 		struct bp_tx *tx;
 
-		tx = g_ptr_array_index(block->vtx, i);
+		tx = parr_idx(block->vtx, i);
 		if (!spend_tx(uset, tx, i, height)) {
 			char hexstr[BU256_STRSZ];
 			bu256_hex(hexstr, &tx->sha256);
@@ -1580,7 +1580,7 @@ static void init_nci(struct net_child_info *nci)
 	nci->read_fd = -1;
 	nci->write_fd = -1;
 	init_peers(nci);
-	nci->conns = g_ptr_array_sized_new(NC_MAX_CONN);
+	nci->conns = parr_new(NC_MAX_CONN, NULL);
 	nci->eb = event_base_new();
 }
 
@@ -1609,7 +1609,7 @@ static void shutdown_nci(struct net_child_info *nci)
 	peerman_free(nci->peers);
 	nc_conns_gc(nci, true);
 	assert(nci->conns->len == 0);
-	g_ptr_array_free(nci->conns, TRUE);
+	parr_free(nci->conns, TRUE);
 	event_base_free(nci->eb);
 }
 

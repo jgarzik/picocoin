@@ -100,17 +100,25 @@ bool parr_add(parr *pa, void *data)
 	return true;
 }
 
-void parr_remove_idx(parr *pa, size_t idx)
+void parr_remove_range(parr *pa, size_t pos, size_t len)
 {
-	if (!pa || (idx >= pa->len))
+	if (!pa || ((pos+len) > pa->len))
 		return;
 
-	if (pa->elem_free_f)
-		pa->elem_free_f(pa->data[idx]);
+	if (pa->elem_free_f) {
+		unsigned int i, count;
+		for (i = pos, count = 0; count < len; i++, count++)
+			pa->elem_free_f(pa->data[i]);
+	}
 
-	memmove(&pa->data[idx], &pa->data[idx + 1],
-		(pa->len - idx - 1) * sizeof(void *));
-	pa->len--;
+	memmove(&pa->data[pos], &pa->data[pos + len],
+		(pa->len - pos - len) * sizeof(void *));
+	pa->len -= len;
+}
+
+void parr_remove_idx(parr *pa, size_t pos)
+{
+	parr_remove_range(pa, pos, 1);
 }
 
 bool parr_remove(parr *pa, void *data)
