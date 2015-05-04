@@ -57,7 +57,7 @@ static void test_btc_decimal(int64_t v, const char *s)
 			(long long) v,
 			valstr,
 			s);
-		
+
 		assert(!strcmp(valstr, s));
 	}
 }

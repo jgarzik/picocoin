@@ -15,7 +15,7 @@ static void test_basics(void)
 {
 	struct bp_hashtab *ht;
 
-	ht = bp_hashtab_new_ext(cstr_hash, cstr_equal, free, free);
+	ht = bp_hashtab_new_ext(czstr_hash, czstr_equal, free, free);
 	assert(ht != NULL);
 
 	bp_hashtab_ref(ht);
@@ -76,7 +76,7 @@ static void test_generate(void)
 {
 	struct bp_hashtab *ht;
 
-	ht = bp_hashtab_new_ext(cstr_hash, cstr_equal, free, free);
+	ht = bp_hashtab_new_ext(czstr_hash, czstr_equal, free, free);
 	assert(ht != NULL);
 
 	const int n_values = 100000;

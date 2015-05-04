@@ -1643,7 +1643,7 @@ static void term_signal(int signo)
 
 int main (int argc, char *argv[])
 {
-	settings = bp_hashtab_new_ext(cstr_hash, cstr_equal,
+	settings = bp_hashtab_new_ext(czstr_hash, czstr_equal,
 				      free, free);
 
 	if (!preload_settings())

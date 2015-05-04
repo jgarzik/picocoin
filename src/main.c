@@ -311,7 +311,7 @@ static bool do_command(const char *s)
 int main (int argc, char *argv[])
 {
 	prog_name = argv[0];
-	settings = bp_hashtab_new_ext(cstr_hash, cstr_equal,
+	settings = bp_hashtab_new_ext(czstr_hash, czstr_equal,
 				      free, free);
 
 	if (!preload_settings())

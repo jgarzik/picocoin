@@ -11,6 +11,7 @@ EXTRA_DIST = \
 	compat.h	\
 	coredefs.h	\
 	core.h		\
+	cstr.h		\
 	hashtab.h	\
 	hexcode.h	\
 	key.h		\

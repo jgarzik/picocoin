@@ -152,7 +152,7 @@ void g_bp_txin_free(gpointer data)
 {
 	if (!data)
 		return;
-	
+
 	struct bp_txin *txin = data;
 	bp_txin_free(txin);
 
@@ -209,7 +209,7 @@ void g_bp_txout_free(gpointer data)
 {
 	if (!data)
 		return;
-	
+
 	struct bp_txout *txout = data;
 	bp_txout_free(txout);
 

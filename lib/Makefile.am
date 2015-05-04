@@ -17,6 +17,7 @@ libccoin_a_SOURCES=	\
 	checkpoints.c	\
 	core.c		\
 	coredefs.c	\
+	cstr.c		\
 	dns.c		\
 	hexcode.c	\
 	file_seq.c	\
