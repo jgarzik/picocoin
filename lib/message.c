@@ -126,7 +126,7 @@ cstring *ser_msg_addr(unsigned int protover, const struct msg_addr *ma)
 void msg_addr_free(struct msg_addr *ma)
 {
 	if (ma->addrs) {
-		parr_free(ma->addrs, TRUE);
+		parr_free(ma->addrs, true);
 		ma->addrs = NULL;
 	}
 }
@@ -217,7 +217,7 @@ void msg_headers_free(struct msg_headers *mh)
 			bp_block_free(block);
 		}
 
-		parr_free(mh->headers, TRUE);
+		parr_free(mh->headers, true);
 		mh->headers = NULL;
 	}
 }
@@ -343,7 +343,7 @@ void msg_vinv_free(struct msg_vinv *mv)
 		return;
 
 	if (mv->invs) {
-		parr_free(mv->invs, TRUE);
+		parr_free(mv->invs, true);
 		mv->invs = NULL;
 	}
 }

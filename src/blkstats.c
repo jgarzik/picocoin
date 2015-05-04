@@ -147,7 +147,7 @@ static void scan_txout(struct bp_txout *txout)
 	 }
 	}
 
-	parr_free(script, TRUE);
+	parr_free(script, true);
 }
 
 static void scan_tx(struct bp_tx *tx)

@@ -221,7 +221,7 @@ static bool nc_conn_send(struct nc_conn *conn, const char *command,
 	buf->p = msg->str;
 	buf->len = msg->len;
 
-	cstr_free(msg, FALSE);
+	cstr_free(msg, false);
 
 	/* if write q exists, write_evt will handle output */
 	if (conn->write_q) {
@@ -1609,7 +1609,7 @@ static void shutdown_nci(struct net_child_info *nci)
 	peerman_free(nci->peers);
 	nc_conns_gc(nci, true);
 	assert(nci->conns->len == 0);
-	parr_free(nci->conns, TRUE);
+	parr_free(nci->conns, true);
 	event_base_free(nci->eb);
 }
 

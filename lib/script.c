@@ -79,7 +79,7 @@ parr *bsp_parse_all(const void *data_, size_t data_len)
 	return arr;
 
 err_out:
-	parr_free(arr, TRUE);
+	parr_free(arr, true);
 	return NULL;
 }
 
@@ -220,7 +220,7 @@ bool bsp_addr_parse(struct bscript_addr *addr,
 
 	addr->txtype = txtype;
 
-	parr_free(ops, TRUE);
+	parr_free(ops, true);
 	return true;
 }
 

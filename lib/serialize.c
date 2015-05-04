@@ -231,7 +231,7 @@ bool deser_u256_array(parr **ao, struct const_buffer *buf)
 {
 	parr *arr = *ao;
 	if (arr) {
-		parr_free(arr, TRUE);
+		parr_free(arr, true);
 		*ao = arr = NULL;
 	}
 
@@ -262,7 +262,7 @@ bool deser_u256_array(parr **ao, struct const_buffer *buf)
 	return true;
 
 err_out:
-	parr_free(arr, TRUE);
+	parr_free(arr, true);
 	return false;
 }
 

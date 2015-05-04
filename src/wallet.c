@@ -41,7 +41,7 @@ static void wallet_free(struct wallet *wlt)
 	wallet_for_each_key(wlt, key)
 		bp_key_free(key);
 
-	parr_free(wlt->keys, TRUE);
+	parr_free(wlt->keys, true);
 	wlt->keys = NULL;
 
 	memset(wlt, 0, sizeof(*wlt));

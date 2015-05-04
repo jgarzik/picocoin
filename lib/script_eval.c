@@ -1051,7 +1051,7 @@ OP_NOP10:
 
 out:
 	BN_clear_free(&bn);
-	parr_free(altstack, TRUE);
+	parr_free(altstack, true);
 	g_byte_array_unref(vfExec);
 	return rc;
 }
@@ -1111,11 +1111,11 @@ bool bp_script_verify(const cstring *scriptSig, const cstring *scriptPubKey,
 	rc = true;
 
 out:
-	parr_free(stack, TRUE);
+	parr_free(stack, true);
 	if (pubkey2)
 		cstr_free(pubkey2, true);
 	if (stackCopy)
-		parr_free(stackCopy, TRUE);
+		parr_free(stackCopy, true);
 	return rc;
 }
 

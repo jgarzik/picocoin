@@ -138,7 +138,7 @@ static void runtest(const char *json_base_fn, const char *ser_in_fn,
 	g_array_free(mtree, TRUE);
 	g_array_free(mbranch, TRUE);
 	BN_clear_free(&tmp_mask);
-	parr_free(matches, TRUE);
+	parr_free(matches, true);
 	bpks_free(&ks);
 	bp_key_free(&key);
 	bp_block_free(&block_in);

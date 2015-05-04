@@ -18,7 +18,7 @@ static void bp_utxo_free_vout(struct bp_utxo *coin)
 	if (!coin || !coin->vout)
 		return;
 
-	parr_free(coin->vout, TRUE);
+	parr_free(coin->vout, true);
 	coin->vout = NULL;
 }
 

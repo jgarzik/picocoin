@@ -77,7 +77,7 @@ void bp_locator_free(struct bp_locator *locator)
 		return;
 
 	if (locator->vHave) {
-		parr_free(locator->vHave, TRUE);
+		parr_free(locator->vHave, true);
 		locator->vHave = NULL;
 	}
 }
@@ -329,7 +329,7 @@ void bp_tx_free_vout(struct bp_tx *tx)
 	if (!tx || !tx->vout)
 		return;
 
-	parr_free(tx->vout, TRUE);
+	parr_free(tx->vout, true);
 	tx->vout = NULL;
 }
 
@@ -339,7 +339,7 @@ void bp_tx_free(struct bp_tx *tx)
 		return;
 
 	if (tx->vin) {
-		parr_free(tx->vin, TRUE);
+		parr_free(tx->vin, true);
 		tx->vin = NULL;
 	}
 
@@ -508,7 +508,7 @@ void bp_block_vtx_free(struct bp_block *block)
 			bp_tx_free(tx);
 		}
 
-		parr_free(block->vtx, TRUE);
+		parr_free(block->vtx, true);
 
 		block->vtx = NULL;
 	}

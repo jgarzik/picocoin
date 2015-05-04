@@ -189,12 +189,12 @@ static void runtest(bool is_valid, const char *basefn)
 		cstr_free(tx_ser, true);
 
 		if (comments->len > 0) {
-			parr_free(comments, TRUE);
+			parr_free(comments, true);
 			comments = parr_new(8, free);
 		}
 	}
 
-	parr_free(comments, TRUE);
+	parr_free(comments, true);
 	comments = NULL;
 
 	bp_hashtab_unref(input_map);

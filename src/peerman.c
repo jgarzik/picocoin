@@ -22,7 +22,7 @@ static unsigned long addr_hash(const void *key)
 
 static bool addr_equal(const void *a, const void *b)
 {
-	return memcmp(a, b, 16) == 0 ? TRUE : FALSE;
+	return (memcmp(a, b, 16) == 0);
 }
 
 bool deser_peer(unsigned int protover,

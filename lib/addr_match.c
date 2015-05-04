@@ -159,7 +159,7 @@ parr *bp_block_match(const struct bp_block *block,
 
 err_out:
 	BN_clear_free(&tmp_mask);
-	parr_free(arr, TRUE);
+	parr_free(arr, true);
 	return NULL;
 }
 
