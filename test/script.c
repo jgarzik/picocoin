@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <jansson.h>
-#include <glib.h>
 #include <ccoin/script.h>
 #include <ccoin/core.h>
 #include "libtest.h"

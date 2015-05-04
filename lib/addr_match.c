@@ -7,6 +7,7 @@
 #include <ccoin/core.h>
 #include <ccoin/script.h>
 #include <ccoin/key.h>
+#include <ccoin/clist.h>
 #include <ccoin/addr_match.h>
 #include <ccoin/compat.h>		/* for g_ptr_array_new_full */
 
@@ -24,7 +25,7 @@ bool bp_txout_match(const struct bp_txout *txout,
 		return false;
 
 	struct const_buffer *buf;
-	GList *tmp = addrs.pub;
+	clist *tmp = addrs.pub;
 	while (tmp) {
 		buf = tmp->data;
 		tmp = tmp->next;
@@ -47,8 +48,8 @@ bool bp_txout_match(const struct bp_txout *txout,
 	}
 
 out:
-	g_list_free_full(addrs.pub, g_buffer_free);
-	g_list_free_full(addrs.pubhash, g_buffer_free);
+	clist_free_ext(addrs.pub, buffer_free);
+	clist_free_ext(addrs.pubhash, buffer_free);
 
 	return rc;
 }

@@ -78,7 +78,7 @@ struct nc_conn {
 	struct net_child_info	*nci;
 
 	struct event		*write_ev;
-	GList			*write_q;	/* of struct buffer */
+	clist			*write_q;	/* of struct buffer */
 	unsigned int		write_partial;
 
 	struct p2p_message	msg;
@@ -151,16 +151,16 @@ static enum netcmds readcmd(int fd, int timeout_secs)
 	return v;
 }
 
-static void nc_conn_build_iov(GList *write_q, unsigned int partial,
+static void nc_conn_build_iov(clist *write_q, unsigned int partial,
 			      struct iovec **iov_, unsigned int *iov_len_)
 {
 	*iov_ = NULL;
 	*iov_len_ = 0;
 
-	unsigned int i, iov_len = g_list_length(write_q);
+	unsigned int i, iov_len = clist_length(write_q);
 	struct iovec *iov = calloc(iov_len, sizeof(struct iovec));
 
-	GList *tmp = write_q;
+	clist *tmp = write_q;
 
 	i = 0;
 	while (tmp) {
@@ -185,7 +185,7 @@ static void nc_conn_build_iov(GList *write_q, unsigned int partial,
 static void nc_conn_written(struct nc_conn *conn, size_t bytes)
 {
 	while (bytes > 0) {
-		GList *tmp;
+		clist *tmp;
 		struct buffer *buf;
 		unsigned int left;
 
@@ -198,7 +198,7 @@ static void nc_conn_written(struct nc_conn *conn, size_t bytes)
 			free(buf->p);
 			free(buf);
 			conn->write_partial = 0;
-			conn->write_q = g_list_delete_link(tmp, tmp);
+			conn->write_q = clist_delete(tmp, tmp);
 
 			bytes -= left;
 		}
@@ -263,7 +263,7 @@ static bool nc_conn_send(struct nc_conn *conn, const char *command,
 
 	/* if write q exists, write_evt will handle output */
 	if (conn->write_q) {
-		conn->write_q = g_list_append(conn->write_q, buf);
+		conn->write_q = clist_append(conn->write_q, buf);
 		return true;
 	}
 
@@ -277,7 +277,7 @@ static bool nc_conn_send(struct nc_conn *conn, const char *command,
 			return false;
 		}
 
-		conn->write_q = g_list_append(conn->write_q, buf);
+		conn->write_q = clist_append(conn->write_q, buf);
 		goto out_wrstart;
 	}
 
@@ -289,7 +289,7 @@ static bool nc_conn_send(struct nc_conn *conn, const char *command,
 	}
 
 	/* message partially sent; pause read; poll for writable */
-	conn->write_q = g_list_append(conn->write_q, buf);
+	conn->write_q = clist_append(conn->write_q, buf);
 	conn->write_partial = wrc;
 
 out_wrstart:
@@ -525,7 +525,7 @@ static void nc_conn_free(struct nc_conn *conn)
 		return;
 
 	if (conn->write_q) {
-		GList *tmp = conn->write_q;
+		clist *tmp = conn->write_q;
 
 		while (tmp) {
 			struct buffer *buf;
@@ -537,7 +537,7 @@ static void nc_conn_free(struct nc_conn *conn)
 			free(buf);
 		}
 
-		g_list_free(conn->write_q);
+		clist_free(conn->write_q);
 	}
 
 	if (conn->ev) {
@@ -845,7 +845,7 @@ err_out:
 
 static void nc_conns_gc(struct net_child_info *nci)
 {
-	GList *dead = NULL;
+	clist *dead = NULL;
 	unsigned int n_gc = 0;
 
 	/* build list of dead connections */
@@ -853,11 +853,11 @@ static void nc_conns_gc(struct net_child_info *nci)
 	for (i = 0; i < nci->conns->len; i++) {
 		struct nc_conn *conn = g_ptr_array_index(nci->conns, i);
 		if (conn->dead)
-			dead = g_list_prepend(dead, conn);
+			dead = clist_prepend(dead, conn);
 	}
 
 	/* remove and free dead connections */
-	GList *tmp = dead;
+	clist *tmp = dead;
 	while (tmp) {
 		struct nc_conn *conn = tmp->data;
 		tmp = tmp->next;
@@ -867,7 +867,7 @@ static void nc_conns_gc(struct net_child_info *nci)
 		n_gc++;
 	}
 
-	g_list_free(dead);
+	clist_free(dead);
 
 	if (debugging)
 		fprintf(stderr, "net: gc'd %u connections\n", n_gc);
@@ -999,9 +999,9 @@ static void network_child(int read_fd, int write_fd)
 	peerman_sort(peers);
 
 	if (debugging)
-		fprintf(stderr, "net: have %u/%u peers\n",
+		fprintf(stderr, "net: have %u/%zu peers\n",
 			bp_hashtab_size(peers->map_addr),
-			g_list_length(peers->addrlist));
+			clist_length(peers->addrlist));
 
 	/*
 	 * read block database

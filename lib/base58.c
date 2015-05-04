@@ -90,7 +90,7 @@ cstring *base58_encode_check(unsigned char addrtype, bool have_addrtype,
 	unsigned char md32[4];
 	bu_Hash4(md32, s->str, s->len);
 
-	cstr_append_buf(s, (gchar *) md32, 4);
+	cstr_append_buf(s, md32, 4);
 
 	cstring *s_enc = base58_encode(s->str, s->len);
 

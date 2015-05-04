@@ -8,9 +8,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-#include <glib.h>
 #include <openssl/bn.h>
 #include <ccoin/cstr.h>
+#include <ccoin/clist.h>
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
@@ -37,14 +37,14 @@ extern bool bu_read_file(const char *filename, void **data_, size_t *data_len_,
 extern bool bu_write_file(const char *filename, const void *data, size_t data_len);
 extern int file_seq_open(const char *filename);
 
-extern GList *bu_dns_lookup(GList *l, const char *seedname, unsigned int def_port);
-extern GList *bu_dns_seed_addrs(void);
+extern clist *bu_dns_lookup(clist *l, const char *seedname, unsigned int def_port);
+extern clist *bu_dns_seed_addrs(void);
 
 extern unsigned long djb2_hash(unsigned long hash, const void *_buf, size_t buflen);
 
 extern unsigned long czstr_hash(const void *p);
 extern bool czstr_equal(const void *a, const void *b);
 
-extern void g_list_shuffle(GList *l);
+extern void clist_shuffle(clist *l);
 
 #endif /* __LIBCCOIN_UTIL_H__ */

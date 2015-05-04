@@ -27,8 +27,9 @@ bool buffer_equal(const void *a_, const void *b_)
 	return memcmp(a->p, b->p, a->len) == 0;
 }
 
-void buffer_free(struct buffer *buf)
+void buffer_free(void *struct_buffer)
 {
+	struct buffer *buf = struct_buffer;
 	if (!buf)
 		return;
 

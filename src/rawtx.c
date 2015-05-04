@@ -56,10 +56,10 @@ static char *opt_hexdata;
 static bool opt_blank;
 static bool opt_decode_json;
 static bool opt_strict_free;
-static GList *opt_txin;
-static GList *opt_del_txin;
-static GList *opt_txout;
-static GList *opt_del_txout;
+static clist *opt_txin;
+static clist *opt_del_txin;
+static clist *opt_txout;
+static clist *opt_del_txout;
 
 static const char doc[] =
 "txmod - command line interface to modify bitcoin transactions";
@@ -118,14 +118,14 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
 		if (!is_hexstr(hexstr, false))
 			return ARGP_ERR_UNKNOWN;
 
-		opt_txin = g_list_append(opt_txin, strdup(arg));
+		opt_txin = clist_append(opt_txin, strdup(arg));
 		break;
 	 }
 	case 1011: {			// --delete-txin=INDEX
 		if (!is_digitstr(arg))
 			return ARGP_ERR_UNKNOWN;
 
-		opt_del_txin = g_list_append(opt_del_txin,
+		opt_del_txin = clist_append(opt_del_txin,
 					     GINT_TO_POINTER(atoi(arg)));
 		break;
 	 }
@@ -147,14 +147,14 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
 			return ARGP_ERR_UNKNOWN;
 		cstr_free(payload, true);
 
-		opt_txout = g_list_append(opt_txout, strdup(arg));
+		opt_txout = clist_append(opt_txout, strdup(arg));
 		break;
 	 }
 	case 1021: {			// --delete-txout=INDEX
 		if (!is_digitstr(arg))
 			return ARGP_ERR_UNKNOWN;
 
-		opt_del_txout = g_list_append(opt_del_txout,
+		opt_del_txout = clist_append(opt_del_txout,
 					      GINT_TO_POINTER(atoi(arg)));
 		break;
 	 }
@@ -226,7 +226,7 @@ static void mutate_inputs(void)
 		tx.vin = g_ptr_array_new_full(8, g_bp_txin_free);
 
 	// delete inputs
-	GList *tmp = opt_del_txin;
+	clist *tmp = opt_del_txin;
 	while (tmp) {
 		int idx = GPOINTER_TO_INT(tmp->data);
 		tmp = tmp->next;
@@ -296,7 +296,7 @@ static void mutate_outputs(void)
 		tx.vout = g_ptr_array_new_full(8, g_bp_txout_free);
 
 	// delete outputs
-	GList *tmp = opt_del_txout;
+	clist *tmp = opt_del_txout;
 	while (tmp) {
 		int idx = GPOINTER_TO_INT(tmp->data);
 		tmp = tmp->next;

@@ -26,7 +26,7 @@ static void test_txout(const struct bp_txout *txout)
 
 	struct bscript_parser bsp;
 	struct bscript_op op;
-	GList *ops = NULL;
+	clist *ops = NULL;
 
 	/*
 	 * parse script
@@ -38,7 +38,7 @@ static void test_txout(const struct bp_txout *txout)
 		struct bscript_op *op_p;
 
 		op_p = g_memdup(&op, sizeof(op));
-		ops = g_list_append(ops, op_p);
+		ops = clist_append(ops, op_p);
 	}
 
 	assert(!bsp.error);
@@ -47,7 +47,7 @@ static void test_txout(const struct bp_txout *txout)
 	 * build script
 	 */
 
-	GList *tmp = ops;
+	clist *tmp = ops;
 	cstring *s = cstr_new_sz(256);
 	while (tmp) {
 		struct bscript_op *op_p;
@@ -62,7 +62,7 @@ static void test_txout(const struct bp_txout *txout)
 		}
 	}
 
-	g_list_free_full(ops, g_free);
+	clist_free_ext(ops, free);
 
 	/* byte-compare original and newly created scripts */
 	assert(cstr_equal(s, txout->scriptPubKey));

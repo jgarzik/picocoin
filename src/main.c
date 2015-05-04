@@ -19,7 +19,6 @@
 #include <netdb.h>
 #endif
 #include <ctype.h>
-#include <glib.h>
 #include <openssl/bn.h>
 #include <openssl/rand.h>
 #include "picocoin.h"
@@ -173,9 +172,9 @@ static void list_settings(void)
 
 static void list_dns_seeds(void)
 {
-	GList *tmp, *addrlist = bu_dns_seed_addrs();
+	clist *tmp, *addrlist = bu_dns_seed_addrs();
 
-	size_t list_len = g_list_length(addrlist);
+	size_t list_len = clist_length(addrlist);
 	unsigned int n_ent = 0;
 
 	printf("[\n");
@@ -197,7 +196,7 @@ static void list_dns_seeds(void)
 		n_ent++;
 	}
 
-	g_list_free_full(addrlist, g_free);
+	clist_free_ext(addrlist, free);
 
 	printf("]\n");
 }

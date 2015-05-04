@@ -203,14 +203,14 @@ bool bsp_addr_parse(struct bscript_addr *addr,
 	case TX_PUBKEY: {
 		struct bscript_op *op = g_ptr_array_index(ops, 0);
 		struct buffer *buf = buffer_copy(op->data.p, op->data.len);
-		addr->pub = g_list_append(addr->pub, buf);
+		addr->pub = clist_append(addr->pub, buf);
 		break;
 	}
 
 	case TX_PUBKEYHASH: {
 		struct bscript_op *op = g_ptr_array_index(ops, 2);
 		struct buffer *buf = buffer_copy(op->data.p, op->data.len);
-		addr->pubhash = g_list_append(addr->pubhash, buf);
+		addr->pubhash = clist_append(addr->pubhash, buf);
 		break;
 	}
 
@@ -231,11 +231,11 @@ void bsp_addr_free(struct bscript_addr *addrs)
 		return;
 
 	if (addrs->pub) {
-		g_list_free_full(addrs->pub, g_buffer_free);
+		clist_free_ext(addrs->pub, buffer_free);
 		addrs->pub = NULL;
 	}
 	if (addrs->pubhash) {
-		g_list_free_full(addrs->pubhash, g_buffer_free);
+		clist_free_ext(addrs->pubhash, buffer_free);
 		addrs->pubhash = NULL;
 	}
 }

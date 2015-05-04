@@ -9,7 +9,6 @@
 #include <fcntl.h>
 #include <assert.h>
 #include <jansson.h>
-#include <glib.h>
 #include <ccoin/message.h>
 #include <ccoin/mbr.h>
 #include <ccoin/util.h>

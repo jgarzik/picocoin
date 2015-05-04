@@ -11,6 +11,7 @@
 #include <glib.h>
 #include <ccoin/buffer.h>
 #include <ccoin/core.h>
+#include <ccoin/clist.h>
 #include <ccoin/buint.h>
 #include <ccoin/key.h>
 
@@ -200,8 +201,8 @@ struct bscript_op {
 
 struct bscript_addr {
 	enum txnouttype		txtype;
-	GList			*pub;		/* of struct buffer */
-	GList			*pubhash;	/* of struct buffer */
+	clist			*pub;		/* of struct buffer */
+	clist			*pubhash;	/* of struct buffer */
 };
 
 extern const char *GetOpName(enum opcodetype opcode);

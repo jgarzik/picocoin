@@ -153,17 +153,17 @@ unsigned long djb2_hash(unsigned long hash, const void *_buf, size_t buflen)
 	return hash;
 }
 
-void g_list_shuffle(GList *l)
+void clist_shuffle(clist *l)
 {
-	unsigned int len = g_list_length(l);
+	unsigned int len = clist_length(l);
 	unsigned int idx = 0;
 
-	GList *tmp = l;
+	clist *tmp = l;
 	while (tmp) {
 		unsigned int ridx = g_random_int_range(0, len - 1);
 
 		if (ridx != idx) {
-			GList *swap = g_list_nth(l, ridx);
+			clist *swap = clist_nth(l, ridx);
 
 			void *tmp_data = tmp->data;
 			void *swap_data = swap->data;

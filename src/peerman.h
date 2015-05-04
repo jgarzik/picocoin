@@ -7,8 +7,8 @@
 
 #include <stdbool.h>
 #include <string.h>
-#include <glib.h>
 #include <ccoin/core.h>
+#include <ccoin/clist.h>
 #include <ccoin/hashtab.h>
 
 struct peer {
@@ -48,7 +48,7 @@ extern void ser_peer(cstring *s, unsigned int protover, const struct peer *peer)
 
 struct peer_manager {
 	struct bp_hashtab *map_addr;	/* binary IP addr -> struct peer */
-	GList		*addrlist;	/* of struct bp_address */
+	clist		*addrlist;	/* of struct bp_address */
 };
 
 extern void peerman_free(struct peer_manager *peers);

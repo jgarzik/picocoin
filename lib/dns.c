@@ -15,9 +15,9 @@
 #endif
 #include <stdlib.h>
 #include <string.h>
-#include <glib.h>
 #include <ccoin/util.h>
 #include <ccoin/core.h>
+#include <ccoin/clist.h>
 
 static const char *dns_seeds[] = {
 	"seed.bitcoin.sipa.be",
@@ -27,7 +27,7 @@ static const char *dns_seeds[] = {
 	"bitseed.xf2.org",
 };
 
-static GList *add_seed_addr(GList *l, const struct addrinfo *ai,
+static clist *add_seed_addr(clist *l, const struct addrinfo *ai,
 			    unsigned int def_port)
 {
 	struct bp_address *addr;
@@ -51,7 +51,7 @@ static GList *add_seed_addr(GList *l, const struct addrinfo *ai,
 	addr->port = def_port;
 	addr->nServices = NODE_NETWORK;
 
-	l = g_list_append(l, addr);
+	l = clist_append(l, addr);
 
 	return l;
 
@@ -60,7 +60,7 @@ err_out:
 	return l;
 }
 
-GList *bu_dns_lookup(GList *l, const char *seedname, unsigned int def_port)
+clist *bu_dns_lookup(clist *l, const char *seedname, unsigned int def_port)
 {
 	struct addrinfo hints, *res;
 
@@ -80,10 +80,10 @@ GList *bu_dns_lookup(GList *l, const char *seedname, unsigned int def_port)
 	return l;
 }
 
-GList *bu_dns_seed_addrs(void)
+clist *bu_dns_seed_addrs(void)
 {
 	unsigned int i;
-	GList *l = NULL;
+	clist *l = NULL;
 
 	for (i = 0; i < ARRAY_SIZE(dns_seeds); i++)
 		l = bu_dns_lookup(l, dns_seeds[i], 8333);

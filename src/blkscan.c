@@ -244,7 +244,7 @@ static void print_txout(bool show_from, unsigned int i, struct bp_txout *txout)
 		printf(" SOME-PUBKEYS!");
 
 	struct const_buffer *buf;
-	GList *tmp = addrs.pubhash;
+	clist *tmp = addrs.pubhash;
 	bool is_mine;
 	while (tmp) {
 		buf = tmp->data;
@@ -270,8 +270,8 @@ static void print_txout(bool show_from, unsigned int i, struct bp_txout *txout)
 	printf("\n");
 
 out:
-        g_list_free_full(addrs.pub, g_buffer_free);
-        g_list_free_full(addrs.pubhash, g_buffer_free);
+        clist_free_ext(addrs.pub, buffer_free);
+        clist_free_ext(addrs.pubhash, buffer_free);
 }
 
 static void print_txouts(struct bp_tx *tx, int idx)

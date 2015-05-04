@@ -11,6 +11,7 @@
 #include <ccoin/coredefs.h>
 #include <ccoin/serialize.h>
 #include <ccoin/net.h>
+#include <ccoin/clist.h>
 #include <ccoin/compat.h>
 #include "picocoin.h"
 
@@ -51,7 +52,7 @@ void ser_peer(cstring *s, unsigned int protover, const struct peer *peer)
 	ser_u32(s, peer->n_fail);
 }
 
-gint g_peer_cmp(gconstpointer a_, gconstpointer b_)
+int peer_cmp(const void *a_, const void *b_, void *user_priv)
 {
 	const struct peer *a = a_;
 	const struct peer *b = b_;
@@ -79,7 +80,7 @@ static struct peer_manager *peerman_new(void)
 	return peers;
 }
 
-static void peer_ent_free(gpointer data)
+static void peer_ent_free(void *data)
 {
 	if (!data)
 		return;
@@ -96,7 +97,7 @@ void peerman_free(struct peer_manager *peers)
 
 	bp_hashtab_unref(peers->map_addr);
 
-	g_list_free_full(peers->addrlist, peer_ent_free);
+	clist_free_ext(peers->addrlist, peer_ent_free);
 
 	memset(peers, 0, sizeof(*peers));
 	free(peers);
@@ -108,9 +109,9 @@ static void __peerman_add(struct peer_manager *peers, struct peer *peer,
 	bn_group(peer->group, &peer->group_len, peer->addr.ip);
 
 	if (prepend_front)
-		peers->addrlist = g_list_prepend(peers->addrlist, peer);
+		peers->addrlist = clist_prepend(peers->addrlist, peer);
 	else
-		peers->addrlist = g_list_append(peers->addrlist, peer);
+		peers->addrlist = clist_append(peers->addrlist, peer);
 
 	bp_hashtab_put(peers->map_addr, peer->addr.ip, peer);
 }
@@ -199,15 +200,15 @@ struct peer_manager *peerman_seed(bool use_dns)
 		return NULL;
 
 	/* make DNS query for seed data */
-	GList *tmp, *seedlist = NULL;
+	clist *tmp, *seedlist = NULL;
 	if (use_dns)
 		seedlist = bu_dns_seed_addrs();
 
 	if (debugging)
-		fprintf(stderr, "peerman: DNS returned %u addresses\n",
-			g_list_length(seedlist));
+		fprintf(stderr, "peerman: DNS returned %zu addresses\n",
+			clist_length(seedlist));
 
-	g_list_shuffle(seedlist);
+	clist_shuffle(seedlist);
 
 	/* import seed data into peerman */
 	tmp = seedlist;
@@ -218,7 +219,7 @@ struct peer_manager *peerman_seed(bool use_dns)
 		peerman_add_addr(peers, addr, true);
 		free(addr);
 	}
-	g_list_free(seedlist);
+	clist_free(seedlist);
 
 	return peers;
 }
@@ -236,11 +237,11 @@ static bool ser_peerman(struct peer_manager *peers, int fd)
 		return false;
 
 	if (debugging)
-		fprintf(stderr, "peerman: %u peers to write\n",
-			g_list_length(peers->addrlist));
+		fprintf(stderr, "peerman: %zu peers to write\n",
+			clist_length(peers->addrlist));
 
 	/* write peer list */
-	GList *tmp = peers->addrlist;
+	clist *tmp = peers->addrlist;
 	while (tmp) {
 		struct peer *peer;
 
@@ -303,13 +304,13 @@ err_out:
 
 void peerman_sort(struct peer_manager *peers)
 {
-	peers->addrlist = g_list_sort(peers->addrlist, g_peer_cmp);
+	peers->addrlist = clist_sort(peers->addrlist, peer_cmp, NULL);
 }
 
 struct peer *peerman_pop(struct peer_manager *peers)
 {
 	struct peer *peer;
-	GList *tmp;
+	clist *tmp;
 
 	tmp = peers->addrlist;
 	if (!tmp)
@@ -317,7 +318,7 @@ struct peer *peerman_pop(struct peer_manager *peers)
 
 	peer = tmp->data;
 
-	peers->addrlist = g_list_delete_link(tmp, tmp);
+	peers->addrlist = clist_delete(tmp, tmp);
 
 	bp_hashtab_del(peers->map_addr, peer->addr.ip);
 
@@ -383,11 +384,11 @@ void peerman_addstr(struct peer_manager *peers,
 	if (port < 1 || port > 65535)
 		port = 8333;
 
-	GList *tmp, *seedlist = bu_dns_lookup(NULL, hoststr, port);
+	clist *tmp, *seedlist = bu_dns_lookup(NULL, hoststr, port);
 
 	if (debugging)
-		fprintf(stderr, "peerman: DNS lookup '%s' returned %u addresses\n",
-			addr_str, g_list_length(seedlist));
+		fprintf(stderr, "peerman: DNS lookup '%s' returned %zu addresses\n",
+			addr_str, clist_length(seedlist));
 
 	/* import seed data into peerman */
 	tmp = seedlist;
@@ -397,5 +398,5 @@ void peerman_addstr(struct peer_manager *peers,
 
 		peerman_add_addr(peers, addr, true);
 	}
-	g_list_free(seedlist);
+	clist_free(seedlist);
 }
