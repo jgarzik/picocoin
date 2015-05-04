@@ -9,6 +9,7 @@
 #include <openssl/bn.h>
 #include <ccoin/core.h>
 #include <ccoin/util.h>
+#include <ccoin/parr.h>
 #include <ccoin/coredefs.h>
 #include <ccoin/serialize.h>
 
@@ -83,12 +84,12 @@ bool bp_tx_valid(const struct bp_tx *tx)
 	return true;
 }
 
-GArray *bp_block_merkle_tree(const struct bp_block *block)
+parr *bp_block_merkle_tree(const struct bp_block *block)
 {
 	if (!block->vtx || !block->vtx->len)
 		return NULL;
 
-	GArray *arr = g_array_new(FALSE, TRUE, sizeof(bu256_t));
+	parr *arr = parr_new(0, bu256_free);
 
 	unsigned int i;
 	for (i = 0; i < block->vtx->len; i++) {
@@ -97,7 +98,7 @@ GArray *bp_block_merkle_tree(const struct bp_block *block)
 		tx = parr_idx(block->vtx, i);
 		bp_tx_calc_sha256(tx);
 
-		g_array_append_val(arr, tx->sha256);
+		parr_add(arr, bu256_new(&tx->sha256));
 	}
 
 	unsigned int j = 0, nSize;
@@ -106,10 +107,10 @@ GArray *bp_block_merkle_tree(const struct bp_block *block)
 			unsigned int i2 = MIN(i+1, nSize-1);
 			bu256_t hash;
 			bu_Hash_((unsigned char *) &hash,
-			   &g_array_index(arr, bu256_t, j+i), sizeof(bu256_t),
-			   &g_array_index(arr, bu256_t, j+i2),sizeof(bu256_t));
+			   parr_idx(arr, j+i), sizeof(bu256_t),
+			   parr_idx(arr, j+i2),sizeof(bu256_t));
 
-			g_array_append_val(arr, hash);
+			parr_add(arr, bu256_new(&hash));
 		}
 
 		j += nSize;
@@ -125,28 +126,28 @@ void bp_block_merkle(bu256_t *vo, const struct bp_block *block)
 	if (!block->vtx || !block->vtx->len)
 		return;
 
-	GArray *arr = bp_block_merkle_tree(block);
+	parr *arr = bp_block_merkle_tree(block);
 	if (!arr)
 		return;
 
-	*vo = g_array_index(arr, bu256_t, arr->len - 1);
+	bu256_copy(vo, parr_idx(arr, arr->len - 1));
 
-	g_array_free(arr, TRUE);
+	parr_free(arr, true);
 }
 
-GArray *bp_block_merkle_branch(const struct bp_block *block,
-			       const GArray *mrktree,
+parr *bp_block_merkle_branch(const struct bp_block *block,
+			       const parr *mrktree,
 			       unsigned int txidx)
 {
 	if (!block || !block->vtx || !mrktree || (txidx >= block->vtx->len))
 		return NULL;
 
-	GArray *ret = g_array_new(FALSE, TRUE, sizeof(bu256_t));
+	parr *ret = parr_new(0, bu256_free);
 
 	unsigned int j = 0, nSize;
 	for (nSize = block->vtx->len; nSize > 1; nSize = (nSize + 1) / 2) {
 		unsigned int i = MIN(txidx ^ 1, nSize - 1);
-		g_array_append_val(ret, g_array_index(mrktree, bu256_t, j+i));
+		parr_add(ret, bu256_new(parr_idx(mrktree, j+i)));
 		txidx >>= 1;
 		j += nSize;
 	}
@@ -155,13 +156,13 @@ GArray *bp_block_merkle_branch(const struct bp_block *block,
 }
 
 void bp_check_merkle_branch(bu256_t *hash, const bu256_t *txhash_in,
-			    const GArray *mrkbranch, unsigned int txidx)
+			    const parr *mrkbranch, unsigned int txidx)
 {
 	bu256_copy(hash, txhash_in);
 
 	unsigned int i;
 	for (i = 0; i < mrkbranch->len; i++) {
-		const bu256_t *otherside = &g_array_index(mrkbranch, bu256_t,i);
+		const bu256_t *otherside = parr_idx(mrkbranch, i);
 		if (txidx & 1)
 			bu_Hash_((unsigned char *)hash,
 				 otherside, sizeof(bu256_t),

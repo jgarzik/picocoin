@@ -5,6 +5,7 @@
 #include <jansson.h>
 #include <ccoin/core.h>
 #include <ccoin/util.h>
+#include <ccoin/parr.h>
 #include <ccoin/buffer.h>
 #include <ccoin/buint.h>
 #include <ccoin/hexcode.h>
@@ -124,9 +125,9 @@ static void runtest(const char *json_base_fn, const char *ser_in_fn,
 	assert(BN_cmp(&tmp_mask, &match->mask) == 0);
 
 	/* build merkle tree, tx's branch */
-	GArray *mtree = bp_block_merkle_tree(&block_in);
+	parr *mtree = bp_block_merkle_tree(&block_in);
 	assert(mtree != NULL);
-	GArray *mbranch = bp_block_merkle_branch(&block_in, mtree, match->n);
+	parr *mbranch = bp_block_merkle_branch(&block_in, mtree, match->n);
 	assert(mbranch != NULL);
 
 	/* verify merkle branch for tx matches expected */
@@ -135,8 +136,8 @@ static void runtest(const char *json_base_fn, const char *ser_in_fn,
 	assert(bu256_equal(&mrk_check, &block_in.hashMerkleRoot) == true);
 
 	/* release resources */
-	g_array_free(mtree, TRUE);
-	g_array_free(mbranch, TRUE);
+	parr_free(mtree, true);
+	parr_free(mbranch, true);
 	BN_clear_free(&tmp_mask);
 	parr_free(matches, true);
 	bpks_free(&ks);

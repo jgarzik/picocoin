@@ -8,7 +8,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-#include <glib.h>
 #include <ccoin/buffer.h>
 #include <ccoin/buint.h>
 #include <ccoin/coredefs.h>
@@ -231,12 +230,12 @@ extern void bp_block_free(struct bp_block *block);
 extern void bp_block_vtx_free(struct bp_block *block);
 extern void bp_block_calc_sha256(struct bp_block *block);
 extern void bp_block_merkle(bu256_t *vo, const struct bp_block *block);
-extern GArray *bp_block_merkle_tree(const struct bp_block *block);
-extern GArray *bp_block_merkle_branch(const struct bp_block *block,
-			       const GArray *mrktree,
+extern parr *bp_block_merkle_tree(const struct bp_block *block);
+extern parr *bp_block_merkle_branch(const struct bp_block *block,
+			       const parr *mrktree,
 			       unsigned int txidx);
 extern void bp_check_merkle_branch(bu256_t *hash, const bu256_t *txhash_in,
-			    const GArray *mrkbranch, unsigned int txidx);
+			    const parr *mrkbranch, unsigned int txidx);
 extern bool bp_block_valid(struct bp_block *block);
 extern unsigned int bp_block_ser_size(const struct bp_block *block);
 extern void bp_block_free_cb(void *data);
