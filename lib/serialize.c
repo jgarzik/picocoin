@@ -241,7 +241,7 @@ bool deser_u256_array(parr **ao, struct const_buffer *buf)
 	if (!vlen)
 		return true;
 
-	arr = parr_new(vlen, g_bu256_free);
+	arr = parr_new(vlen, bu256_free);
 	if (!arr)
 		return false;
 

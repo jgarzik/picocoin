@@ -8,7 +8,6 @@
  */
 
 #include <unistd.h>
-#include <glib.h>
 
 #ifndef HAVE_FDATASYNC
 static inline int fdatasync(int fd)

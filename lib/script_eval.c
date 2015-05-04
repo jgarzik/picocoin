@@ -82,7 +82,7 @@ void bp_tx_sighash(bu256_t *hash, const cstring *scriptCode,
 	if ((nHashType & 0x1f) == SIGHASH_NONE) {
 		/* Wildcard payee */
 		bp_tx_free_vout(&txTmp);
-		txTmp.vout = parr_new(1, g_bp_txout_free);
+		txTmp.vout = parr_new(1, bp_txout_free_cb);
 
 		/* Let the others update at will */
 		for (i = 0; i < txTmp.vin->len; i++) {
@@ -192,7 +192,7 @@ static void stack_insert(parr *stack, const struct buffer *buf, int index_)
 	int index = stack->len + index_;
 	parr_add(stack, NULL);
 	memmove(&stack->data[index + 1], &stack->data[index],
-		sizeof(gpointer) * (stack->len - index - 1));
+		sizeof(void *) * (stack->len - index - 1));
 	stack->data[index] = buffer_copy(buf->p, buf->len);
 }
 

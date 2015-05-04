@@ -12,6 +12,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <glib.h>			// for g_random_int_range
 #include <openssl/sha.h>
 #include <openssl/ripemd.h>
 #include <ccoin/coredefs.h>

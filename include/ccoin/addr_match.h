@@ -6,8 +6,13 @@
  */
 
 #include <stdbool.h>
-#include <glib.h>
 #include <openssl/bn.h>
+#include <ccoin/parr.h>
+
+struct bp_txout;
+struct bp_keyset;
+struct bp_tx;
+struct bp_block;
 
 extern bool bp_txout_match(const struct bp_txout *txout,
 		    const struct bp_keyset *ks);
@@ -26,6 +31,6 @@ extern struct bp_block_match *bbm_new(void);
 extern void bbm_free(struct bp_block_match *match);
 
 extern parr *bp_block_match(const struct bp_block *block,
-			  const struct bp_keyset *ks);
+			    const struct bp_keyset *ks);
 
 #endif /* __LIBCCOIN_ADDR_MATCH_H__ */

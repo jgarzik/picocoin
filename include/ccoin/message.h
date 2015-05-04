@@ -8,7 +8,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-#include <glib.h>
 #include <ccoin/core.h>
 #include <ccoin/buffer.h>
 

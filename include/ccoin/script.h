@@ -8,12 +8,12 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <glib.h>
 #include <ccoin/buffer.h>
 #include <ccoin/core.h>
 #include <ccoin/clist.h>
 #include <ccoin/buint.h>
 #include <ccoin/key.h>
+#include <ccoin/parr.h>
 
 /** Signature hash types/flags */
 enum

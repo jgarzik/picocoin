@@ -86,7 +86,7 @@ void bp_locator_push(struct bp_locator *locator, const bu256_t *hash_in)
 {
 	/* TODO: replace '16' with number based on real world usage */
 	if (!locator->vHave)
-		locator->vHave = parr_new(16, g_bu256_free);
+		locator->vHave = parr_new(16, bu256_free);
 
 	bu256_t *hash = bu256_new(hash_in);
 	parr_add(locator->vHave, hash);
@@ -148,7 +148,7 @@ void bp_txin_free(struct bp_txin *txin)
 	}
 }
 
-void g_bp_txin_free(gpointer data)
+void bp_txin_free_cb(void *data)
 {
 	if (!data)
 		return;
@@ -205,7 +205,7 @@ void bp_txout_free(struct bp_txout *txout)
 	}
 }
 
-void g_bp_txout_free(gpointer data)
+void bp_txout_free_cb(void *data)
 {
 	if (!data)
 		return;
@@ -249,8 +249,8 @@ bool deser_bp_tx(struct bp_tx *tx, struct const_buffer *buf)
 {
 	bp_tx_free(tx);
 
-	tx->vin = parr_new(8, g_bp_txin_free);
-	tx->vout = parr_new(8, g_bp_txout_free);
+	tx->vin = parr_new(8, bp_txin_free_cb);
+	tx->vout = parr_new(8, bp_txout_free_cb);
 
 	if (!deser_u32(&tx->nVersion, buf)) return false;
 
@@ -392,7 +392,7 @@ void bp_tx_copy(struct bp_tx *dest, const struct bp_tx *src)
 	else {
 		unsigned int i;
 
-		dest->vin = parr_new(src->vin->len, g_bp_txin_free);
+		dest->vin = parr_new(src->vin->len, bp_txin_free_cb);
 
 		for (i = 0; i < src->vin->len; i++) {
 			struct bp_txin *txin_old, *txin_new;
@@ -410,7 +410,7 @@ void bp_tx_copy(struct bp_tx *dest, const struct bp_tx *src)
 		unsigned int i;
 
 		dest->vout = parr_new(src->vout->len,
-						  g_bp_txout_free);
+						  bp_txout_free_cb);
 
 		for (i = 0; i < src->vout->len; i++) {
 			struct bp_txout *txout_old, *txout_new;
@@ -522,7 +522,7 @@ void bp_block_free(struct bp_block *block)
 	bp_block_vtx_free(block);
 }
 
-void g_bp_block_free(gpointer data)
+void bp_block_free_cb(void *data)
 {
 	if (!data)
 		return;

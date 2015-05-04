@@ -112,7 +112,7 @@ extern void bp_txin_init(struct bp_txin *txin);
 extern bool deser_bp_txin(struct bp_txin *txin, struct const_buffer *buf);
 extern void ser_bp_txin(cstring *s, const struct bp_txin *txin);
 extern void bp_txin_free(struct bp_txin *txin);
-extern void g_bp_txin_free(gpointer data);
+extern void bp_txin_free_cb(void *data);
 static inline bool bp_txin_valid(const struct bp_txin *txin) { return true; }
 extern void bp_txin_copy(struct bp_txin *dest, const struct bp_txin *src);
 
@@ -125,7 +125,7 @@ extern void bp_txout_init(struct bp_txout *txout);
 extern bool deser_bp_txout(struct bp_txout *txout, struct const_buffer *buf);
 extern void ser_bp_txout(cstring *s, const struct bp_txout *txout);
 extern void bp_txout_free(struct bp_txout *txout);
-extern void g_bp_txout_free(gpointer data);
+extern void bp_txout_free_cb(void *data);
 extern void bp_txout_set_null(struct bp_txout *txout);
 extern void bp_txout_copy(struct bp_txout *dest, const struct bp_txout *src);
 
@@ -239,7 +239,7 @@ extern void bp_check_merkle_branch(bu256_t *hash, const bu256_t *txhash_in,
 			    const GArray *mrkbranch, unsigned int txidx);
 extern bool bp_block_valid(struct bp_block *block);
 extern unsigned int bp_block_ser_size(const struct bp_block *block);
-extern void g_bp_block_free(gpointer data);
+extern void bp_block_free_cb(void *data);
 
 static inline void bp_block_copy_hdr(struct bp_block *dest,
 				     const struct bp_block *src)
