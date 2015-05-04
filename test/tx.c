@@ -43,7 +43,7 @@ static void runtest(const char *json_fn_base, const char *ser_fn_base)
 	rc = deser_bp_tx(&tx, &buf);
 	assert(rc);
 
-	GString *gs = g_string_sized_new(10000);
+	cstring *gs = cstr_new_sz(10000);
 	ser_bp_tx(gs, &tx);
 
 	if (gs->len != data_len) {
@@ -76,7 +76,7 @@ static void runtest(const char *json_fn_base, const char *ser_fn_base)
 
 	bp_tx_free(&tx);
 	bp_tx_free(&tx_copy);
-	g_string_free(gs, TRUE);
+	cstr_free(gs, true);
 	free(data);
 	free(fn);
 	free(ser_fn);

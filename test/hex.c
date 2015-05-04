@@ -62,12 +62,12 @@ static void test_decode(void)
 
 static void test_decode2(void)
 {
-	GString *s = hex2str(hexstr);
+	cstring *s = hex2str(hexstr);
 	assert(s != NULL);
 	assert(s->len == data_len);
 	assert(memcmp(s->str, data, data_len) == 0);
 
-	g_string_free(s, TRUE);
+	cstr_free(s, true);
 }
 
 int main (int argc, char *argv[])

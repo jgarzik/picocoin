@@ -250,7 +250,7 @@ static bool nc_conn_send(struct nc_conn *conn, const char *command,
 			 const void *data, size_t data_len)
 {
 	/* build wire message */
-	GString *msg = message_str(chain->netmagic, command, data, data_len);
+	cstring *msg = message_str(chain->netmagic, command, data, data_len);
 	if (!msg)
 		return false;
 
@@ -259,7 +259,7 @@ static bool nc_conn_send(struct nc_conn *conn, const char *command,
 	buf->p = msg->str;
 	buf->len = msg->len;
 
-	g_string_free(msg, FALSE);
+	cstr_free(msg, FALSE);
 
 	/* if write q exists, write_evt will handle output */
 	if (conn->write_q) {
@@ -702,7 +702,7 @@ err_out:
 	nc_conn_kill(conn);
 }
 
-static GString *nc_version_build(struct nc_conn *conn)
+static cstring *nc_version_build(struct nc_conn *conn)
 {
 	struct msg_version mv;
 
@@ -716,7 +716,7 @@ static GString *nc_version_build(struct nc_conn *conn)
 		conn->nci->db->best_chain ?
 			conn->nci->db->best_chain->height : 0;
 
-	GString *rs = ser_msg_version(&mv);
+	cstring *rs = ser_msg_version(&mv);
 
 	msg_version_free(&mv);
 
@@ -818,9 +818,9 @@ static void nc_conn_evt_connected(int fd, short events, void *priv)
 	conn->ev = NULL;
 
 	/* build and send "version" message */
-	GString *msg_data = nc_version_build(conn);
+	cstring *msg_data = nc_version_build(conn);
 	bool rc = nc_conn_send(conn, "version", msg_data->str, msg_data->len);
-	g_string_free(msg_data, TRUE);
+	cstr_free(msg_data, true);
 
 	if (!rc) {
 		fprintf(stderr, "net: %s !conn_send\n", conn->addr_str);

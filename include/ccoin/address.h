@@ -5,9 +5,9 @@
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.
  */
 
-#include <glib.h>
 #include <ccoin/key.h>
+#include <ccoin/cstr.h>
 
-extern GString *bp_pubkey_get_address(struct bp_key *key, unsigned char addrtype);
+extern cstring *bp_pubkey_get_address(struct bp_key *key, unsigned char addrtype);
 
 #endif /* __LIBCCOIN_ADDRESS_H__ */

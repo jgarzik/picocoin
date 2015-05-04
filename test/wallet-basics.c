@@ -52,11 +52,11 @@ static void load_json_key(json_t *wallet, struct bp_key *key)
 	free(pk);
 
 	/* verify pubkey hash (bitcoin address) matches expected */
-	GString *btc_addr = bp_pubkey_get_address(key, PUBKEY_ADDRESS_TEST);
+	cstring *btc_addr = bp_pubkey_get_address(key, PUBKEY_ADDRESS_TEST);
 	assert(strlen(address_str) == btc_addr->len);
 	assert(memcmp(address_str, btc_addr->str, btc_addr->len) == 0);
 
-	g_string_free(btc_addr, TRUE);
+	cstr_free(btc_addr, true);
 }
 
 static void runtest(const char *json_base_fn, const char *ser_in_fn,

@@ -30,7 +30,7 @@ static void runtest (void)
 	assert(bloom_contains(&bloom, md1, sizeof(md1)) == true);
 	assert(bloom_contains(&bloom, md2, sizeof(md2)) == false);
 
-	GString *ser = g_string_sized_new(1024);
+	cstring *ser = cstr_new_sz(1024);
 	ser_bloom(ser, &bloom);
 
 	struct bloom bloom2;
@@ -51,7 +51,7 @@ static void runtest (void)
 
 	bloom_free(&bloom);
 
-	g_string_free(ser, TRUE);
+	cstr_free(ser, true);
 }
 
 int main (int argc, char *argv[])

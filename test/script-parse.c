@@ -48,7 +48,7 @@ static void test_txout(const struct bp_txout *txout)
 	 */
 
 	GList *tmp = ops;
-	GString *s = g_string_sized_new(256);
+	cstring *s = cstr_new_sz(256);
 	while (tmp) {
 		struct bscript_op *op_p;
 
@@ -65,9 +65,9 @@ static void test_txout(const struct bp_txout *txout)
 	g_list_free_full(ops, g_free);
 
 	/* byte-compare original and newly created scripts */
-	assert(g_string_equal(s, txout->scriptPubKey));
+	assert(cstr_equal(s, txout->scriptPubKey));
 
-	g_string_free(s, TRUE);
+	cstr_free(s, true);
 }
 
 static void runtest(const char *ser_fn_base)

@@ -240,46 +240,46 @@ void bsp_addr_free(struct bscript_addr *addrs)
 	}
 }
 
-void bsp_push_data(GString *s, const void *data, size_t data_len)
+void bsp_push_data(cstring *s, const void *data, size_t data_len)
 {
 	if (data_len < OP_PUSHDATA1) {
 		uint8_t c = (uint8_t) data_len;
 
-		g_string_append_len(s, (gchar *) &c, sizeof(c));
+		cstr_append_buf(s, (gchar *) &c, sizeof(c));
 	}
 
 	else if (data_len <= 0xff) {
 		uint8_t opcode = OP_PUSHDATA1;
 		uint8_t v8 = (uint8_t) data_len;
 
-		g_string_append_len(s, (gchar *) &opcode, sizeof(opcode));
-		g_string_append_len(s, (gchar *) &v8, sizeof(v8));
+		cstr_append_buf(s, (gchar *) &opcode, sizeof(opcode));
+		cstr_append_buf(s, (gchar *) &v8, sizeof(v8));
 	}
 
 	else if (data_len <= 0xffff) {
 		uint8_t opcode = OP_PUSHDATA2;
 		uint16_t v16_le = GUINT16_TO_LE((uint16_t) data_len);
 
-		g_string_append_len(s, (gchar *) &opcode, sizeof(opcode));
-		g_string_append_len(s, (gchar *) &v16_le, sizeof(v16_le));
+		cstr_append_buf(s, (gchar *) &opcode, sizeof(opcode));
+		cstr_append_buf(s, (gchar *) &v16_le, sizeof(v16_le));
 	}
 
 	else {
 		uint8_t opcode = OP_PUSHDATA4;
 		uint32_t v32_le = GUINT32_TO_LE((uint32_t) data_len);
 
-		g_string_append_len(s, (gchar *) &opcode, sizeof(opcode));
-		g_string_append_len(s, (gchar *) &v32_le, sizeof(v32_le));
+		cstr_append_buf(s, (gchar *) &opcode, sizeof(opcode));
+		cstr_append_buf(s, (gchar *) &v32_le, sizeof(v32_le));
 	}
 
-	g_string_append_len(s, data, data_len);
+	cstr_append_buf(s, data, data_len);
 }
 
-void bsp_push_int64(GString *s, int64_t n)
+void bsp_push_int64(cstring *s, int64_t n)
 {
 	if (n == -1 || (n >= 1 && n <= 16)) {
 		unsigned char c = (unsigned char) (n + (OP_1 - 1));
-		g_string_append_len(s, (gchar *) &c, 1);
+		cstr_append_buf(s, (gchar *) &c, 1);
 		return;
 	}
 
@@ -301,21 +301,21 @@ void bsp_push_int64(GString *s, int64_t n)
 	if (neg)
 		BN_set_negative(&bn, 1);
 
-	GString *vch = bn_getvch(&bn);
+	cstring *vch = bn_getvch(&bn);
 
 	bsp_push_data(s, vch->str, vch->len);
 
-	g_string_free(vch, TRUE);
+	cstr_free(vch, true);
 	BN_clear_free(&bn);
 	BN_clear_free(&bn_hi);
 	BN_clear_free(&bn_lo);
 }
 
-void bsp_push_uint64(GString *s, uint64_t n)
+void bsp_push_uint64(cstring *s, uint64_t n)
 {
 	if (n >= 1 && n <= 16) {
 		unsigned char c = (unsigned char) (n + (OP_1 - 1));
-		g_string_append_len(s, (gchar *) &c, 1);
+		cstr_append_buf(s, (gchar *) &c, 1);
 		return;
 	}
 
@@ -329,19 +329,19 @@ void bsp_push_uint64(GString *s, uint64_t n)
 	BN_set_word(&bn_lo, (n & 0xffffffffU));
 	BN_add(&bn, &bn_hi, &bn_lo);
 
-	GString *vch = bn_getvch(&bn);
+	cstring *vch = bn_getvch(&bn);
 
 	bsp_push_data(s, vch->str, vch->len);
 
-	g_string_free(vch, TRUE);
+	cstr_free(vch, true);
 	BN_clear_free(&bn);
 	BN_clear_free(&bn_hi);
 	BN_clear_free(&bn_lo);
 }
 
-GString *bsp_make_scripthash(GString *hash)
+cstring *bsp_make_scripthash(cstring *hash)
 {
-	GString *script_out = g_string_sized_new(32);
+	cstring *script_out = cstr_new_sz(32);
 
 	bsp_push_op(script_out, OP_HASH160);
 	bsp_push_data(script_out, hash->str, hash->len);
@@ -350,9 +350,9 @@ GString *bsp_make_scripthash(GString *hash)
 	return script_out;
 }
 
-GString *bsp_make_pubkeyhash(GString *hash)
+cstring *bsp_make_pubkeyhash(cstring *hash)
 {
-	GString *script_out = g_string_sized_new(32);
+	cstring *script_out = cstr_new_sz(32);
 
 	bsp_push_op(script_out, OP_DUP);
 	bsp_push_op(script_out, OP_HASH160);

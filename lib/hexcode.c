@@ -6,8 +6,8 @@
 
 #include <string.h>
 #include <stdbool.h>
-#include <glib.h>
 #include <ccoin/hexcode.h>
+#include <ccoin/cstr.h>
 
 static const unsigned char hexdigit_val[256] = {
 	['0'] = 0,
@@ -95,7 +95,7 @@ bool is_hexstr(const char *hexstr, bool require_prefix)
 	return true;
 }
 
-GString *hex2str(const char *hexstr)
+cstring *hex2str(const char *hexstr)
 {
 	if (!hexstr || !*hexstr)
 		return NULL;
@@ -103,15 +103,15 @@ GString *hex2str(const char *hexstr)
 		hexstr += 2;
 
 	size_t slen = strlen(hexstr) / 2;
-	GString *s = g_string_sized_new(slen);
-	g_string_set_size(s, slen);
+	cstring *s = cstr_new_sz(slen);
+	cstr_resize(s, slen);
 	memset(s->str, 0, slen);
 
 	size_t outlen = 0;
 	bool rc = decode_hex(s->str, slen, hexstr, &outlen);
 
 	if (!rc || (slen != outlen)) {
-		g_string_free(s, TRUE);
+		cstr_free(s, true);
 		return NULL;
 	}
 

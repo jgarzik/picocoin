@@ -10,7 +10,6 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <argp.h>
-#include <glib.h>
 #include <openssl/ripemd.h>
 #include <ccoin/coredefs.h>
 #include <ccoin/base58.h>
@@ -83,7 +82,7 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
 static void load_address(unsigned int line_no, const char *line)
 {
 	unsigned char addrtype;
-	GString *s = base58_decode_check(&addrtype, line);
+	cstring *s = base58_decode_check(&addrtype, line);
 
 	if (!s || addrtype != PUBKEY_ADDRESS) {
 		fprintf(stderr, "Invalid address on line %d: %s\n", line_no, line);
@@ -99,7 +98,7 @@ static void load_address(unsigned int line_no, const char *line)
 	struct buffer *buf_pkhash = buffer_copy(s->str,RIPEMD160_DIGEST_LENGTH);
 	bp_hashtab_put(bpks.pubhash, buf_pkhash, buf_pkhash);
 
-	g_string_free(s, TRUE);
+	cstr_free(s, true);
 }
 
 static void load_addresses(void)
@@ -253,7 +252,7 @@ static void print_txout(bool show_from, unsigned int i, struct bp_txout *txout)
 
 		is_mine = bpks_lookup(&bpks, buf->p, buf->len, true);
 
-		GString *addr = base58_encode_check(PUBKEY_ADDRESS, true,
+		cstring *addr = base58_encode_check(PUBKEY_ADDRESS, true,
 						    buf->p, buf->len);
 		if (!addr) {
 			printf(" ENCODE-FAILED!\n");
@@ -265,7 +264,7 @@ static void print_txout(bool show_from, unsigned int i, struct bp_txout *txout)
 		       addr->str,
 		       is_mine ? "*" : "");
 
-		g_string_free(addr, TRUE);
+		cstr_free(addr, true);
 	}
 
 	printf("\n");

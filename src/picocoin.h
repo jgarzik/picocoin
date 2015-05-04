@@ -8,7 +8,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-#include <glib.h>
 #include <ccoin/coredefs.h>
 #include <ccoin/buint.h>
 #include <ccoin/core.h>
@@ -32,7 +31,7 @@ extern bool debugging;
 extern void network_sync(void);
 
 /* aes.c */
-extern GString *read_aes_file(const char *filename, void *key, size_t key_len,
+extern cstring *read_aes_file(const char *filename, void *key, size_t key_len,
 			      size_t max_file_len);
 extern bool write_aes_file(const char *filename, void *key, size_t key_len,
 		    const void *plaintext, size_t pt_len);

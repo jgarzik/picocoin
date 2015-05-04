@@ -5,12 +5,12 @@
 #include "picocoin-config.h"
 
 #include <openssl/ripemd.h>
-#include <glib.h>
 #include <ccoin/address.h>
 #include <ccoin/base58.h>
 #include <ccoin/util.h>
+#include <ccoin/cstr.h>
 
-GString *bp_pubkey_get_address(struct bp_key *key, unsigned char addrtype)
+cstring *bp_pubkey_get_address(struct bp_key *key, unsigned char addrtype)
 {
 	void *pubkey = NULL;
 	size_t pk_len = 0;
@@ -23,7 +23,7 @@ GString *bp_pubkey_get_address(struct bp_key *key, unsigned char addrtype)
 
 	free(pubkey);
 
-	GString *btc_addr = base58_encode_check(addrtype, true,
+	cstring *btc_addr = base58_encode_check(addrtype, true,
 						md160, sizeof(md160));
 
 	return btc_addr;

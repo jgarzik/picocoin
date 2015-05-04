@@ -212,7 +212,7 @@ static bool nc_conn_send(struct nc_conn *conn, const char *command,
 			 const void *data, size_t data_len)
 {
 	/* build wire message */
-	GString *msg = message_str(chain->netmagic, command, data, data_len);
+	cstring *msg = message_str(chain->netmagic, command, data, data_len);
 	if (!msg)
 		return false;
 
@@ -221,7 +221,7 @@ static bool nc_conn_send(struct nc_conn *conn, const char *command,
 	buf->p = msg->str;
 	buf->len = msg->len;
 
-	g_string_free(msg, FALSE);
+	cstr_free(msg, FALSE);
 
 	/* if write q exists, write_evt will handle output */
 	if (conn->write_q) {
@@ -385,11 +385,11 @@ static bool nc_msg_verack(struct nc_conn *conn)
 		struct msg_getblocks gb;
 		msg_getblocks_init(&gb);
 		blkdb_locator(&db, NULL, &gb.locator);
-		GString *s = ser_msg_getblocks(&gb);
+		cstring *s = ser_msg_getblocks(&gb);
 
 		rc = nc_conn_send(conn, "getblocks", s->str, s->len);
 
-		g_string_free(s, TRUE);
+		cstr_free(s, true);
 		msg_getblocks_free(&gb);
 
 		conn->nci->last_getblocks = now;
@@ -452,11 +452,11 @@ static bool nc_msg_inv(struct nc_conn *conn)
 
 	/* send getdata, if they have anything we want */
 	if (mv_out.invs && mv_out.invs->len) {
-		GString *s = ser_msg_vinv(&mv_out);
+		cstring *s = ser_msg_vinv(&mv_out);
 
 		rc = nc_conn_send(conn, "getdata", s->str, s->len);
 
-		g_string_free(s, TRUE);
+		cstr_free(s, true);
 	}
 
 out_ok:
@@ -834,7 +834,7 @@ err_out:
 	nc_conn_kill(conn);
 }
 
-static GString *nc_version_build(struct nc_conn *conn)
+static cstring *nc_version_build(struct nc_conn *conn)
 {
 	struct msg_version mv;
 
@@ -847,7 +847,7 @@ static GString *nc_version_build(struct nc_conn *conn)
 	sprintf(mv.strSubVer, "/brd:%s/", VERSION);
 	mv.nStartingHeight = db.best_chain ? db.best_chain->height : 0;
 
-	GString *rs = ser_msg_version(&mv);
+	cstring *rs = ser_msg_version(&mv);
 
 	msg_version_free(&mv);
 
@@ -949,9 +949,9 @@ static void nc_conn_evt_connected(int fd, short events, void *priv)
 	conn->ev = NULL;
 
 	/* build and send "version" message */
-	GString *msg_data = nc_version_build(conn);
+	cstring *msg_data = nc_version_build(conn);
 	bool rc = nc_conn_send(conn, "version", msg_data->str, msg_data->len);
-	g_string_free(msg_data, TRUE);
+	cstr_free(msg_data, true);
 
 	if (!rc) {
 		fprintf(plog, "net: %s !conn_send\n", conn->addr_str);
@@ -1261,14 +1261,14 @@ static void init_block0(void)
 		exit(1);
 	}
 
-	GString *msg0 = message_str(chain->netmagic, "block",
+	cstring *msg0 = message_str(chain->netmagic, "block",
 				    genesis_raw, genesis_rawlen);
 	ssize_t bwritten = write(blocks_fd, msg0->str, msg0->len);
 	if (bwritten != msg0->len) {
 		fprintf(plog, "blocks write0 failed: %s\n", strerror(errno));
 		exit(1);
 	}
-	g_string_free(msg0, TRUE);
+	cstr_free(msg0, true);
 
 	off64_t fpos64 = lseek64(blocks_fd, 0, SEEK_SET);
 	if (fpos64 == (off64_t)-1) {

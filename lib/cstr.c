@@ -9,12 +9,9 @@
 
 static bool cstr_alloc_min_sz(cstring *s, size_t sz)
 {
-	if (!sz)
-		return true;
-
 	sz++;		// NUL overhead
 
-	if (s->alloc >= sz)
+	if (s->alloc && (s->alloc >= sz))
 		return true;
 
 	unsigned int shift = 3;
@@ -28,6 +25,8 @@ static bool cstr_alloc_min_sz(cstring *s, size_t sz)
 
 	s->str = new_s;
 	s->alloc = al_sz;
+	s->str[s->len] = 0;
+
 	return true;
 }
 

@@ -14,10 +14,10 @@
 
 static const size_t nMaxNumSize = 4;
 
-static void string_find_del(GString *s, const struct buffer *buf)
+static void string_find_del(cstring *s, const struct buffer *buf)
 {
 	/* wrap buffer in a script */
-	GString *script = g_string_sized_new(buf->len + 8);
+	cstring *script = cstr_new_sz(buf->len + 8);
 	bsp_push_data(script, buf->p, buf->len);
 
 	/* search for script, as a substring of 's' */
@@ -31,10 +31,10 @@ static void string_find_del(GString *s, const struct buffer *buf)
 		unsigned int new_len = s->len - sublen;
 
 		memmove(p, tail, tail_len);
-		g_string_set_size(s, new_len);
+		cstr_resize(s, new_len);
 	}
 
-	g_string_free(script, TRUE);
+	cstr_free(script, true);
 }
 
 static void bp_tx_calc_sighash(bu256_t *hash, const struct bp_tx *tx,
@@ -42,16 +42,16 @@ static void bp_tx_calc_sighash(bu256_t *hash, const struct bp_tx *tx,
 {
 	/* TODO: introduce hashing-only serialization mode */
 
-	GString *s = g_string_sized_new(512);
+	cstring *s = cstr_new_sz(512);
 	ser_bp_tx(s, tx);
 	ser_s32(s, nHashType);
 
 	bu_Hash((unsigned char *) hash, s->str, s->len);
 
-	g_string_free(s, TRUE);
+	cstr_free(s, true);
 }
 
-void bp_tx_sighash(bu256_t *hash, const GString *scriptCode,
+void bp_tx_sighash(bu256_t *hash, const cstring *scriptCode,
 		   const struct bp_tx *txTo, unsigned int nIn,
 		   int nHashType)
 {
@@ -71,10 +71,10 @@ void bp_tx_sighash(bu256_t *hash, const GString *scriptCode,
 	struct bp_txin *txin;
 	for (i = 0; i < txTmp.vin->len; i++) {
 		txin = g_ptr_array_index(txTmp.vin, i);
-		g_string_set_size(txin->scriptSig, 0);
+		cstr_resize(txin->scriptSig, 0);
 
 		if (i == nIn)
-			g_string_append_len(txin->scriptSig,
+			cstr_append_buf(txin->scriptSig,
 					    scriptCode->str, scriptCode->len);
 	}
 
@@ -162,11 +162,11 @@ static bool CastToBigNum(BIGNUM *vo, const struct buffer *buf)
 	BN_init(&bn);
 
 	bn_setvch(&bn, buf->p, buf->len);
-	GString *bn_s = bn_getvch(&bn);
+	cstring *bn_s = bn_getvch(&bn);
 
 	bn_setvch(vo, bn_s->str, bn_s->len);
 
-	g_string_free(bn_s, TRUE);
+	cstr_free(bn_s, true);
 	BN_clear_free(&bn);
 	return true;
 }
@@ -211,10 +211,10 @@ static void stack_push_char(GPtrArray *stack, unsigned char ch)
 	g_ptr_array_add(stack, buffer_copy(&ch, 1));
 }
 
-static void stack_push_str(GPtrArray *stack, GString *s)
+static void stack_push_str(GPtrArray *stack, cstring *s)
 {
 	g_ptr_array_add(stack, buffer_copy(s->str, s->len));
-	g_string_free(s, TRUE);
+	cstr_free(s, true);
 }
 
 static void stack_copy(GPtrArray *dest, const GPtrArray *src)
@@ -297,7 +297,7 @@ static void bn_set_int(BIGNUM *n, int val)
 
 static bool bp_checksig(const struct buffer *vchSigHT,
 			const struct buffer *vchPubKey,
-			const GString *scriptCode,
+			const cstring *scriptCode,
 			const struct bp_tx *txTo, unsigned int nIn,
 			int nHashType)
 {
@@ -346,7 +346,7 @@ static bool IsCanonicalPubKey(const struct buffer *vch)
 	return true;
 }
 
-static bool bp_script_eval(GPtrArray *stack, const GString *script,
+static bool bp_script_eval(GPtrArray *stack, const cstring *script,
 			   const struct bp_tx *txTo, unsigned int nIn,
 			   unsigned int flags, int nHashType)
 {
@@ -919,8 +919,8 @@ OP_NOP10:
 			//PrintHex(vchPubKey.begin(), vchPubKey.end(), "pubkey: %s\n");
 
 			// Subset of script starting at the most recent codeseparator
-			GString *scriptCode = g_string_sized_new(pbegincodehash.len);
-			g_string_append_len(scriptCode,
+			cstring *scriptCode = cstr_new_sz(pbegincodehash.len);
+			cstr_append_buf(scriptCode,
 					    pbegincodehash.p,
 					    pbegincodehash.len);
 
@@ -937,7 +937,7 @@ OP_NOP10:
 						       scriptCode,
 						       txTo, nIn, nHashType);
 
-			g_string_free(scriptCode, TRUE);
+			cstr_free(scriptCode, true);
 
 			popstack(stack);
 			popstack(stack);
@@ -980,8 +980,8 @@ OP_NOP10:
 				goto out;
 
 			// Subset of script starting at the most recent codeseparator
-			GString *scriptCode = g_string_sized_new(pbegincodehash.len);
-			g_string_append_len(scriptCode,
+			cstring *scriptCode = cstr_new_sz(pbegincodehash.len);
+			cstr_append_buf(scriptCode,
 					    pbegincodehash.p,
 					    pbegincodehash.len);
 
@@ -1023,7 +1023,7 @@ OP_NOP10:
 					fSuccess = false;
 			}
 
-			g_string_free(scriptCode, TRUE);
+			cstr_free(scriptCode, true);
 
 			while (i-- > 0)
 				popstack(stack);
@@ -1056,13 +1056,13 @@ out:
 	return rc;
 }
 
-bool bp_script_verify(const GString *scriptSig, const GString *scriptPubKey,
+bool bp_script_verify(const cstring *scriptSig, const cstring *scriptPubKey,
 		      const struct bp_tx *txTo, unsigned int nIn,
 		      unsigned int flags, int nHashType)
 {
 	bool rc = false;
 	GPtrArray *stack = g_ptr_array_new_with_free_func(g_buffer_free);
-	GString *pubkey2 = NULL;
+	cstring *pubkey2 = NULL;
 	GPtrArray *stackCopy = NULL;
 
 	if (!bp_script_eval(stack, scriptSig, txTo, nIn, flags, nHashType))
@@ -1091,14 +1091,14 @@ bool bp_script_verify(const GString *scriptSig, const GString *scriptPubKey,
 		struct buffer *pubkey2_buf = stack_take(stackCopy, -1);
 		popstack(stackCopy);
 
-		GString *pubkey2 = g_string_sized_new(pubkey2_buf->len);
-		g_string_append_len(pubkey2, pubkey2_buf->p, pubkey2_buf->len);
+		cstring *pubkey2 = cstr_new_sz(pubkey2_buf->len);
+		cstr_append_buf(pubkey2, pubkey2_buf->p, pubkey2_buf->len);
 
 		buffer_free(pubkey2_buf);
 
 		bool rc2 = bp_script_eval(stackCopy, pubkey2, txTo, nIn,
 					  flags, nHashType);
-		g_string_free(pubkey2, TRUE);
+		cstr_free(pubkey2, true);
 
 		if (!rc2)
 			goto out;
@@ -1113,7 +1113,7 @@ bool bp_script_verify(const GString *scriptSig, const GString *scriptPubKey,
 out:
 	g_ptr_array_free(stack, TRUE);
 	if (pubkey2)
-		g_string_free(pubkey2, TRUE);
+		cstr_free(pubkey2, true);
 	if (stackCopy)
 		g_ptr_array_free(stackCopy, TRUE);
 	return rc;

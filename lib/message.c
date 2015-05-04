@@ -38,34 +38,34 @@ bool message_valid(const struct p2p_message *msg)
 	return true;
 }
 
-GString *message_str(const unsigned char netmagic[4],
+cstring *message_str(const unsigned char netmagic[4],
 		     const char *command_,
 		     const void *data, uint32_t data_len)
 {
-	GString *s = g_string_sized_new(P2P_HDR_SZ + data_len);
+	cstring *s = cstr_new_sz(P2P_HDR_SZ + data_len);
 
 	/* network identifier (magic number) */
-	g_string_append_len(s, (gchar *) netmagic, 4);
+	cstr_append_buf(s, (gchar *) netmagic, 4);
 
 	/* command string */
 	char command[12] = {};
 	strncpy(command, command_, 12);
-	g_string_append_len(s, command, 12);
+	cstr_append_buf(s, command, 12);
 
 	/* data length */
 	uint32_t data_len_le = GUINT32_TO_LE(data_len);
-	g_string_append_len(s, (gchar *) &data_len_le, 4);
+	cstr_append_buf(s, (gchar *) &data_len_le, 4);
 
 	/* data checksum */
 	unsigned char md32[4];
 
 	bu_Hash4(md32, data, data_len);
 
-	g_string_append_len(s, (gchar *) &md32[0], 4);
+	cstr_append_buf(s, (gchar *) &md32[0], 4);
 
 	/* data payload */
 	if (data_len > 0)
-		g_string_append_len(s, data, data_len);
+		cstr_append_buf(s, data, data_len);
 
 	return s;
 }
@@ -100,9 +100,9 @@ err_out:
 	return false;
 }
 
-GString *ser_msg_addr(unsigned int protover, const struct msg_addr *ma)
+cstring *ser_msg_addr(unsigned int protover, const struct msg_addr *ma)
 {
-	GString *s = g_string_new(NULL);
+	cstring *s = cstr_new(NULL);
 
 	if (!ma || !ma->addrs || !ma->addrs->len) {
 		ser_varlen(s, 0);
@@ -140,9 +140,9 @@ bool deser_msg_getblocks(struct msg_getblocks *gb, struct const_buffer *buf)
 	return true;
 }
 
-GString *ser_msg_getblocks(const struct msg_getblocks *gb)
+cstring *ser_msg_getblocks(const struct msg_getblocks *gb)
 {
-	GString *s = g_string_sized_new(256);
+	cstring *s = cstr_new_sz(256);
 
 	ser_bp_locator(s, &gb->locator);
 	ser_u256(s, &gb->hash_stop);
@@ -179,9 +179,9 @@ err_out:
 	return false;
 }
 
-GString *ser_msg_headers(const struct msg_headers *mh)
+cstring *ser_msg_headers(const struct msg_headers *mh)
 {
-	GString *s = g_string_new(NULL);
+	cstring *s = cstr_new(NULL);
 
 	if (!mh || !mh->headers || !mh->headers->len) {
 		ser_varlen(s, 0);
@@ -234,9 +234,9 @@ bool deser_msg_ping(unsigned int protover, struct msg_ping *mp,
 	return true;
 }
 
-GString *ser_msg_ping(unsigned int protover, const struct msg_ping *mp)
+cstring *ser_msg_ping(unsigned int protover, const struct msg_ping *mp)
 {
-	GString *s = g_string_new(NULL);
+	cstring *s = cstr_new(NULL);
 
 	if (mp && (protover > BIP0031_VERSION))
 		ser_u64(s, mp->nonce);
@@ -267,9 +267,9 @@ bool deser_msg_version(struct msg_version *mv, struct const_buffer *buf)
 	return true;
 }
 
-GString *ser_msg_version(const struct msg_version *mv)
+cstring *ser_msg_version(const struct msg_version *mv)
 {
-	GString *s = g_string_sized_new(256);
+	cstring *s = cstr_new_sz(256);
 
 	ser_u32(s, mv->nVersion);
 	ser_u64(s, mv->nServices);
@@ -314,9 +314,9 @@ err_out:
 	return false;
 }
 
-GString *ser_msg_vinv(const struct msg_vinv *mv)
+cstring *ser_msg_vinv(const struct msg_vinv *mv)
 {
-	GString *s = g_string_new(NULL);
+	cstring *s = cstr_new(NULL);
 
 	if (!mv || !mv->invs || !mv->invs->len) {
 		ser_varlen(s, 0);

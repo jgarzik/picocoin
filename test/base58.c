@@ -27,7 +27,7 @@ static void test_encode(const char *hexstr, const char *enc)
 		assert(rc);
 	}
 
-	GString *s = base58_encode(raw, out_len);
+	cstring *s = base58_encode(raw, out_len);
 	if (strcmp(s->str, enc)) {
 		fprintf(stderr, "base58 mismatch: '%s' vs expected '%s'\n",
 			s->str, enc);
@@ -35,7 +35,7 @@ static void test_encode(const char *hexstr, const char *enc)
 	}
 
 	free(raw);
-	g_string_free(s, TRUE);
+	cstr_free(s, true);
 }
 
 static void test_decode(const char *hexstr, const char *base58_str)
@@ -51,7 +51,7 @@ static void test_decode(const char *hexstr, const char *base58_str)
 		assert(rc);
 	}
 
-	GString *s = base58_decode(base58_str);
+	cstring *s = base58_decode(base58_str);
 	if (memcmp(s->str, raw, out_len < s->len ? out_len : s->len)) {
 		dumphex("decode have", s->str, s->len);
 		dumphex("decode want", raw, out_len);
@@ -67,7 +67,7 @@ static void test_decode(const char *hexstr, const char *base58_str)
 	}
 
 	free(raw);
-	g_string_free(s, TRUE);
+	cstr_free(s, true);
 }
 
 static void runtest_encdec(const char *base_fn)
@@ -103,17 +103,17 @@ static void runtest_encdec(const char *base_fn)
 }
 
 static void test_privkey_valid_enc(const char *base58_str,
-				GString *payload,
+				cstring *payload,
 				bool compress, bool is_testnet)
 {
 	assert(payload != NULL);
 
-	GString *pl = g_string_sized_new(payload->len + 1);
-	g_string_append_len(pl, payload->str, payload->len);
+	cstring *pl = cstr_new_sz(payload->len + 1);
+	cstr_append_buf(pl, payload->str, payload->len);
 	if (compress)
-		g_string_append_c(pl, 1);
+		cstr_append_c(pl, 1);
 
-	GString *b58 = base58_encode_check(
+	cstring *b58 = base58_encode_check(
 		is_testnet ? PRIVKEY_ADDRESS_TEST : PRIVKEY_ADDRESS, true,
 		pl->str, pl->len);
 	assert(b58 != NULL);
@@ -123,13 +123,13 @@ static void test_privkey_valid_enc(const char *base58_str,
 		assert(!strcmp(b58->str, base58_str));
 	}
 
-	g_string_free(b58, TRUE);
-	g_string_free(pl, TRUE);
-	g_string_free(payload, TRUE);
+	cstr_free(b58, true);
+	cstr_free(pl, true);
+	cstr_free(payload, true);
 }
 
 static void test_pubkey_valid_enc(const char *base58_str,
-				GString *payload,
+				cstring *payload,
 				const char *addrtype_str,
 				bool is_testnet)
 {
@@ -152,7 +152,7 @@ static void test_pubkey_valid_enc(const char *base58_str,
 			addrtype = SCRIPT_ADDRESS;
 	}
 
-	GString *b58 = base58_encode_check(
+	cstring *b58 = base58_encode_check(
 		addrtype, true,
 		payload->str, payload->len);
 	if (strcmp(b58->str, base58_str)) {
@@ -161,23 +161,23 @@ static void test_pubkey_valid_enc(const char *base58_str,
 		assert(!strcmp(b58->str, base58_str));
 	}
 
-	g_string_free(b58, TRUE);
-	g_string_free(payload, TRUE);
+	cstr_free(b58, true);
+	cstr_free(payload, true);
 }
 
 static void test_privkey_valid_dec(const char *base58_str,
-				GString *payload,
+				cstring *payload,
 				bool compress, bool is_testnet)
 {
 	assert(payload != NULL);
 
-	GString *pl = g_string_sized_new(payload->len + 1);
-	g_string_append_len(pl, payload->str, payload->len);
+	cstring *pl = cstr_new_sz(payload->len + 1);
+	cstr_append_buf(pl, payload->str, payload->len);
 	if (compress)
-		g_string_append_c(pl, 1);
+		cstr_append_c(pl, 1);
 
 	unsigned char addrtype;
-	GString *dec = base58_decode_check(&addrtype, base58_str);
+	cstring *dec = base58_decode_check(&addrtype, base58_str);
 	assert(dec != NULL);
 
 	if (is_testnet)
@@ -194,13 +194,13 @@ static void test_privkey_valid_dec(const char *base58_str,
 	assert(dec->len == pl->len);
 	assert(memcmp(dec->str, pl->str, pl->len) == 0);
 
-	g_string_free(dec, TRUE);
-	g_string_free(pl, TRUE);
-	g_string_free(payload, TRUE);
+	cstr_free(dec, true);
+	cstr_free(pl, true);
+	cstr_free(payload, true);
 }
 
 static void test_pubkey_valid_dec(const char *base58_str,
-				GString *payload,
+				cstring *payload,
 				const char *addrtype_str,
 				bool is_testnet)
 {
@@ -224,7 +224,7 @@ static void test_pubkey_valid_dec(const char *base58_str,
 	}
 
 	unsigned char addrtype_dec;
-	GString *dec = base58_decode_check(&addrtype_dec, base58_str);
+	cstring *dec = base58_decode_check(&addrtype_dec, base58_str);
 	assert(dec != NULL);
 
 	assert(addrtype == addrtype_dec);
@@ -232,8 +232,8 @@ static void test_pubkey_valid_dec(const char *base58_str,
 	assert(payload->len == dec->len);
 	assert(memcmp(payload->str, dec->str, dec->len) == 0);
 
-	g_string_free(dec, TRUE);
-	g_string_free(payload, TRUE);
+	cstr_free(dec, true);
+	cstr_free(payload, true);
 }
 
 static void runtest_keys_valid(const char *base_fn)

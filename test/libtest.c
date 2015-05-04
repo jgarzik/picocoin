@@ -57,12 +57,12 @@ static bool is_digitstr(const char *s)
 	return true;
 }
 
-GString *parse_script_str(const char *enc)
+cstring *parse_script_str(const char *enc)
 {
 	char **tokens = g_strsplit_set(enc, " \t\n", 0);
 	assert (tokens != NULL);
 
-	GString *script = g_string_sized_new(64);
+	cstring *script = cstr_new_sz(64);
 
 	unsigned int idx;
 	for (idx = 0; tokens[idx] != NULL; idx++) {
@@ -74,9 +74,9 @@ GString *parse_script_str(const char *enc)
 		}
 
 		else if (is_hexstr(token, true)) {
-			GString *raw = hex2str(token);
-			g_string_append_len(script, raw->str, raw->len);
-			g_string_free(raw, TRUE);
+			cstring *raw = hex2str(token);
+			cstr_append_buf(script, raw->str, raw->len);
+			cstr_free(raw, true);
 		}
 
 		else if ((strlen(token) >= 2) &&

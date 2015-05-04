@@ -68,7 +68,7 @@ bool bkeys_key_get(struct bp_keystore *ks, const bu160_t *key_id,
 }
 
 bool bkeys_pubkey_append(struct bp_keystore *ks, const bu160_t *key_id,
-			 GString *scriptSig)
+			 cstring *scriptSig)
 {
 	struct bp_key key;
 	bp_key_init(&key);

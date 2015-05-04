@@ -6,7 +6,6 @@
  */
 
 #include <stdbool.h>
-#include <glib.h>
 #include <ccoin/core.h>
 #include <ccoin/buint.h>
 #include <ccoin/hashtab.h>

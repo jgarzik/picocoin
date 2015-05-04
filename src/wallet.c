@@ -65,9 +65,9 @@ static bool deser_wallet_root(struct wallet *wlt, struct const_buffer *buf)
 	return true;
 }
 
-static GString *ser_wallet_root(const struct wallet *wlt)
+static cstring *ser_wallet_root(const struct wallet *wlt)
 {
-	GString *rs = g_string_sized_new(8);
+	cstring *rs = cstr_new_sz(8);
 
 	ser_u32(rs, wlt->version);
 	ser_bytes(rs, &wlt->netmagic[0], 4);
@@ -141,7 +141,7 @@ static struct wallet *load_wallet(void)
 		return NULL;
 	}
 
-	GString *data = read_aes_file(filename, passphrase, strlen(passphrase),
+	cstring *data = read_aes_file(filename, passphrase, strlen(passphrase),
 				      100 * 1024 * 1024);
 	if (!data) {
 		fprintf(stderr, "wallet: missing or invalid\n");
@@ -174,25 +174,25 @@ static struct wallet *load_wallet(void)
 err_out:
 	fprintf(stderr, "wallet: invalid data found\n");
 	wallet_free(wlt);
-	g_string_free(data, TRUE);
+	cstr_free(data, true);
 	return NULL;
 }
 
-static GString *ser_wallet(struct wallet *wlt)
+static cstring *ser_wallet(struct wallet *wlt)
 {
 	struct bp_key *key;
 
-	GString *rs = g_string_sized_new(20 * 1024);
+	cstring *rs = cstr_new_sz(20 * 1024);
 
 	/*
 	 * ser "root" record
 	 */
-	GString *s_root = ser_wallet_root(wlt);
-	GString *recdata = message_str(wlt->netmagic,
+	cstring *s_root = ser_wallet_root(wlt);
+	cstring *recdata = message_str(wlt->netmagic,
 				       "root", s_root->str, s_root->len);
-	g_string_append_len(rs, recdata->str, recdata->len);
-	g_string_free(recdata, TRUE);
-	g_string_free(s_root, TRUE);
+	cstr_append_buf(rs, recdata->str, recdata->len);
+	cstr_free(recdata, true);
+	cstr_free(s_root, true);
 
 	/* ser "privkey" records */
 	wallet_for_each_key(wlt, key) {
@@ -201,13 +201,13 @@ static GString *ser_wallet(struct wallet *wlt)
 
 		bp_privkey_get(key, &privkey, &pk_len);
 
-		GString *recdata = message_str(wlt->netmagic,
+		cstring *recdata = message_str(wlt->netmagic,
 					       "privkey",
 					       privkey, pk_len);
 		free(privkey);
 
-		g_string_append_len(rs, recdata->str, recdata->len);
-		g_string_free(recdata, TRUE);
+		cstr_append_buf(rs, recdata->str, recdata->len);
+		cstr_free(recdata, true);
 	}
 
 	return rs;
@@ -225,7 +225,7 @@ static bool store_wallet(struct wallet *wlt)
 	if (!filename)
 		return false;
 
-	GString *plaintext = ser_wallet(wlt);
+	cstring *plaintext = ser_wallet(wlt);
 	if (!plaintext)
 		return false;
 
@@ -233,7 +233,7 @@ static bool store_wallet(struct wallet *wlt)
 				 plaintext->str, plaintext->len);
 
 	memset(plaintext->str, 0, plaintext->len);
-	g_string_free(plaintext, TRUE);
+	cstr_free(plaintext, true);
 
 	return rc;
 }
@@ -274,11 +274,11 @@ void wallet_new_address(void)
 
 	store_wallet(wlt);
 
-	GString *btc_addr = bp_pubkey_get_address(key, chain->addr_pubkey);
+	cstring *btc_addr = bp_pubkey_get_address(key, chain->addr_pubkey);
 
 	printf("%s\n", btc_addr->str);
 
-	g_string_free(btc_addr, TRUE);
+	cstr_free(btc_addr, true);
 }
 
 void cur_wallet_free(void)
@@ -341,7 +341,7 @@ void wallet_addresses(void)
 	printf("[\n");
 
 	wallet_for_each_key_numbered(wlt, key, i) {
-		GString *btc_addr;
+		cstring *btc_addr;
 
 		btc_addr = bp_pubkey_get_address(key, chain->addr_pubkey);
 
@@ -349,7 +349,7 @@ void wallet_addresses(void)
 		       btc_addr->str,
 		       i == (wlt->keys->len - 1) ? "" : ",");
 
-		g_string_free(btc_addr, TRUE);
+		cstr_free(btc_addr, true);
 	}
 
 	printf("]\n");
@@ -409,10 +409,10 @@ static void wallet_dump_keys(json_t *keys_a, struct wallet *wlt)
 			json_object_set_new(o, "pubkey", json_string(pubkey_str));
 			free(pubkey_str);
 
-			GString *btc_addr = bp_pubkey_get_address(key, chain->addr_pubkey);
+			cstring *btc_addr = bp_pubkey_get_address(key, chain->addr_pubkey);
 			json_object_set_new(o, "address", json_string(btc_addr->str));
 
-			g_string_free(btc_addr, TRUE);
+			cstr_free(btc_addr, true);
 
 			free(pubkey);
 		}

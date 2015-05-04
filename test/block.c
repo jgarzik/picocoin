@@ -52,7 +52,7 @@ static void runtest(const char *json_fn_base, const char *ser_fn_base)
 	rc = deser_bp_block(&block, &buf);
 	assert(rc);
 
-	GString *gs = g_string_sized_new(100000);
+	cstring *gs = cstr_new_sz(100000);
 	ser_bp_block(gs, &block);
 
 	if (gs->len != msg.hdr.data_len) {
@@ -77,7 +77,7 @@ static void runtest(const char *json_fn_base, const char *ser_fn_base)
 	assert(rc);
 
 	bp_block_free(&block);
-	g_string_free(gs, TRUE);
+	cstr_free(gs, true);
 	free(msg.data);
 	free(fn);
 	free(ser_fn);

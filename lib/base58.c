@@ -7,13 +7,13 @@
 #include <ctype.h>
 #include <string.h>
 #include <openssl/bn.h>
-#include <glib.h>
 #include <ccoin/util.h>
+#include <ccoin/cstr.h>
 
 static const char base58_chars[] =
 	"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
-GString *base58_encode(const void *data_, size_t data_len)
+cstring *base58_encode(const void *data_, size_t data_len)
 {
 	const unsigned char *data = data_;
 	BIGNUM bn58, bn0, bn, dv, rem;
@@ -35,7 +35,7 @@ GString *base58_encode(const void *data_, size_t data_len)
 
 	bn_setvch(&bn, swapbuf, sizeof(swapbuf));
 
-	GString *rs = g_string_sized_new(data_len * 138 / 100 + 1);
+	cstring *rs = cstr_new_sz(data_len * 138 / 100 + 1);
 
 	while (BN_cmp(&bn, &bn0) > 0) {
 		if (!BN_div(&dv, &rem, &bn, &bn58, ctx))
@@ -43,23 +43,23 @@ GString *base58_encode(const void *data_, size_t data_len)
 		BN_copy(&bn, &dv);
 
 		unsigned int c = BN_get_word(&rem);
-		g_string_append_c(rs, base58_chars[c]);
+		cstr_append_c(rs, base58_chars[c]);
 	}
 
 	unsigned int i;
 	for (i = 0; i < data_len; i++) {
 		if (data[i] == 0)
-			g_string_append_c(rs, base58_chars[0]);
+			cstr_append_c(rs, base58_chars[0]);
 		else
 			break;
 	}
 
-	GString *rs_swap = g_string_sized_new(rs->len);
-	g_string_set_size(rs_swap, rs->len);
+	cstring *rs_swap = cstr_new_sz(rs->len);
+	cstr_resize(rs_swap, rs->len);
 	bu_reverse_copy((unsigned char *) rs_swap->str,
 		     (unsigned char *) rs->str, rs->len);
 
-	g_string_free(rs, TRUE);
+	cstr_free(rs, true);
 	rs = rs_swap;
 
 out:
@@ -73,37 +73,37 @@ out:
 	return rs;
 
 err_out:
-	g_string_free(rs, TRUE);
+	cstr_free(rs, true);
 	rs = NULL;
 	goto out;
 }
 
-GString *base58_encode_check(unsigned char addrtype, bool have_addrtype,
+cstring *base58_encode_check(unsigned char addrtype, bool have_addrtype,
 			     const void *data, size_t data_len)
 {
-	GString *s = g_string_sized_new(data_len + 1 + 4);
+	cstring *s = cstr_new_sz(data_len + 1 + 4);
 
 	if (have_addrtype)
-		g_string_append_c(s, addrtype);
-	g_string_append_len(s, data, data_len);
+		cstr_append_c(s, addrtype);
+	cstr_append_buf(s, data, data_len);
 
 	unsigned char md32[4];
 	bu_Hash4(md32, s->str, s->len);
 
-	g_string_append_len(s, (gchar *) md32, 4);
+	cstr_append_buf(s, (gchar *) md32, 4);
 
-	GString *s_enc = base58_encode(s->str, s->len);
+	cstring *s_enc = base58_encode(s->str, s->len);
 
-	g_string_free(s, TRUE);
+	cstr_free(s, true);
 
 	return s_enc;
 }
 
-GString *base58_decode(const char *s_in)
+cstring *base58_decode(const char *s_in)
 {
 	BIGNUM bn58, bn, bnChar;
 	BN_CTX *ctx;
-	GString *ret = NULL;
+	cstring *ret = NULL;
 
 	ctx = BN_CTX_new();
 	BN_init(&bn58);
@@ -136,26 +136,26 @@ GString *base58_decode(const char *s_in)
 			goto out;
 	}
 
-	GString *tmp = bn_getvch(&bn);
+	cstring *tmp = bn_getvch(&bn);
 
 	if ((tmp->len >= 2) &&
 	    (tmp->str[tmp->len - 1] == 0) &&
 	    ((unsigned char)tmp->str[tmp->len - 2] >= 0x80))
-		g_string_set_size(tmp, tmp->len - 1);
+		cstr_resize(tmp, tmp->len - 1);
 
 	unsigned int leading_zero = 0;
 	for (p = s_in; *p == base58_chars[0]; p++)
 		leading_zero++;
 
 	unsigned int be_sz = tmp->len + leading_zero;
-	GString *tmp_be = g_string_sized_new(be_sz);
-	g_string_set_size(tmp_be, be_sz);
+	cstring *tmp_be = cstr_new_sz(be_sz);
+	cstr_resize(tmp_be, be_sz);
 	memset(tmp_be->str, 0, be_sz);
 
 	bu_reverse_copy((unsigned char *)tmp_be->str + leading_zero,
 			(unsigned char *)tmp->str, tmp->len);
 
-	g_string_free(tmp, TRUE);
+	cstr_free(tmp, true);
 
 	ret = tmp_be;
 
@@ -167,10 +167,10 @@ out:
 	return ret;
 }
 
-GString *base58_decode_check(unsigned char *addrtype, const char *s_in)
+cstring *base58_decode_check(unsigned char *addrtype, const char *s_in)
 {
 	/* decode base58 string */
-	GString *s = base58_decode(s_in);
+	cstring *s = base58_decode(s_in);
 	if (!s)
 		return NULL;
 	if (s->len < 4)
@@ -183,18 +183,18 @@ GString *base58_decode_check(unsigned char *addrtype, const char *s_in)
 	if (memcmp(md32, &s->str[s->len - 4], 4))
 		goto err_out;
 
-	g_string_set_size(s, s->len - 4);
+	cstr_resize(s, s->len - 4);
 
 	/* if addrtype requested, remove from front of data string */
 	if (addrtype) {
 		*addrtype = (unsigned char) s->str[0];
-		g_string_erase(s, 0, 1);
+		cstr_erase(s, 0, 1);
 	}
 
 	return s;
 
 err_out:
-	g_string_free(s, TRUE);
+	cstr_free(s, true);
 	return NULL;
 }
 

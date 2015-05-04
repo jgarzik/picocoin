@@ -142,10 +142,10 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
 		memcpy(addrstr, arg, partlen);
 		addrstr[partlen] = 0;
 
-		GString *payload = base58_decode_check(NULL, addrstr);
+		cstring *payload = base58_decode_check(NULL, addrstr);
 		if (!payload || (payload->len != 21))
 			return ARGP_ERR_UNKNOWN;
-		g_string_free(payload, TRUE);
+		cstr_free(payload, true);
 
 		opt_txout = g_list_append(opt_txout, strdup(arg));
 		break;
@@ -214,7 +214,7 @@ static void append_input(char *txid_str, char *vout_str)
 
 	bu256_copy(&txin->prevout.hash, &txid);
 	txin->prevout.n = vout;
-	txin->scriptSig = g_string_new(NULL);
+	txin->scriptSig = cstr_new(NULL);
 	txin->nSequence = 0xffffffffU;
 
 	g_ptr_array_add(tx.vin, txin);
@@ -269,7 +269,7 @@ static bool is_script_addr(unsigned char addrtype)
 static void append_output(char *addr_str, char *amount_str)
 {
 	unsigned char addrtype = 0;
-	GString *payload = base58_decode_check(&addrtype, addr_str);
+	cstring *payload = base58_decode_check(&addrtype, addr_str);
 	bool is_script = is_script_addr(addrtype);
 
 	uint64_t amt = (uint64_t) strtoull(amount_str, NULL, 10);
@@ -344,7 +344,7 @@ static void read_data(void)
 		exit(1);
 	}
 	
-	GString *txbuf = hex2str(opt_hexdata);
+	cstring *txbuf = hex2str(opt_hexdata);
 	if (!txbuf) {
 		fprintf(stderr, "invalid input data\n");
 		exit(1);
@@ -356,7 +356,7 @@ static void read_data(void)
 		exit(1);
 	}
 
-	g_string_free(txbuf, TRUE);
+	cstr_free(txbuf, true);
 }
 
 static void bp_json_set_new_int(json_t *obj, const char *key, json_int_t i)
@@ -381,7 +381,7 @@ static void bp_json_set_new_int256(json_t *obj, const char *key, const bu256_t *
 }
 
 static void bp_json_set_new_script(json_t *obj_parent, const char *key,
-				   GString *s)
+				   cstring *s)
 {
 	json_t *obj = json_object();
 	assert(obj != NULL);
@@ -500,14 +500,14 @@ static void output_data_json(void)
 static void output_data_hex(void)
 {
 	size_t alloc_len = opt_hexdata ? strlen(opt_hexdata) : 512;
-	GString *s = g_string_sized_new(alloc_len);
+	cstring *s = cstr_new_sz(alloc_len);
 	ser_bp_tx(s, &tx);
 
 	char hexstr[(s->len * 2) + 1];
 	encode_hex(hexstr, s->str, s->len);
 	printf("%s\n", hexstr);
 
-	g_string_free(s, TRUE);
+	cstr_free(s, true);
 }
 
 static void output_data(void)

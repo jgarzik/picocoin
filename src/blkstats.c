@@ -10,7 +10,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <argp.h>
-#include <glib.h>
 #include <ccoin/coredefs.h>
 #include <ccoin/buffer.h>
 #include <ccoin/core.h>

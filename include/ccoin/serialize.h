@@ -8,35 +8,35 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <openssl/bn.h>
-#include <glib.h>
 #include <ccoin/buffer.h>
 #include <ccoin/buint.h>
+#include <ccoin/cstr.h>
 
-extern void ser_bytes(GString *s, const void *p, size_t len);
-extern void ser_u16(GString *s, uint16_t v_);
-extern void ser_u32(GString *s, uint32_t v_);
-extern void ser_u64(GString *s, uint64_t v_);
+extern void ser_bytes(cstring *s, const void *p, size_t len);
+extern void ser_u16(cstring *s, uint16_t v_);
+extern void ser_u32(cstring *s, uint32_t v_);
+extern void ser_u64(cstring *s, uint64_t v_);
 
-static inline void ser_u256(GString *s, const bu256_t *v_)
+static inline void ser_u256(cstring *s, const bu256_t *v_)
 {
 	ser_bytes(s, v_, sizeof(bu256_t));
 }
 
-extern void ser_varlen(GString *s, uint32_t vlen);
-extern void ser_str(GString *s, const char *s_in, size_t maxlen);
-extern void ser_varstr(GString *s, GString *s_in);
+extern void ser_varlen(cstring *s, uint32_t vlen);
+extern void ser_str(cstring *s, const char *s_in, size_t maxlen);
+extern void ser_varstr(cstring *s, cstring *s_in);
 
-static inline void ser_s32(GString *s, int32_t v_)
+static inline void ser_s32(cstring *s, int32_t v_)
 {
 	ser_u32(s, (uint32_t) v_);
 }
 
-static inline void ser_s64(GString *s, int64_t v_)
+static inline void ser_s64(cstring *s, int64_t v_)
 {
 	ser_u64(s, (uint64_t) v_);
 }
 
-extern void ser_u256_array(GString *s, GPtrArray *arr);
+extern void ser_u256_array(cstring *s, GPtrArray *arr);
 
 extern bool deser_skip(struct const_buffer *buf, size_t len);
 extern bool deser_bytes(void *po, struct const_buffer *buf, size_t len);
@@ -51,7 +51,7 @@ static inline bool deser_u256(bu256_t *vo, struct const_buffer *buf)
 
 extern bool deser_varlen(uint32_t *lo, struct const_buffer *buf);
 extern bool deser_str(char *so, struct const_buffer *buf, size_t maxlen);
-extern bool deser_varstr(GString **so, struct const_buffer *buf);
+extern bool deser_varstr(cstring **so, struct const_buffer *buf);
 
 static inline bool deser_s64(int64_t *vo, struct const_buffer *buf)
 {

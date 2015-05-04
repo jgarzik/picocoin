@@ -13,8 +13,8 @@
 #include <unistd.h>
 #include <openssl/evp.h>
 #include <openssl/aes.h>
-#include <glib.h>
 #include <ccoin/util.h>
+#include <ccoin/cstr.h>
 
 /**
  * Create an 256 bit key and IV using the supplied key_data. salt can be added for taste.
@@ -90,14 +90,14 @@ static unsigned char *aes_decrypt(EVP_CIPHER_CTX * e, const unsigned char *ciphe
 	return plaintext;
 }
 
-GString *read_aes_file(const char *filename, void *key, size_t key_len,
+cstring *read_aes_file(const char *filename, void *key, size_t key_len,
 		       size_t max_file_len)
 {
 	EVP_CIPHER_CTX en, de;
 	unsigned int salt[] = { 4185398345U, 2729682459U };
 	void *ciphertext = NULL;
 	size_t ct_len = 0;
-	GString *rs = NULL;
+	cstring *rs = NULL;
 
 	if (!bu_read_file(filename, &ciphertext, &ct_len, max_file_len))
 		goto out;
@@ -108,7 +108,7 @@ GString *read_aes_file(const char *filename, void *key, size_t key_len,
 	size_t pt_len = ct_len;
 	void *plaintext = aes_decrypt(&de, ciphertext, &pt_len);
 
-	rs = g_string_new_len(plaintext, pt_len);
+	rs = cstr_new_buf(plaintext, pt_len);
 
 	EVP_CIPHER_CTX_cleanup(&en);
 	EVP_CIPHER_CTX_cleanup(&de);

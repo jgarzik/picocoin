@@ -10,6 +10,7 @@
 #include <string.h>
 #include <glib.h>
 #include <openssl/bn.h>
+#include <ccoin/cstr.h>
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
@@ -21,7 +22,7 @@ enum {
 };
 
 extern void btc_decimal(char *valstr, size_t valstr_sz, int64_t val);
-extern GString *bn_getvch(const BIGNUM *v);
+extern cstring *bn_getvch(const BIGNUM *v);
 extern void bn_setvch(BIGNUM *vo, const void *data_, size_t data_len);
 
 extern void bu_reverse_copy(unsigned char *dst, const unsigned char *src, size_t len);

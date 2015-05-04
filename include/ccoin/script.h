@@ -237,7 +237,7 @@ static inline bool is_bsp_p2sh(struct const_buffer *buf)
 		 vch[22] == OP_EQUAL);
 }
 
-static inline bool is_bsp_p2sh_str(const GString *s)
+static inline bool is_bsp_p2sh_str(const cstring *s)
 {
 	struct const_buffer buf = { s->str, s->len };
 	return is_bsp_p2sh(&buf);
@@ -254,16 +254,16 @@ static inline void bsp_start(struct bscript_parser *bp,
  * script validation and signing
  */
 
-extern void bp_tx_sighash(bu256_t *hash, const GString *scriptCode,
+extern void bp_tx_sighash(bu256_t *hash, const cstring *scriptCode,
 		   const struct bp_tx *txTo, unsigned int nIn,
 		   int nHashType);
-extern bool bp_script_verify(const GString *scriptSig, const GString *scriptPubKey,
+extern bool bp_script_verify(const cstring *scriptSig, const cstring *scriptPubKey,
 		      const struct bp_tx *txTo, unsigned int nIn,
 		      unsigned int flags, int nHashType);
 extern bool bp_verify_sig(const struct bp_utxo *txFrom, const struct bp_tx *txTo,
 		   unsigned int nIn, unsigned int flags, int nHashType);
 
-extern bool bp_script_sign(struct bp_keystore *ks, const GString *fromPubKey,
+extern bool bp_script_sign(struct bp_keystore *ks, const cstring *fromPubKey,
 		    const struct bp_tx *txTo, unsigned int nIn,
 		    int nHashType);
 extern bool bp_sign_sig(struct bp_keystore *ks, const struct bp_utxo *txFrom,
@@ -274,17 +274,17 @@ extern bool bp_sign_sig(struct bp_keystore *ks, const struct bp_utxo *txFrom,
  * script building
  */
 
-extern GString *bsp_make_pubkeyhash(GString *hash);
-extern GString *bsp_make_scripthash(GString *hash);
-extern void bsp_push_data(GString *s, const void *data, size_t data_len);
-extern void bsp_push_int64(GString *s, int64_t v);
-extern void bsp_push_uint64(GString *s, uint64_t v);
+extern cstring *bsp_make_pubkeyhash(cstring *hash);
+extern cstring *bsp_make_scripthash(cstring *hash);
+extern void bsp_push_data(cstring *s, const void *data, size_t data_len);
+extern void bsp_push_int64(cstring *s, int64_t v);
+extern void bsp_push_uint64(cstring *s, uint64_t v);
 
-static inline void bsp_push_op(GString *s, enum opcodetype op)
+static inline void bsp_push_op(cstring *s, enum opcodetype op)
 {
 	uint8_t c = (uint8_t) op;
 
-	g_string_append_len(s, (gchar *) &c, sizeof(c));
+	cstr_append_buf(s, (gchar *) &c, sizeof(c));
 }
 
 #endif /* __LIBCCOIN_SCRIPT_H__ */

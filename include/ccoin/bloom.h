@@ -5,8 +5,8 @@
 #define LIBCCOIN_BLOOM_H
 
 #include <stdbool.h>
-#include <glib.h>
 #include <ccoin/buffer.h>
+#include <ccoin/cstr.h>
 
 // 20,000 items with fp rate < 0.1% or 10,000 items and <0.0001%
 enum {
@@ -15,7 +15,7 @@ enum {
 };
 
 struct bloom {
-	GString		*vData;
+	cstring		*vData;
 	unsigned int	nHashFuncs;
 };
 
@@ -24,7 +24,7 @@ extern void __bloom_init(struct bloom *bf);
 extern void bloom_free(struct bloom *bf);
 
 extern bool deser_bloom(struct bloom *bf, struct const_buffer *buf);
-extern void ser_bloom(GString *s, const struct bloom *bf);
+extern void ser_bloom(cstring *s, const struct bloom *bf);
 
 extern void bloom_insert(struct bloom *bf, const void *data, size_t data_len);
 extern bool bloom_contains(struct bloom *bf, const void *data, size_t data_len);

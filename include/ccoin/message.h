@@ -38,7 +38,7 @@ enum {
 
 extern void parse_message_hdr(struct p2p_message_hdr *hdr, const unsigned char *data);
 extern bool message_valid(const struct p2p_message *msg);
-extern GString *message_str(const unsigned char netmagic[4],
+extern cstring *message_str(const unsigned char netmagic[4],
 		     const char *command_,
 		     const void *data, uint32_t data_len);
 
@@ -53,7 +53,7 @@ static inline void msg_addr_init(struct msg_addr *ma)
 
 extern bool deser_msg_addr(unsigned int protover, struct msg_addr *ma,
 			   struct const_buffer *buf);
-extern GString *ser_msg_addr(unsigned int protover, const struct msg_addr *ma);
+extern cstring *ser_msg_addr(unsigned int protover, const struct msg_addr *ma);
 extern void msg_addr_free(struct msg_addr *ma);
 
 /*
@@ -72,7 +72,7 @@ static inline void msg_getblocks_init(struct msg_getblocks *gb)
 }
 
 extern bool deser_msg_getblocks(struct msg_getblocks *gb, struct const_buffer *buf);
-extern GString *ser_msg_getblocks(const struct msg_getblocks *gb);
+extern cstring *ser_msg_getblocks(const struct msg_getblocks *gb);
 
 static inline void msg_getblocks_free(struct msg_getblocks *gb)
 {
@@ -89,7 +89,7 @@ static inline void msg_headers_init(struct msg_headers *mh)
 }
 
 extern bool deser_msg_headers(struct msg_headers *mh, struct const_buffer *buf);
-extern GString *ser_msg_headers(const struct msg_headers *mh);
+extern cstring *ser_msg_headers(const struct msg_headers *mh);
 extern void msg_headers_free(struct msg_headers *mh);
 
 /*
@@ -108,7 +108,7 @@ static inline void msg_ping_init(struct msg_ping *mp)
 static inline void msg_ping_free(struct msg_ping *mp) {}
 extern bool deser_msg_ping(unsigned int protover, struct msg_ping *ma,
 			   struct const_buffer *buf);
-extern GString *ser_msg_ping(unsigned int protover, const struct msg_ping *ma);
+extern cstring *ser_msg_ping(unsigned int protover, const struct msg_ping *ma);
 
 struct msg_version {
 	uint32_t	nVersion;
@@ -127,7 +127,7 @@ static inline void msg_version_init(struct msg_version *mv)
 }
 
 extern bool deser_msg_version(struct msg_version *mv, struct const_buffer *buf);
-extern GString *ser_msg_version(const struct msg_version *mv);
+extern cstring *ser_msg_version(const struct msg_version *mv);
 static inline void msg_version_free(struct msg_version *mv) {}
 
 /*
@@ -144,7 +144,7 @@ static inline void msg_vinv_init(struct msg_vinv *mv)
 }
 
 extern bool deser_msg_vinv(struct msg_vinv *mv, struct const_buffer *buf);
-extern GString *ser_msg_vinv(const struct msg_vinv *mv);
+extern cstring *ser_msg_vinv(const struct msg_vinv *mv);
 extern void msg_vinv_free(struct msg_vinv *mv);
 extern void msg_vinv_push(struct msg_vinv *mv, uint32_t msg_type,
 		   const bu256_t *hash_in);

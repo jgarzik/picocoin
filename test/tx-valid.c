@@ -27,7 +27,7 @@ static bool input_equal(const void *a, const void *b)
 
 static void input_value_free(void *v)
 {
-	g_string_free(v, TRUE);
+	cstr_free(v, true);
 }
 
 static void dump_comments(void)
@@ -40,7 +40,7 @@ static void dump_comments(void)
 }
 
 static void test_tx_valid(bool is_valid, struct bp_hashtab *input_map,
-			  GString *tx_ser, bool enforce_p2sh)
+			  cstring *tx_ser, bool enforce_p2sh)
 {
 	struct bp_tx tx;
 
@@ -71,7 +71,7 @@ static void test_tx_valid(bool is_valid, struct bp_hashtab *input_map,
 		txin = g_ptr_array_index(tx.vin, i);
 		assert(txin != NULL);
 
-		GString *scriptPubKey = bp_hashtab_get(input_map,
+		cstring *scriptPubKey = bp_hashtab_get(input_map,
 						       &txin->prevout);
 		if (scriptPubKey == NULL) {
 			if (!is_valid) {
@@ -169,7 +169,7 @@ static void runtest(bool is_valid, const char *basefn)
 			hex_bu256(&outpt->hash, prev_hashstr);
 			outpt->n = prev_n;
 
-			GString *script = parse_script_str(prev_pubkey_enc);
+			cstring *script = parse_script_str(prev_pubkey_enc);
 			assert(script != NULL);
 
 			bp_hashtab_put(input_map, outpt, script);
@@ -181,12 +181,12 @@ static void runtest(bool is_valid, const char *basefn)
 
 		bool enforce_p2sh = json_is_true(json_array_get(test, 2));
 
-		GString *tx_ser = hex2str(tx_hexser);
+		cstring *tx_ser = hex2str(tx_hexser);
 		assert(tx_ser != NULL);
 
 		test_tx_valid(is_valid, input_map, tx_ser, enforce_p2sh);
 
-		g_string_free(tx_ser, TRUE);
+		cstr_free(tx_ser, true);
 
 		if (comments->len > 0) {
 			g_ptr_array_free(comments, TRUE);

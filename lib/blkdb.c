@@ -11,13 +11,13 @@
 #include <unistd.h>
 #include <string.h>
 #include <openssl/bn.h>
-#include <glib.h>
 #include <ccoin/blkdb.h>
 #include <ccoin/message.h>
 #include <ccoin/serialize.h>
 #include <ccoin/buint.h>
 #include <ccoin/mbr.h>
 #include <ccoin/util.h>
+#include <ccoin/cstr.h>
 #include <ccoin/compat.h>		/* for fdatasync */
 
 struct blkinfo *bi_new(void)
@@ -197,9 +197,9 @@ err_out:
 	return false;
 }
 
-static GString *ser_blkinfo(const struct blkinfo *bi)
+static cstring *ser_blkinfo(const struct blkinfo *bi)
 {
-	GString *rs = g_string_sized_new(sizeof(*bi));
+	cstring *rs = cstr_new_sz(sizeof(*bi));
 
 	ser_u256(rs, &bi->hash);
 	ser_bp_block(rs, &bi->hdr);
@@ -207,13 +207,13 @@ static GString *ser_blkinfo(const struct blkinfo *bi)
 	return rs;
 }
 
-static GString *blkdb_ser_rec(struct blkdb *db, const struct blkinfo *bi)
+static cstring *blkdb_ser_rec(struct blkdb *db, const struct blkinfo *bi)
 {
-	GString *data = ser_blkinfo(bi);
+	cstring *data = ser_blkinfo(bi);
 
-	GString *rs = message_str(db->netmagic, "rec", data->str, data->len);
+	cstring *rs = message_str(db->netmagic, "rec", data->str, data->len);
 
-	g_string_free(data, TRUE);
+	cstr_free(data, true);
 
 	return rs;
 }
@@ -246,7 +246,7 @@ bool blkdb_add(struct blkdb *db, struct blkinfo *bi,
 	       struct blkdb_reorg *reorg_info)
 {
 	if (db->fd >= 0) {
-		GString *data = blkdb_ser_rec(db, bi);
+		cstring *data = blkdb_ser_rec(db, bi);
 		if (!data)
 			return false;
 
@@ -254,7 +254,7 @@ bool blkdb_add(struct blkdb *db, struct blkinfo *bi,
 		size_t data_len = data->len;
 		ssize_t wrc = write(db->fd, data->str, data_len);
 
-		g_string_free(data, TRUE);
+		cstr_free(data, true);
 
 		if (wrc != data_len)
 			return false;

@@ -44,7 +44,7 @@ static inline void peer_copy(struct peer *dest, const struct peer *src)
 
 extern bool deser_peer(unsigned int protover,
 		       struct peer *peer, struct const_buffer *buf);
-extern void ser_peer(GString *s, unsigned int protover, const struct peer *peer);
+extern void ser_peer(cstring *s, unsigned int protover, const struct peer *peer);
 
 struct peer_manager {
 	struct bp_hashtab *map_addr;	/* binary IP addr -> struct peer */

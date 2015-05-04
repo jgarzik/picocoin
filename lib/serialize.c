@@ -13,30 +13,30 @@
 #include <ccoin/util.h>
 #include <ccoin/compat.h>
 
-void ser_bytes(GString *s, const void *p, size_t len)
+void ser_bytes(cstring *s, const void *p, size_t len)
 {
-	g_string_append_len(s, p, len);
+	cstr_append_buf(s, p, len);
 }
 
-void ser_u16(GString *s, uint16_t v_)
+void ser_u16(cstring *s, uint16_t v_)
 {
 	uint16_t v = GUINT16_TO_LE(v_);
-	g_string_append_len(s, (gchar *) &v, sizeof(v));
+	cstr_append_buf(s, (gchar *) &v, sizeof(v));
 }
 
-void ser_u32(GString *s, uint32_t v_)
+void ser_u32(cstring *s, uint32_t v_)
 {
 	uint32_t v = GUINT32_TO_LE(v_);
-	g_string_append_len(s, (gchar *) &v, sizeof(v));
+	cstr_append_buf(s, (gchar *) &v, sizeof(v));
 }
 
-void ser_u64(GString *s, uint64_t v_)
+void ser_u64(cstring *s, uint64_t v_)
 {
 	uint64_t v = GUINT64_TO_LE(v_);
-	g_string_append_len(s, (gchar *) &v, sizeof(v));
+	cstr_append_buf(s, (gchar *) &v, sizeof(v));
 }
 
-void ser_varlen(GString *s, uint32_t vlen)
+void ser_varlen(cstring *s, uint32_t vlen)
 {
 	unsigned char c;
 
@@ -60,7 +60,7 @@ void ser_varlen(GString *s, uint32_t vlen)
 	/* u64 case intentionally not implemented */
 }
 
-void ser_str(GString *s, const char *s_in, size_t maxlen)
+void ser_str(cstring *s, const char *s_in, size_t maxlen)
 {
 	size_t slen = strnlen(s_in, maxlen);
 
@@ -68,7 +68,7 @@ void ser_str(GString *s, const char *s_in, size_t maxlen)
 	ser_bytes(s, s_in, slen);
 }
 
-void ser_varstr(GString *s, GString *s_in)
+void ser_varstr(cstring *s, cstring *s_in)
 {
 	if (!s_in || !s_in->len) {
 		ser_varlen(s, 0);
@@ -79,7 +79,7 @@ void ser_varstr(GString *s, GString *s_in)
 	ser_bytes(s, s_in->str, s_in->len);
 }
 
-void ser_u256_array(GString *s, GPtrArray *arr)
+void ser_u256_array(cstring *s, GPtrArray *arr)
 {
 	unsigned int arr_len = arr ? arr->len : 0;
 
@@ -203,10 +203,10 @@ bool deser_str(char *so, struct const_buffer *buf, size_t maxlen)
 	return true;
 }
 
-bool deser_varstr(GString **so, struct const_buffer *buf)
+bool deser_varstr(cstring **so, struct const_buffer *buf)
 {
 	if (*so) {
-		g_string_free(*so, TRUE);
+		cstr_free(*so, true);
 		*so = NULL;
 	}
 
@@ -216,8 +216,8 @@ bool deser_varstr(GString **so, struct const_buffer *buf)
 	if (buf->len < len)
 		return false;
 
-	GString *s = g_string_sized_new(len);
-	g_string_append_len(s, buf->p, len);
+	cstring *s = cstr_new_sz(len);
+	cstr_append_buf(s, buf->p, len);
 
 	buf->p += len;
 	buf->len -= len;

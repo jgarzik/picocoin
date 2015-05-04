@@ -6,11 +6,11 @@
  */
 
 #include <jansson.h>
-#include <glib.h>
+#include <ccoin/cstr.h>
 
 extern json_t *read_json(const char *filename);
 extern char *test_filename(const char *basename);
 extern void dumphex(const char *prefix, const void *p_, size_t len);
-extern GString *parse_script_str(const char *enc);
+extern cstring *parse_script_str(const char *enc);
 
 #endif /* __LIBTEST_H__ */

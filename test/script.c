@@ -11,7 +11,7 @@
 #include <ccoin/core.h>
 #include "libtest.h"
 
-static void test_script(bool is_valid,GString *scriptSig, GString *scriptPubKey,
+static void test_script(bool is_valid,cstring *scriptSig, cstring *scriptPubKey,
 			unsigned int idx, const char *scriptSigEnc,
 			const char *scriptPubKeyEnc)
 {
@@ -54,16 +54,16 @@ static void runtest(bool is_valid, const char *basefn)
 		assert(scriptSigEnc != NULL);
 		assert(scriptPubKeyEnc != NULL);
 
-		GString *scriptSig = parse_script_str(scriptSigEnc);
-		GString *scriptPubKey = parse_script_str(scriptPubKeyEnc);
+		cstring *scriptSig = parse_script_str(scriptSigEnc);
+		cstring *scriptPubKey = parse_script_str(scriptPubKeyEnc);
 		assert(scriptSig != NULL);
 		assert(scriptPubKey != NULL);
 
 		test_script(is_valid, scriptSig, scriptPubKey,
 			    idx, scriptSigEnc, scriptPubKeyEnc);
 
-		g_string_free(scriptSig, TRUE);
-		g_string_free(scriptPubKey, TRUE);
+		cstr_free(scriptSig, true);
+		cstr_free(scriptPubKey, true);
 	}
 
 	json_decref(tests);

@@ -13,6 +13,7 @@
 #include <ccoin/buint.h>
 #include <ccoin/coredefs.h>
 #include <ccoin/hashtab.h>
+#include <ccoin/cstr.h>
 
 enum service_bits {
 	NODE_NETWORK	= (1 << 0),
@@ -39,7 +40,7 @@ static inline void bp_addr_init(struct bp_address *addr)
 
 extern bool deser_bp_addr(unsigned int protover,
 		struct bp_address *addr, struct const_buffer *buf);
-extern void ser_bp_addr(GString *s, unsigned int protover, const struct bp_address *addr);
+extern void ser_bp_addr(cstring *s, unsigned int protover, const struct bp_address *addr);
 static inline void bp_addr_free(struct bp_address *addr) {}
 
 static inline void bp_addr_copy(struct bp_address *dest,
@@ -55,7 +56,7 @@ struct bp_inv {
 
 extern void bp_inv_init(struct bp_inv *inv);
 extern bool deser_bp_inv(struct bp_inv *inv, struct const_buffer *buf);
-extern void ser_bp_inv(GString *s, const struct bp_inv *inv);
+extern void ser_bp_inv(cstring *s, const struct bp_inv *inv);
 static inline void bp_inv_free(struct bp_inv *inv) {}
 
 struct bp_locator {
@@ -69,7 +70,7 @@ static inline void bp_locator_init(struct bp_locator *locator)
 }
 
 extern bool deser_bp_locator(struct bp_locator *locator, struct const_buffer *buf);
-extern void ser_bp_locator(GString *s, const struct bp_locator *locator);
+extern void ser_bp_locator(cstring *s, const struct bp_locator *locator);
 extern void bp_locator_free(struct bp_locator *locator);
 extern void bp_locator_push(struct bp_locator *locator, const bu256_t *hash_in);
 
@@ -80,7 +81,7 @@ struct bp_outpt {
 
 extern void bp_outpt_init(struct bp_outpt *outpt);
 extern bool deser_bp_outpt(struct bp_outpt *outpt, struct const_buffer *buf);
-extern void ser_bp_outpt(GString *s, const struct bp_outpt *outpt);
+extern void ser_bp_outpt(cstring *s, const struct bp_outpt *outpt);
 static inline void bp_outpt_free(struct bp_outpt *outpt) {}
 
 static inline bool bp_outpt_null(const struct bp_outpt *outpt)
@@ -102,13 +103,13 @@ static inline void bp_outpt_copy(struct bp_outpt *dest,
 
 struct bp_txin {
 	struct bp_outpt	prevout;
-	GString		*scriptSig;
+	cstring		*scriptSig;
 	uint32_t	nSequence;
 };
 
 extern void bp_txin_init(struct bp_txin *txin);
 extern bool deser_bp_txin(struct bp_txin *txin, struct const_buffer *buf);
-extern void ser_bp_txin(GString *s, const struct bp_txin *txin);
+extern void ser_bp_txin(cstring *s, const struct bp_txin *txin);
 extern void bp_txin_free(struct bp_txin *txin);
 extern void g_bp_txin_free(gpointer data);
 static inline bool bp_txin_valid(const struct bp_txin *txin) { return true; }
@@ -116,12 +117,12 @@ extern void bp_txin_copy(struct bp_txin *dest, const struct bp_txin *src);
 
 struct bp_txout {
 	int64_t		nValue;
-	GString		*scriptPubKey;
+	cstring		*scriptPubKey;
 };
 
 extern void bp_txout_init(struct bp_txout *txout);
 extern bool deser_bp_txout(struct bp_txout *txout, struct const_buffer *buf);
-extern void ser_bp_txout(GString *s, const struct bp_txout *txout);
+extern void ser_bp_txout(cstring *s, const struct bp_txout *txout);
 extern void bp_txout_free(struct bp_txout *txout);
 extern void g_bp_txout_free(gpointer data);
 extern void bp_txout_set_null(struct bp_txout *txout);
@@ -150,7 +151,7 @@ struct bp_tx {
 
 extern void bp_tx_init(struct bp_tx *tx);
 extern bool deser_bp_tx(struct bp_tx *tx, struct const_buffer *buf);
-extern void ser_bp_tx(GString *s, const struct bp_tx *tx);
+extern void ser_bp_tx(cstring *s, const struct bp_tx *tx);
 extern void bp_tx_free_vout(struct bp_tx *tx);
 extern void bp_tx_free(struct bp_tx *tx);
 extern bool bp_tx_valid(const struct bp_tx *tx);
@@ -224,7 +225,7 @@ struct bp_block {
 
 extern void bp_block_init(struct bp_block *block);
 extern bool deser_bp_block(struct bp_block *block, struct const_buffer *buf);
-extern void ser_bp_block(GString *s, const struct bp_block *block);
+extern void ser_bp_block(cstring *s, const struct bp_block *block);
 extern void bp_block_free(struct bp_block *block);
 extern void bp_block_vtx_free(struct bp_block *block);
 extern void bp_block_calc_sha256(struct bp_block *block);

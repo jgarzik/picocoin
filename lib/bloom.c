@@ -5,10 +5,10 @@
 #include <stdlib.h>
 
 #include <string.h>
-#include <glib.h>
 #include <ccoin/buffer.h>
 #include <ccoin/bloom.h>
 #include <ccoin/serialize.h>
+#include <ccoin/cstr.h>
 
 #define LN2SQUARED 0.4804530139182014246671025263266649717305529515945455L
 #define LN2 0.6931471805599453094172321214581765680755001343602552L
@@ -75,14 +75,14 @@ static unsigned int bloom_hash(struct bloom *bf, unsigned int nHashNum,
 	return h1 % (bf->vData->len * 8);
 }
 
-static void string_resize(GString *s, unsigned int new_index)
+static void string_resize(cstring *s, unsigned int new_index)
 {
 	unsigned int new_size = new_index + 1;
 	unsigned int cur_size = s->len;
 	if (cur_size >= new_size)
 		return;
 
-	g_string_set_size(s, new_size);
+	cstr_resize(s, new_size);
 
 	unsigned int pad = new_size - cur_size;
 	memset(s->str + cur_size, 0, pad);
@@ -127,7 +127,7 @@ bool deser_bloom(struct bloom *bf, struct const_buffer *buf)
 	return true;
 }
 
-void ser_bloom(GString *s, const struct bloom *bf)
+void ser_bloom(cstring *s, const struct bloom *bf)
 {
 	ser_varstr(s, bf->vData);
 	ser_u32(s, bf->nHashFuncs);
@@ -140,7 +140,7 @@ bool bloom_init(struct bloom *bf, unsigned int nElements, double nFPRate)
 	unsigned int filter_size =
 	MIN((unsigned int)(-1 / LN2SQUARED * nElements * log(nFPRate)), MAX_BLOOM_FILTER_SIZE * 8) / 8;
 
-	bf->vData = g_string_sized_new(filter_size);
+	bf->vData = cstr_new_sz(filter_size);
 	string_resize(bf->vData, filter_size - 1);
 
 	bf->nHashFuncs =
@@ -157,7 +157,7 @@ void __bloom_init(struct bloom *bf)
 void bloom_free(struct bloom *bf)
 {
 	if (bf->vData) {
-		g_string_free(bf->vData, TRUE);
+		cstr_free(bf->vData, true);
 		bf->vData = NULL;
 	}
 }

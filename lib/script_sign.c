@@ -10,7 +10,7 @@
 
 static bool sign1(const bu160_t *key_id, struct bp_keystore *ks,
 		  const bu256_t *hash, int nHashType,
-		  GString *scriptSig)
+		  cstring *scriptSig)
 {
 	struct bp_key key;
 	bool rc = false;
@@ -45,7 +45,7 @@ out:
 	return rc;
 }
 
-bool bp_script_sign(struct bp_keystore *ks, const GString *fromPubKey,
+bool bp_script_sign(struct bp_keystore *ks, const cstring *fromPubKey,
 		    const struct bp_tx *txTo, unsigned int nIn,
 		    int nHashType)
 {
@@ -65,7 +65,7 @@ bool bp_script_sign(struct bp_keystore *ks, const GString *fromPubKey,
 	if (!bsp_addr_parse(&addrs, fromPubKey->str, fromPubKey->len))
 		return false;
 
-	GString *scriptSig = g_string_sized_new(64);
+	cstring *scriptSig = cstr_new_sz(64);
 	bool rc = false;
 	bu160_t key_id;
 	struct buffer *kbuf;
@@ -99,14 +99,14 @@ bool bp_script_sign(struct bp_keystore *ks, const GString *fromPubKey,
 	}
 
 	if (txin->scriptSig)
-		g_string_free(txin->scriptSig, TRUE);
+		cstr_free(txin->scriptSig, true);
 	txin->scriptSig = scriptSig;
 	scriptSig = NULL;
 	rc = true;
 
 out:
 	if (scriptSig)
-		g_string_free(scriptSig, TRUE);
+		cstr_free(scriptSig, true);
 	bsp_addr_free(&addrs);
 	return rc;
 }

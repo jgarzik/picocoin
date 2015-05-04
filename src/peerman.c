@@ -40,7 +40,7 @@ bool deser_peer(unsigned int protover,
 	return true;
 }
 
-void ser_peer(GString *s, unsigned int protover, const struct peer *peer)
+void ser_peer(cstring *s, unsigned int protover, const struct peer *peer)
 {
 	ser_bp_addr(s, protover, &peer->addr);
 
@@ -226,11 +226,11 @@ struct peer_manager *peerman_seed(bool use_dns)
 static bool ser_peerman(struct peer_manager *peers, int fd)
 {
 	/* write "magic number" (constant first file record) */
-	GString *rec = message_str(chain->netmagic, "magic.peers", NULL, 0);
+	cstring *rec = message_str(chain->netmagic, "magic.peers", NULL, 0);
 	unsigned int rec_len = rec->len;
 	ssize_t wrc = write(fd, rec->str, rec_len);
 
-	g_string_free(rec, TRUE);
+	cstr_free(rec, true);
 
 	if (wrc != rec_len)
 		return false;
@@ -247,7 +247,7 @@ static bool ser_peerman(struct peer_manager *peers, int fd)
 		peer = tmp->data;
 		tmp = tmp->next;
 
-		GString *msg_data = g_string_sized_new(sizeof(struct peer));
+		cstring *msg_data = cstr_new_sz(sizeof(struct peer));
 		ser_peer(msg_data, CADDR_TIME_VERSION, peer);
 
 		rec = message_str(chain->netmagic, "peer",
@@ -256,8 +256,8 @@ static bool ser_peerman(struct peer_manager *peers, int fd)
 		rec_len = rec->len;
 		wrc = write(fd, rec->str, rec_len);
 
-		g_string_free(rec, TRUE);
-		g_string_free(msg_data, TRUE);
+		cstr_free(rec, true);
+		cstr_free(msg_data, true);
 
 		if (wrc != rec_len)
 			return false;
