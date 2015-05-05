@@ -41,3 +41,21 @@ const struct chain_info *chain_find(const char *name)
 
 	return NULL;
 }
+
+const struct chain_info *chain_find_by_netmagic(unsigned char netmagic[4])
+{
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(chain_metadata); i++) {
+		const struct chain_info *chain;
+
+		chain = &chain_metadata[i];
+		if (!chain->name || !chain->genesis_hash)
+			continue;
+
+		if (!memcmp(netmagic, chain->netmagic, 4))
+			return chain;
+	}
+
+	return NULL;
+}

@@ -49,5 +49,6 @@ struct chain_info {
 
 extern const struct chain_info chain_metadata[];
 extern const struct chain_info *chain_find(const char *name);
+extern const struct chain_info *chain_find_by_netmagic(unsigned char netmagic[4]);
 
 #endif /* __LIBCCOIN_COREDEFS_H__ */
