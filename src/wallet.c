@@ -21,12 +21,13 @@
 #include <ccoin/hexcode.h>
 #include <ccoin/compat.h>		/* for parr_new */
 
-static struct wallet *wallet_new(void)
+static struct wallet *wallet_new(const struct chain_info *chain)
 {
 	struct wallet *wlt;
 
 	wlt = calloc(1, sizeof(*wlt));
 	wlt->keys = parr_new(1000, free);
+	wlt->chain = chain;
 
 	return wlt;
 }
@@ -158,7 +159,7 @@ static struct wallet *load_wallet(void)
 
 	struct wallet *wlt;
 
-	wlt = wallet_new();
+	wlt = wallet_new(chain);
 
 	struct const_buffer buf = { data->str, data->len };
 	struct mbuf_reader mbr;
@@ -328,9 +329,8 @@ void wallet_create(void)
 
 	struct wallet *wlt;
 
-	wlt = wallet_new();
+	wlt = wallet_new(chain);
 	wlt->version = 1;
-	wlt->chain = chain;
 
 	cur_wallet_update(wlt);
 
