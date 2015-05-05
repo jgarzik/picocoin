@@ -265,6 +265,8 @@ void wallet_new_address(void)
 	}
 
 	if (!bp_key_generate(key)) {
+		bp_key_free(key);
+		free(key);
 		fprintf(stderr, "wallet: key gen failed\n");
 		return;
 	}
