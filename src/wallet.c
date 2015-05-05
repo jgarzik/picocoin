@@ -20,34 +20,7 @@
 #include <ccoin/mbr.h>
 #include <ccoin/hexcode.h>
 #include <ccoin/compat.h>		/* for parr_new */
-
-struct wallet *wallet_new(const struct chain_info *chain)
-{
-	struct wallet *wlt;
-
-	wlt = calloc(1, sizeof(*wlt));
-	wlt->keys = parr_new(1000, free);
-	wlt->chain = chain;
-
-	return wlt;
-}
-
-void wallet_free(struct wallet *wlt)
-{
-	struct bp_key *key;
-
-	if (!wlt)
-		return;
-
-	wallet_for_each_key(wlt, key)
-		bp_key_free(key);
-
-	parr_free(wlt->keys, true);
-	wlt->keys = NULL;
-
-	memset(wlt, 0, sizeof(*wlt));
-	free(wlt);
-}
+#include <ccoin/wallet.h>
 
 static char *wallet_filename(void)
 {
@@ -55,105 +28,6 @@ static char *wallet_filename(void)
 	if (!filename)
 		filename = setting("w");
 	return filename;
-}
-
-static bool deser_wallet_root(struct wallet *wlt, struct const_buffer *buf)
-{
-	unsigned char netmagic[4];
-
-	if (!deser_u32(&wlt->version, buf))
-		return false;
-
-	if (!deser_bytes(&netmagic[0], buf, 4))
-		return false;
-
-	wlt->chain = chain_find_by_netmagic(netmagic);
-	if (!wlt->chain)
-		return false;
-
-	return true;
-}
-
-static cstring *ser_wallet_root(const struct wallet *wlt)
-{
-	cstring *rs = cstr_new_sz(8);
-
-	ser_u32(rs, wlt->version);
-	ser_bytes(rs, &wlt->chain->netmagic[0], 4);
-
-	return rs;
-}
-
-static bool load_rec_privkey(struct wallet *wlt, const void *privkey, size_t pk_len)
-{
-	struct bp_key *key;
-
-	key = calloc(1, sizeof(*key));
-	if (!bp_key_init(key))
-		goto err_out;
-	if (!bp_privkey_set(key, privkey, pk_len))
-		goto err_out_kf;
-
-	parr_add(wlt->keys, key);
-
-	return true;
-
-err_out_kf:
-	bp_key_free(key);
-err_out:
-	free(key);
-	return false;
-}
-
-static bool load_rec_root(struct wallet *wlt, const void *data, size_t data_len)
-{
-	struct const_buffer buf = { data, data_len };
-
-	if (!deser_wallet_root(wlt, &buf)) return false;
-
-	if (wlt->version != 1) {
-		fprintf(stderr, "wallet root: unsupported wallet version %u\n",
-			wlt->version);
-		return false;
-	}
-
-	return true;
-}
-
-static bool load_record(struct wallet *wlt, const struct p2p_message *msg)
-{
-	if (!strncmp(msg->hdr.command, "privkey", sizeof(msg->hdr.command)))
-		return load_rec_privkey(wlt, msg->data, msg->hdr.data_len);
-
-	else if (!strncmp(msg->hdr.command, "root", sizeof(msg->hdr.command)))
-		return load_rec_root(wlt, msg->data, msg->hdr.data_len);
-
-	return true;	/* ignore unknown records */
-}
-
-bool deser_wallet(struct wallet *wlt, struct const_buffer *buf)
-{
-	struct mbuf_reader mbr;
-
-	mbr_init(&mbr, buf);
-
-	while (mbr_read(&mbr)) {
-		if (!load_record(wlt, &mbr.msg)) {
-			mbr_free(&mbr);
-			goto err_out;
-		}
-	}
-
-	if (mbr.error) {
-		mbr_free(&mbr);
-		goto err_out;
-	}
-
-	return true;
-
-err_out:
-	fprintf(stderr, "wallet: invalid data found\n");
-	return false;
 }
 
 static struct wallet *load_wallet(void)
@@ -200,41 +74,6 @@ err_out:
 	return NULL;
 }
 
-cstring *ser_wallet(const struct wallet *wlt)
-{
-	struct bp_key *key;
-
-	cstring *rs = cstr_new_sz(20 * 1024);
-
-	/*
-	 * ser "root" record
-	 */
-	cstring *s_root = ser_wallet_root(wlt);
-	cstring *recdata = message_str(wlt->chain->netmagic,
-				       "root", s_root->str, s_root->len);
-	cstr_append_buf(rs, recdata->str, recdata->len);
-	cstr_free(recdata, true);
-	cstr_free(s_root, true);
-
-	/* ser "privkey" records */
-	wallet_for_each_key(wlt, key) {
-		void *privkey = NULL;
-		size_t pk_len = 0;
-
-		bp_privkey_get(key, &privkey, &pk_len);
-
-		cstring *recdata = message_str(wlt->chain->netmagic,
-					       "privkey",
-					       privkey, pk_len);
-		free(privkey);
-
-		cstr_append_buf(rs, recdata->str, recdata->len);
-		cstr_free(recdata, true);
-	}
-
-	return rs;
-}
-
 static bool store_wallet(struct wallet *wlt)
 {
 	char *passphrase = getenv("PICOCOIN_PASSPHRASE");
@@ -270,29 +109,6 @@ static bool cur_wallet_load(void)
 	}
 
 	return true;
-}
-
-cstring *wallet_new_address(struct wallet *wlt)
-{
-	struct bp_key *key;
-
-	key = calloc(1, sizeof(*key));
-	if (!bp_key_init(key)) {
-		free(key);
-		fprintf(stderr, "wallet: key init failed\n");
-		return;
-	}
-
-	if (!bp_key_generate(key)) {
-		bp_key_free(key);
-		free(key);
-		fprintf(stderr, "wallet: key gen failed\n");
-		return;
-	}
-
-	parr_add(wlt->keys, key);
-
-	return bp_pubkey_get_address(key, chain->addr_pubkey);
 }
 
 void cur_wallet_new_address(void)
