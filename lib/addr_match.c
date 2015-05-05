@@ -110,8 +110,9 @@ struct bp_block_match *bbm_new(void)
 	return match;
 }
 
-void bbm_free(struct bp_block_match *match)
+void bbm_free(void *match_)
 {
+	struct bp_block_match *match = match_;
 	if (!match)
 		return;
 
@@ -127,8 +128,7 @@ parr *bp_block_match(const struct bp_block *block,
 	if (!block || !block->vtx || !ks)
 		return NULL;
 
-	parr *arr = parr_new(block->vtx->len,
-				(GDestroyNotify) bbm_free);
+	parr *arr = parr_new(block->vtx->len, bbm_free);
 	if (!arr)
 		return NULL;
 

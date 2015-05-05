@@ -7,9 +7,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <glib.h>
 #include <ccoin/mbr.h>
 #include <ccoin/message.h>
+#include <ccoin/endian.h>
 
 
 bool fread_block(int fd, struct p2p_message *msg, bool *read_ok)
@@ -34,7 +34,7 @@ bool fread_block(int fd, struct p2p_message *msg, bool *read_ok)
 	/* translate to P2P message header */
 	memcpy(&msg->hdr.netmagic, &hdr.netmagic, sizeof(hdr.netmagic));
 	strcpy(msg->hdr.command, "block");
-	msg->hdr.data_len = GUINT32_FROM_LE(hdr.data_len);
+	msg->hdr.data_len = le32toh(hdr.data_len);
 	memset(&msg->hdr.hash, 0, sizeof(msg->hdr.hash));
 
 	unsigned int data_len = msg->hdr.data_len;

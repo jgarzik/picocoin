@@ -6,12 +6,12 @@
 
 #include <stdint.h>
 #include <string.h>
-#include <glib.h>
 #include <openssl/sha.h>
 #include <openssl/bn.h>
 #include <ccoin/serialize.h>
 #include <ccoin/util.h>
 #include <ccoin/compat.h>
+#include <ccoin/endian.h>
 
 void ser_bytes(cstring *s, const void *p, size_t len)
 {
@@ -20,20 +20,20 @@ void ser_bytes(cstring *s, const void *p, size_t len)
 
 void ser_u16(cstring *s, uint16_t v_)
 {
-	uint16_t v = GUINT16_TO_LE(v_);
-	cstr_append_buf(s, (gchar *) &v, sizeof(v));
+	uint16_t v = htole16(v_);
+	cstr_append_buf(s, &v, sizeof(v));
 }
 
 void ser_u32(cstring *s, uint32_t v_)
 {
-	uint32_t v = GUINT32_TO_LE(v_);
-	cstr_append_buf(s, (gchar *) &v, sizeof(v));
+	uint32_t v = htole32(v_);
+	cstr_append_buf(s, &v, sizeof(v));
 }
 
 void ser_u64(cstring *s, uint64_t v_)
 {
-	uint64_t v = GUINT64_TO_LE(v_);
-	cstr_append_buf(s, (gchar *) &v, sizeof(v));
+	uint64_t v = htole64(v_);
+	cstr_append_buf(s, &v, sizeof(v));
 }
 
 void ser_varlen(cstring *s, uint32_t vlen)
@@ -124,7 +124,7 @@ bool deser_u16(uint16_t *vo, struct const_buffer *buf)
 	if (!deser_bytes(&v, buf, sizeof(v)))
 		return false;
 
-	*vo = GUINT16_FROM_LE(v);
+	*vo = le16toh(v);
 	return true;
 }
 
@@ -135,7 +135,7 @@ bool deser_u32(uint32_t *vo, struct const_buffer *buf)
 	if (!deser_bytes(&v, buf, sizeof(v)))
 		return false;
 
-	*vo = GUINT32_FROM_LE(v);
+	*vo = le32toh(v);
 	return true;
 }
 
@@ -146,7 +146,7 @@ bool deser_u64(uint64_t *vo, struct const_buffer *buf)
 	if (!deser_bytes(&v, buf, sizeof(v)))
 		return false;
 
-	*vo = GUINT64_FROM_LE(v);
+	*vo = le64toh(v);
 	return true;
 }
 

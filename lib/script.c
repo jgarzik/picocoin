@@ -5,10 +5,12 @@
 #include "picocoin-config.h"
 
 #include <assert.h>
+#include <glib.h>
 #include <ccoin/script.h>
 #include <ccoin/serialize.h>
 #include <ccoin/util.h>
 #include <ccoin/buffer.h>
+#include <ccoin/endian.h>
 
 bool bsp_getop(struct bscript_op *op, struct bscript_parser *bp)
 {
@@ -257,7 +259,7 @@ void bsp_push_data(cstring *s, const void *data, size_t data_len)
 
 	else if (data_len <= 0xffff) {
 		uint8_t opcode = OP_PUSHDATA2;
-		uint16_t v16_le = GUINT16_TO_LE((uint16_t) data_len);
+		uint16_t v16_le = htole16((uint16_t) data_len);
 
 		cstr_append_buf(s, (gchar *) &opcode, sizeof(opcode));
 		cstr_append_buf(s, (gchar *) &v16_le, sizeof(v16_le));
@@ -265,7 +267,7 @@ void bsp_push_data(cstring *s, const void *data, size_t data_len)
 
 	else {
 		uint8_t opcode = OP_PUSHDATA4;
-		uint32_t v32_le = GUINT32_TO_LE((uint32_t) data_len);
+		uint32_t v32_le = htole32((uint32_t) data_len);
 
 		cstr_append_buf(s, (gchar *) &opcode, sizeof(opcode));
 		cstr_append_buf(s, (gchar *) &v32_le, sizeof(v32_le));

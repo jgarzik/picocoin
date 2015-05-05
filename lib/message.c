@@ -6,17 +6,17 @@
 
 #include <stdint.h>
 #include <string.h>
-#include <glib.h>
 #include <openssl/sha.h>
 #include <ccoin/message.h>
 #include <ccoin/serialize.h>
 #include <ccoin/util.h>
 #include <ccoin/compat.h>		/* for parr_new */
+#include <ccoin/endian.h>
 
 void parse_message_hdr(struct p2p_message_hdr *hdr, const unsigned char *data)
 {
 	memcpy(hdr, data, P2P_HDR_SZ);
-	hdr->data_len = GUINT32_FROM_LE(hdr->data_len);
+	hdr->data_len = le32toh(hdr->data_len);
 }
 
 bool message_valid(const struct p2p_message *msg)
@@ -45,7 +45,7 @@ cstring *message_str(const unsigned char netmagic[4],
 	cstring *s = cstr_new_sz(P2P_HDR_SZ + data_len);
 
 	/* network identifier (magic number) */
-	cstr_append_buf(s, (gchar *) netmagic, 4);
+	cstr_append_buf(s, netmagic, 4);
 
 	/* command string */
 	char command[12] = {};
@@ -53,15 +53,15 @@ cstring *message_str(const unsigned char netmagic[4],
 	cstr_append_buf(s, command, 12);
 
 	/* data length */
-	uint32_t data_len_le = GUINT32_TO_LE(data_len);
-	cstr_append_buf(s, (gchar *) &data_len_le, 4);
+	uint32_t data_len_le = htole32(data_len);
+	cstr_append_buf(s, &data_len_le, 4);
 
 	/* data checksum */
 	unsigned char md32[4];
 
 	bu_Hash4(md32, data, data_len);
 
-	cstr_append_buf(s, (gchar *) &md32[0], 4);
+	cstr_append_buf(s, &md32[0], 4);
 
 	/* data payload */
 	if (data_len > 0)

@@ -24,6 +24,7 @@
 #include <fcntl.h>
 #include <assert.h>
 #include <signal.h>
+#include <time.h>
 #include <errno.h>
 #include <event2/event.h>
 #include <ccoin/util.h>

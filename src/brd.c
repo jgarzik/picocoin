@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <errno.h>
+#include <signal.h>
 #include <assert.h>
 #include <openssl/rand.h>
 #include <event2/event.h>

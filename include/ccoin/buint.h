@@ -10,7 +10,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <openssl/bn.h>
-#include <glib.h>
+#include <ccoin/endian.h>
 
 enum {
 	BU160_WORDS	= (160 / 32),
@@ -65,8 +65,8 @@ static inline void bu256_zero(bu256_t *v)
 
 static inline void bu256_set_u64(bu256_t *vo, uint64_t vi)
 {
-	vo->dword[0] = GUINT32_TO_LE((uint32_t) vi);
-	vo->dword[1] = GUINT32_TO_LE((uint32_t) (vi >> 32));
+	vo->dword[0] = htole32((uint32_t) vi);
+	vo->dword[1] = htole32((uint32_t) (vi >> 32));
 	vo->dword[2] = 0;
 	vo->dword[3] = 0;
 	vo->dword[4] = 0;

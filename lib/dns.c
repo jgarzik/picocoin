@@ -15,6 +15,7 @@
 #endif
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <ccoin/util.h>
 #include <ccoin/core.h>
 #include <ccoin/clist.h>

@@ -9,6 +9,7 @@
 #include <ccoin/bloom.h>
 #include <ccoin/serialize.h>
 #include <ccoin/cstr.h>
+#include <ccoin/util.h>
 
 #define LN2SQUARED 0.4804530139182014246671025263266649717305529515945455L
 #define LN2 0.6931471805599453094172321214581765680755001343602552L

@@ -13,6 +13,7 @@ EXTRA_DIST = \
 	coredefs.h	\
 	core.h		\
 	cstr.h		\
+	endian.h	\
 	hashtab.h	\
 	hexcode.h	\
 	key.h		\

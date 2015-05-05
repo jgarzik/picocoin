@@ -9,6 +9,7 @@
 #include <glib.h>
 #include <ccoin/buint.h>
 #include <ccoin/hexcode.h>
+#include <ccoin/endian.h>
 
 void bu256_bn(BIGNUM *vo, const bu256_t *vi)
 {
@@ -19,7 +20,7 @@ void bu256_bn(BIGNUM *vo, const bu256_t *vi)
 
 	unsigned int i;
 	for (i = 0; i < 8; i++) {
-		BN_set_word(&tmp, GUINT32_FROM_LE(vi->dword[i]));
+		BN_set_word(&tmp, le32toh(vi->dword[i]));
 		BN_lshift(&tmp, &tmp, (i * 32));
 
 		BN_add(vo, vo, &tmp);
@@ -53,7 +54,7 @@ void bu256_hex(char *hexstr, const bu256_t *v)
 	for (i = 7; i >= 0; i--) {		/* endian: high to low */
 		char tmp[8 + 1];
 
-		sprintf(tmp, "%08x", GUINT32_FROM_LE(v->dword[i]));
+		sprintf(tmp, "%08x", le32toh(v->dword[i]));
 		strcat(hexstr, tmp);
 	}
 }

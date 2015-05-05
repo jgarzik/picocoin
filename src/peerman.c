@@ -60,7 +60,7 @@ int peer_cmp(const void *a_, const void *b_, void *user_priv)
 	int64_t a_time = (a->last_ok > a->addr.nTime) ? a->last_ok : a->addr.nTime;
 	int64_t b_time = (b->last_ok > b->addr.nTime) ? b->last_ok : b->addr.nTime;
 	/* reverse sort, greatest first */
-	return (gint) (b_time - a_time);
+	return (int) (b_time - a_time);
 }
 
 static struct peer_manager *peerman_new(void)

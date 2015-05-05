@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <openssl/sha.h>
 #include <openssl/ripemd.h>
+#include <glib.h>
 #include <ccoin/script.h>
 #include <ccoin/util.h>
 #include <ccoin/key.h>

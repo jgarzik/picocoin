@@ -26,7 +26,7 @@ static struct wallet *wallet_new(void)
 	struct wallet *wlt;
 
 	wlt = calloc(1, sizeof(*wlt));
-	wlt->keys = parr_new(1000, g_free);
+	wlt->keys = parr_new(1000, free);
 
 	return wlt;
 }

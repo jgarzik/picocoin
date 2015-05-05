@@ -285,7 +285,7 @@ static inline void bsp_push_op(cstring *s, enum opcodetype op)
 {
 	uint8_t c = (uint8_t) op;
 
-	cstr_append_buf(s, (gchar *) &c, sizeof(c));
+	cstr_append_buf(s, &c, sizeof(c));
 }
 
 #endif /* __LIBCCOIN_SCRIPT_H__ */
