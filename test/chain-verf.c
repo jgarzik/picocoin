@@ -200,7 +200,7 @@ static void runtest(bool use_testnet, const char *blocks_fn)
 	bool read_ok = true;
 	int64_t fpos = 0;
 	unsigned int records = 0;
-	while (fread_message(fd, &msg, &read_ok)) {
+	while (fread_block(fd, &msg, &read_ok)) {
 		assert(memcmp(msg.hdr.netmagic, chain->netmagic, 4) == 0);
 
 		read_test_msg(&blkdb, &uset, &msg, fpos, ckpt_height);
@@ -249,8 +249,7 @@ int main (int argc, char *argv[])
 		fprintf(stderr,
 	"chain-verf: Skipping lengthy, extended chain verification test.\n"
 	"chain-verf: Set TEST_TESTNET3_VERF and/or TEST_MAINNET_VERF to a\n"
-	"chain-verf: valid pynode blocks.dat file, to enable.\n"
-	"chain-verf: (a linear sequence of P2P \"block\" messages)\n"
+	"chain-verf: valid linearized bootstrap.dat file, to enable.\n"
 	"chain-verf: NO_SCRIPT_VERF=1 to disable script verification\n"
 	"chain-verf: FORCE_SCRIPT_VERF=1 to verify all scripts, even checkpointed\n"
 			);
