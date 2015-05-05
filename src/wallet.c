@@ -259,7 +259,7 @@ static bool cur_wallet_load(void)
 	return true;
 }
 
-void wallet_new_address(void)
+void cur_wallet_new_address(void)
 {
 	if (!cur_wallet_load())
 		return;
@@ -314,7 +314,7 @@ static void cur_wallet_update(struct wallet *wlt)
 	cur_wallet = wlt;
 }
 
-void wallet_create(void)
+void cur_wallet_create(void)
 {
 	char *filename = wallet_filename();
 	if (!filename) {
@@ -340,7 +340,7 @@ void wallet_create(void)
 	}
 }
 
-void wallet_addresses(void)
+void cur_wallet_addresses(void)
 {
 	if (!cur_wallet_load())
 		return;
@@ -365,7 +365,7 @@ void wallet_addresses(void)
 	printf("]\n");
 }
 
-void wallet_info(void)
+void cur_wallet_info(void)
 {
 	if (!cur_wallet_load())
 		return;
@@ -431,7 +431,7 @@ static void wallet_dump_keys(json_t *keys_a, struct wallet *wlt)
 	}
 }
 
-void wallet_dump(void)
+void cur_wallet_dump(void)
 {
 	if (!cur_wallet_load())
 		return;

@@ -284,10 +284,10 @@ static bool do_command(const char *s)
 		list_settings();
 
 	else if (!strcmp(s, "new-address"))
-		wallet_new_address();
+		cur_wallet_new_address();
 
 	else if (!strcmp(s, "new-wallet"))
-		wallet_create();
+		cur_wallet_create();
 
 	else if (!strcmp(s, "netsync"))
 		network_sync();
@@ -296,13 +296,13 @@ static bool do_command(const char *s)
 		printf("version=%s\n", VERSION);
 
 	else if (!strcmp(s, "wallet-addr"))
-		wallet_addresses();
+		cur_wallet_addresses();
 
 	else if (!strcmp(s, "wallet-info"))
-		wallet_info();
+		cur_wallet_info();
 
 	else if (!strcmp(s, "wallet-dump"))
-		wallet_dump();
+		cur_wallet_dump();
 
 	return true;
 }

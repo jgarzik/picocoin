@@ -18,11 +18,11 @@ struct wallet {
 	parr			*keys;
 };
 
-extern void wallet_new_address(void);
-extern void wallet_create(void);
-extern void wallet_info(void);
-extern void wallet_dump(void);
-extern void wallet_addresses(void);
+extern void cur_wallet_new_address(void);
+extern void cur_wallet_create(void);
+extern void cur_wallet_info(void);
+extern void cur_wallet_dump(void);
+extern void cur_wallet_addresses(void);
 extern void cur_wallet_free(void);
 
 #define wallet_for_each_key_numbered(_wlt, _key, _num)			\
