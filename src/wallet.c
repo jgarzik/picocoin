@@ -259,12 +259,8 @@ static bool cur_wallet_load(void)
 	return true;
 }
 
-void cur_wallet_new_address(void)
+cstring *wallet_new_address(struct wallet *wlt)
 {
-	if (!cur_wallet_load())
-		return;
-	struct wallet *wlt = cur_wallet;
-
 	struct bp_key *key;
 
 	key = calloc(1, sizeof(*key));
@@ -283,9 +279,19 @@ void cur_wallet_new_address(void)
 
 	parr_add(wlt->keys, key);
 
-	store_wallet(wlt);
+	return bp_pubkey_get_address(key, chain->addr_pubkey);
+}
 
-	cstring *btc_addr = bp_pubkey_get_address(key, chain->addr_pubkey);
+void cur_wallet_new_address(void)
+{
+	if (!cur_wallet_load())
+		return;
+	struct wallet *wlt = cur_wallet;
+	cstring *btc_addr;
+
+	btc_addr = wallet_new_address(wlt);
+
+	store_wallet(wlt);
 
 	printf("%s\n", btc_addr->str);
 

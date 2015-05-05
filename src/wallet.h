@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <ccoin/cstr.h>
 #include <ccoin/parr.h>
 
 struct chain_info;
@@ -20,6 +21,7 @@ struct wallet {
 
 extern struct wallet *wallet_new(const struct chain_info *chain);
 extern void wallet_free(struct wallet *wlt);
+extern cstring *wallet_new_address(struct wallet *wlt);
 
 extern void cur_wallet_new_address(void);
 extern void cur_wallet_create(void);
