@@ -9,11 +9,13 @@
 #include <stdbool.h>
 #include <ccoin/parr.h>
 
-struct wallet {
-	uint32_t	version;
-	unsigned char	netmagic[4];
+struct chain_info;
 
-	parr	*keys;
+struct wallet {
+	uint32_t		version;
+	const struct chain_info	*chain;
+
+	parr			*keys;
 };
 
 extern void wallet_new_address(void);

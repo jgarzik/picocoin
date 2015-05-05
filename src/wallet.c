@@ -58,8 +58,17 @@ static char *wallet_filename(void)
 
 static bool deser_wallet_root(struct wallet *wlt, struct const_buffer *buf)
 {
-	if (!deser_u32(&wlt->version, buf)) return false;
-	if (!deser_bytes(&wlt->netmagic[0], buf, 4)) return false;
+	unsigned char netmagic[4];
+
+	if (!deser_u32(&wlt->version, buf))
+		return false;
+
+	if (!deser_bytes(&netmagic[0], buf, 4))
+		return false;
+
+	wlt->chain = chain_find_by_netmagic(netmagic);
+	if (!wlt->chain)
+		return false;
 
 	return true;
 }
@@ -69,7 +78,7 @@ static cstring *ser_wallet_root(const struct wallet *wlt)
 	cstring *rs = cstr_new_sz(8);
 
 	ser_u32(rs, wlt->version);
-	ser_bytes(rs, &wlt->netmagic[0], 4);
+	ser_bytes(rs, &wlt->chain->netmagic[0], 4);
 
 	return rs;
 }
@@ -107,7 +116,7 @@ static bool load_rec_root(struct wallet *wlt, const void *data, size_t data_len)
 		return false;
 	}
 
-	if (memcmp(chain->netmagic, wlt->netmagic, 4)) {
+	if (memcmp(chain->netmagic, wlt->chain->netmagic, 4)) {
 		fprintf(stderr, "wallet root: foreign chain detected, aborting load.  Try 'chain-set' first.\n");
 		return false;
 	}
@@ -187,7 +196,7 @@ static cstring *ser_wallet(struct wallet *wlt)
 	 * ser "root" record
 	 */
 	cstring *s_root = ser_wallet_root(wlt);
-	cstring *recdata = message_str(wlt->netmagic,
+	cstring *recdata = message_str(wlt->chain->netmagic,
 				       "root", s_root->str, s_root->len);
 	cstr_append_buf(rs, recdata->str, recdata->len);
 	cstr_free(recdata, true);
@@ -200,7 +209,7 @@ static cstring *ser_wallet(struct wallet *wlt)
 
 		bp_privkey_get(key, &privkey, &pk_len);
 
-		cstring *recdata = message_str(wlt->netmagic,
+		cstring *recdata = message_str(wlt->chain->netmagic,
 					       "privkey",
 					       privkey, pk_len);
 		free(privkey);
@@ -321,7 +330,7 @@ void wallet_create(void)
 
 	wlt = wallet_new();
 	wlt->version = 1;
-	memcpy(wlt->netmagic, chain->netmagic, sizeof(wlt->netmagic));
+	wlt->chain = chain;
 
 	cur_wallet_update(wlt);
 
@@ -367,10 +376,10 @@ void wallet_info(void)
 	printf("  \"version\": %u,\n", wlt->version);
 	printf("  \"n_privkeys\": %zu,\n", wlt->keys ? wlt->keys->len : 0);
 	printf("  \"netmagic\": %02x%02x%02x%02x\n",
-	       wlt->netmagic[0],
-	       wlt->netmagic[1],
-	       wlt->netmagic[2],
-	       wlt->netmagic[3]);
+	       wlt->chain->netmagic[0],
+	       wlt->chain->netmagic[1],
+	       wlt->chain->netmagic[2],
+	       wlt->chain->netmagic[3]);
 
 	printf("}\n");
 }
@@ -433,10 +442,10 @@ void wallet_dump(void)
 
 	char nmstr[32];
 	sprintf(nmstr, "%02x%02x%02x%02x",
-	       wlt->netmagic[0],
-	       wlt->netmagic[1],
-	       wlt->netmagic[2],
-	       wlt->netmagic[3]);
+	       wlt->chain->netmagic[0],
+	       wlt->chain->netmagic[1],
+	       wlt->chain->netmagic[2],
+	       wlt->chain->netmagic[3]);
 
 	json_object_set_new(o, "netmagic", json_string(nmstr));
 
