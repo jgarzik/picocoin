@@ -19,9 +19,12 @@ struct wallet {
 	parr			*keys;
 };
 
+struct const_buffer;
+
 extern struct wallet *wallet_new(const struct chain_info *chain);
 extern void wallet_free(struct wallet *wlt);
 extern cstring *wallet_new_address(struct wallet *wlt);
+extern bool deser_wallet(struct wallet *wlt, struct const_buffer *buf);
 
 extern void cur_wallet_new_address(void);
 extern void cur_wallet_create(void);

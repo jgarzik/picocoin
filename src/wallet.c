@@ -131,6 +131,31 @@ static bool load_record(struct wallet *wlt, const struct p2p_message *msg)
 	return true;	/* ignore unknown records */
 }
 
+bool deser_wallet(struct wallet *wlt, struct const_buffer *buf)
+{
+	struct mbuf_reader mbr;
+
+	mbr_init(&mbr, buf);
+
+	while (mbr_read(&mbr)) {
+		if (!load_record(wlt, &mbr.msg)) {
+			mbr_free(&mbr);
+			goto err_out;
+		}
+	}
+
+	if (mbr.error) {
+		mbr_free(&mbr);
+		goto err_out;
+	}
+
+	return true;
+
+err_out:
+	fprintf(stderr, "wallet: invalid data found\n");
+	return false;
+}
+
 static struct wallet *load_wallet(void)
 {
 	char *passphrase = getenv("PICOCOIN_PASSPHRASE");
@@ -157,21 +182,9 @@ static struct wallet *load_wallet(void)
 	wlt = wallet_new(chain);
 
 	struct const_buffer buf = { data->str, data->len };
-	struct mbuf_reader mbr;
 
-	mbr_init(&mbr, &buf);
-
-	while (mbr_read(&mbr)) {
-		if (!load_record(wlt, &mbr.msg)) {
-			mbr_free(&mbr);
-			goto err_out;
-		}
-	}
-
-	if (mbr.error) {
-		mbr_free(&mbr);
+	if (!deser_wallet(wlt, &buf))
 		goto err_out;
-	}
 
 	if (chain != wlt->chain) {
 		fprintf(stderr, "wallet root: foreign chain detected, aborting load.  Try 'chain-set' first.\n");
