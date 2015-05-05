@@ -21,7 +21,7 @@
 #include <ccoin/hexcode.h>
 #include <ccoin/compat.h>		/* for parr_new */
 
-static struct wallet *wallet_new(const struct chain_info *chain)
+struct wallet *wallet_new(const struct chain_info *chain)
 {
 	struct wallet *wlt;
 
@@ -32,7 +32,7 @@ static struct wallet *wallet_new(const struct chain_info *chain)
 	return wlt;
 }
 
-static void wallet_free(struct wallet *wlt)
+void wallet_free(struct wallet *wlt)
 {
 	struct bp_key *key;
 
