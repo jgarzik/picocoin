@@ -200,7 +200,7 @@ err_out:
 	return NULL;
 }
 
-static cstring *ser_wallet(struct wallet *wlt)
+cstring *ser_wallet(const struct wallet *wlt)
 {
 	struct bp_key *key;
 
