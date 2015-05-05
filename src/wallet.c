@@ -117,11 +117,6 @@ static bool load_rec_root(struct wallet *wlt, const void *data, size_t data_len)
 		return false;
 	}
 
-	if (memcmp(chain->netmagic, wlt->chain->netmagic, 4)) {
-		fprintf(stderr, "wallet root: foreign chain detected, aborting load.  Try 'chain-set' first.\n");
-		return false;
-	}
-
 	return true;
 }
 
@@ -175,6 +170,11 @@ static struct wallet *load_wallet(void)
 
 	if (mbr.error) {
 		mbr_free(&mbr);
+		goto err_out;
+	}
+
+	if (chain != wlt->chain) {
+		fprintf(stderr, "wallet root: foreign chain detected, aborting load.  Try 'chain-set' first.\n");
 		goto err_out;
 	}
 
