@@ -9,7 +9,6 @@
 #include <string.h>
 #include <argp.h>
 #include <ctype.h>
-#include <glib.h>
 #include <jansson.h>
 #include <ccoin/core.h>
 #include <ccoin/util.h>
@@ -70,6 +69,17 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state);
 
 static const struct argp argp = { options, parse_opt, args_doc, doc };
 
+static inline int ptr_to_int(void *p)
+{
+	unsigned long l = (unsigned long) p;
+	return (int) l;
+}
+
+static inline void *int_to_ptr(int v)
+{
+	return (void *)(unsigned long) v;
+}
+
 static bool is_digitstr(const char *s)
 {
 	if (!*s)
@@ -126,7 +136,7 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
 			return ARGP_ERR_UNKNOWN;
 
 		opt_del_txin = clist_append(opt_del_txin,
-					     GINT_TO_POINTER(atoi(arg)));
+					     int_to_ptr(atoi(arg)));
 		break;
 	 }
 
@@ -155,7 +165,7 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
 			return ARGP_ERR_UNKNOWN;
 
 		opt_del_txout = clist_append(opt_del_txout,
-					      GINT_TO_POINTER(atoi(arg)));
+					      int_to_ptr(atoi(arg)));
 		break;
 	 }
 
@@ -228,7 +238,7 @@ static void mutate_inputs(void)
 	// delete inputs
 	clist *tmp = opt_del_txin;
 	while (tmp) {
-		int idx = GPOINTER_TO_INT(tmp->data);
+		int idx = ptr_to_int(tmp->data);
 		tmp = tmp->next;
 
 		if ((idx >= 0) && (idx < tx.vin->len))
@@ -298,7 +308,7 @@ static void mutate_outputs(void)
 	// delete outputs
 	clist *tmp = opt_del_txout;
 	while (tmp) {
-		int idx = GPOINTER_TO_INT(tmp->data);
+		int idx = ptr_to_int(tmp->data);
 		tmp = tmp->next;
 
 		if ((idx >= 0) && (idx < tx.vin->len))
