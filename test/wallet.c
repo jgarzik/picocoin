@@ -78,7 +78,6 @@ static void check_serialization(const struct wallet *wlt)
 	cstring *ser = ser_wallet(wlt);
 	struct const_buffer buf;
 	struct wallet deser;
-	bool err;
 
 	assert(ser);
 
@@ -97,13 +96,19 @@ static void check_with_chain(const struct chain_info *chain)
 	unsigned int i;
 
 	wlt = wallet_new(chain);
+	assert(wlt != NULL);
 
 	for (i = 0; i < 100; i++) {
 		cstring *addr;
 
 		addr = wallet_new_address(wlt);
+		assert(addr != NULL);
+
 		cstr_free(addr, true);
 	}
+
+	if (0)			// FIXME: make me work
+		check_serialization(wlt);
 
 	wallet_free(wlt);
 

@@ -12,6 +12,7 @@
 #include <ccoin/mbr.h>
 #include <ccoin/message.h>
 #include <ccoin/wallet.h>
+#include <ccoin/serialize.h>
 
 struct wallet *wallet_new(const struct chain_info *chain)
 {
@@ -49,14 +50,14 @@ cstring *wallet_new_address(struct wallet *wlt)
 	if (!bp_key_init(key)) {
 		free(key);
 		fprintf(stderr, "wallet: key init failed\n");
-		return;
+		return NULL;
 	}
 
 	if (!bp_key_generate(key)) {
 		bp_key_free(key);
 		free(key);
 		fprintf(stderr, "wallet: key gen failed\n");
-		return;
+		return NULL;
 	}
 
 	parr_add(wlt->keys, key);
