@@ -30,12 +30,13 @@
 #define be64toh(x) OSSwapBigToHostInt64(x)
 #define le64toh(x) OSSwapLittleToHostInt64(x)
 
+#define bswap_32(x) OSSwapInt32(x)
+
 #else
 
 #include <endian.h>
+#include <byteswap.h>
 
 #endif // __APPLE__
-
-#include <byteswap.h>
 
 #endif /* __LIBCCOIN_ENDIAN_H__ */
