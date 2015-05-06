@@ -1,5 +1,5 @@
 
-AM_CPPFLAGS	= @GLIB_CFLAGS@ -I$(top_srcdir)/include
+AM_CPPFLAGS	= -I$(top_srcdir)/include
 
 bin_PROGRAMS	= brd picocoin blkscan blkstats rawtx
 
@@ -14,7 +14,7 @@ brd_SOURCES=		\
 	brd.h
 
 brd_LDADD	= libnode.a ../lib/libccoin.a \
-		  @GLIB_LIBS@ @CRYPTO_LIBS@ @EVENT_LIBS@
+		  @CRYPTO_LIBS@ @EVENT_LIBS@
 
 picocoin_SOURCES=	\
 	aes.c		\
@@ -25,12 +25,12 @@ picocoin_SOURCES=	\
 	wallet.c wallet.h
 
 picocoin_LDADD	= libnode.a ../lib/libccoin.a \
-		  @GLIB_LIBS@ @CRYPTO_LIBS@ @ARGP_LIBS@ \
+		  @CRYPTO_LIBS@ @ARGP_LIBS@ \
 		  @EVENT_LIBS@ @JANSSON_LIBS@
 
 blkscan_LDADD	= ../lib/libccoin.a \
-		  @GLIB_LIBS@ @CRYPTO_LIBS@ @ARGP_LIBS@
+		  @CRYPTO_LIBS@ @ARGP_LIBS@
 blkstats_LDADD	= ../lib/libccoin.a \
-		  @GLIB_LIBS@ @CRYPTO_LIBS@ @ARGP_LIBS@
+		  @CRYPTO_LIBS@ @ARGP_LIBS@
 rawtx_LDADD	= ../lib/libccoin.a \
-		  @GLIB_LIBS@ @CRYPTO_LIBS@ @ARGP_LIBS@ @JANSSON_LIBS@
+		  @CRYPTO_LIBS@ @ARGP_LIBS@ @JANSSON_LIBS@

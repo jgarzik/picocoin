@@ -87,8 +87,6 @@ dnl --------------------------
 dnl autoconf output generation
 dnl --------------------------
 
-AM_PATH_GLIB_2_0(2.0.0, , exit 1)
-
 AC_SUBST(MATH_LIBS)
 AC_SUBST(CRYPTO_LIBS)
 AC_SUBST(EVENT_LIBS)

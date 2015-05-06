@@ -1,5 +1,5 @@
 
-AM_CPPFLAGS	= @GLIB_CFLAGS@ -DTEST_SRCDIR=\"$(top_srcdir)/test\" \
+AM_CPPFLAGS	= -DTEST_SRCDIR=\"$(top_srcdir)/test\" \
 		  -I$(top_srcdir)/include
 
 EXTRA_DIST	= \
@@ -27,7 +27,7 @@ TESTS		= clist cstr hex hashtab base58 fileio util keyset bloom \
 		  tx-valid wallet wallet-basics chain-verf
 
 COMMON_LDADD	= libtest.a ../lib/libccoin.a \
-		  @GLIB_LIBS@ @CRYPTO_LIBS@ @JANSSON_LIBS@ @MATH_LIBS@
+		  @CRYPTO_LIBS@ @JANSSON_LIBS@ @MATH_LIBS@
 
 base58_LDADD		= $(COMMON_LDADD)
 blkdb_LDADD		= $(COMMON_LDADD)

@@ -7,14 +7,6 @@ or
 
 	make check TESTS_ENVIRONMENT='libtool --mode=execute valgrind --error-exitcode=1'
 
-The following environment variables make GLib much more valgrind-friendly:
-
-	G_SLICE=always-malloc
-
-		or
-
-	G_DEBUG=gc-friendly G_SLICE=always-malloc
-
 It is recommended to build OpenSSL with -DPURIFY to eliminate lots of
 valgrind noise.
 

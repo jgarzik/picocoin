@@ -4,17 +4,14 @@
 Tiny bitcoin library, with lightweight client and utils
 
 libccoin library dependencies:
-	GLib 2.x (from the GTK project)
 	OpenSSL
 
 picocoin client dependencies:
-	GLib 2.x (from the GTK project)
 	OpenSSL
 	libevent 2.x
 	jansson 2.x (2.1 used for development)
 
 block relay daemon (brd) dependencies:
-	GLib 2.x (from the GTK project)
 	OpenSSL
 	libevent 2.x
 
