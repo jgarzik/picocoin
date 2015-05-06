@@ -2,11 +2,11 @@
 #include "picocoin-config.h"
 
 #define _GNU_SOURCE			/* for memmem */
+#include <stdint.h>
 #include <string.h>
 #include <assert.h>
 #include <openssl/sha.h>
 #include <openssl/ripemd.h>
-#include <glib.h>
 #include <ccoin/script.h>
 #include <ccoin/util.h>
 #include <ccoin/key.h>
@@ -275,12 +275,12 @@ static void stack_swap(parr *stack, int idx1, int idx2)
 	stack->data[len + idx2] = tmp;
 }
 
-static unsigned int count_false(GByteArray *vfExec)
+static unsigned int count_false(cstring *vfExec)
 {
 	unsigned int i, count = 0;
 
 	for (i = 0; i < vfExec->len; i++)
-		if (vfExec->data[i] == 0)
+		if (vfExec->str[i] == 0)
 			count++;
 
 	return count;
@@ -356,7 +356,7 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 	struct const_buffer pbegincodehash = { script->str, script->len };
 	struct bscript_op op;
 	bool rc = false;
-	GByteArray *vfExec = g_byte_array_new();
+	cstring *vfExec = cstr_new(NULL);
 	parr *altstack = parr_new(0, buffer_free);
 	BIGNUM bn;
 	BN_init(&bn);
@@ -436,15 +436,15 @@ OP_NOP10:
 					fValue = !fValue;
 				popstack(stack);
 			}
-			guint8 vc = (guint8) fValue;
-			g_byte_array_append(vfExec, &vc, 1);
+			uint8_t vc = (uint8_t) fValue;
+			cstr_append_c(vfExec, vc);
 			break;
 		}
 
 		case OP_ELSE: {
 			if (vfExec->len == 0)
 				goto out;
-			guint8 *v = &vfExec->data[vfExec->len - 1];
+			uint8_t *v = (uint8_t *) &vfExec->str[vfExec->len - 1];
 			*v = !(*v);
 			break;
 		}
@@ -452,7 +452,7 @@ OP_NOP10:
 		case OP_ENDIF:
 			if (vfExec->len == 0)
 				goto out;
-			g_byte_array_remove_index(vfExec, vfExec->len - 1);
+			cstr_erase(vfExec, vfExec->len - 1, 1);
 			break;
 
 		case OP_VERIFY: {
@@ -1053,7 +1053,7 @@ OP_NOP10:
 out:
 	BN_clear_free(&bn);
 	parr_free(altstack, true);
-	g_byte_array_unref(vfExec);
+	cstr_free(vfExec, true);
 	return rc;
 }
 
