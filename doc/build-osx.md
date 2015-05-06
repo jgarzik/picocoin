@@ -17,7 +17,7 @@ those plus `libevent` and `jansson` to build *picocoin*.
 
 Install these packages. It will take a few minutes.
 
-    brew install openssl libevent jansson
+    brew install openssl libevent jansson argp-standalone
 
 or
 
