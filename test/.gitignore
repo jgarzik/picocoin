@@ -19,6 +19,7 @@ script-parse
 tx
 tx-valid
 util
+wallet
 wallet-basics
 
 *.trs

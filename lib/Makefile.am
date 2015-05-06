@@ -37,5 +37,6 @@ libccoin_a_SOURCES=	\
 	script_sign.c	\
 	serialize.c	\
 	util.c		\
-	utxo.c
+	utxo.c		\
+	wallet.c
 

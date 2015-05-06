@@ -23,5 +23,6 @@ EXTRA_DIST = \
 	parr.h		\
 	script.h	\
 	serialize.h	\
-	util.h
+	util.h		\
+	wallet.h
 
