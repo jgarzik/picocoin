@@ -6,10 +6,14 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 #include <ctype.h>
 #include <assert.h>
 #include <jansson.h>
-#include <glib.h>
+#include <ccoin/cstr.h>
+#include <ccoin/parr.h>
 #include <ccoin/script.h>
 #include <ccoin/hexcode.h>
 #include "libtest.h"
@@ -26,7 +30,11 @@ json_t *read_json(const char *filename)
 
 char *test_filename(const char *basename)
 {
-	return g_strdup_printf("%s/%s", TEST_SRCDIR, basename);
+	size_t slen = strlen(TEST_SRCDIR) + 1 + strlen(basename) + 1;
+	char *ret = malloc(slen);
+	if (ret)
+		snprintf(ret, slen, "%s/%s", TEST_SRCDIR, basename);
+	return ret;
 }
 
 void dumphex(const char *prefix, const void *p_, size_t len)
@@ -57,9 +65,80 @@ static bool is_digitstr(const char *s)
 	return true;
 }
 
+static char **strsplit_set(const char *s, const char *delim)
+{
+	// init delimiter lookup table
+	const char *stmp;
+	bool is_delim[256];
+	memset(&is_delim, 0, sizeof(is_delim));
+
+	stmp = delim;
+	while (*stmp) {
+		is_delim[(unsigned char)*stmp] = true;
+		stmp++;
+	}
+
+	bool in_str = true;
+	parr *pa = parr_new(0, free);
+	cstring *cs = cstr_new(NULL);
+	if (!pa || !cs)
+		goto err_out;
+
+	while (*s) {
+		unsigned char ch = (unsigned char) *s;
+		if (is_delim[ch]) {
+			if (in_str) {
+				in_str = false;
+				parr_add(pa, cs->str);
+
+				cstr_free(cs, false);
+				cs = cstr_new(NULL);
+				if (!cs)
+					goto err_out;
+			}
+		} else {
+			in_str = true;
+			if (!cstr_append_c(cs, ch))
+				goto err_out;
+		}
+		s++;
+	}
+
+	parr_add(pa, cs->str);
+	cstr_free(cs, false);
+
+	parr_add(pa, NULL);
+
+	char **ret = (char **) pa->data;
+	parr_free(pa, false);
+
+	return ret;
+
+err_out:
+	parr_free(pa, true);
+	cstr_free(cs, true);
+	return NULL;
+}
+
+static void freev(void *vec_)
+{
+	void **vec = vec_;
+	if (!vec)
+		return;
+
+	unsigned int idx = 0;
+	while (vec[idx]) {
+		free(vec[idx]);
+		vec[idx] = NULL;
+		idx++;
+	}
+
+	free(vec);
+}
+
 cstring *parse_script_str(const char *enc)
 {
-	char **tokens = g_strsplit_set(enc, " \t\n", 0);
+	char **tokens = strsplit_set(enc, " \t\n");
 	assert (tokens != NULL);
 
 	cstring *script = cstr_new_sz(64);
@@ -91,7 +170,7 @@ cstring *parse_script_str(const char *enc)
 			assert(!"parse error");
 	}
 
-	g_strfreev(tokens);
+	freev(tokens);
 
 	return script;
 }

@@ -7,6 +7,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <openssl/bn.h>
 #include <ccoin/cstr.h>
@@ -49,5 +50,13 @@ extern unsigned long czstr_hash(const void *p);
 extern bool czstr_equal(const void *a, const void *b);
 
 extern void clist_shuffle(clist *l);
+
+static inline void *memdup(const void *data, size_t sz)
+{
+	void *ret = malloc(sz);
+	if (ret)
+		memcpy(ret, data, sz);
+	return ret;
+}
 
 #endif /* __LIBCCOIN_UTIL_H__ */

@@ -10,7 +10,6 @@
 #include <string.h>
 #include <assert.h>
 #include <unistd.h>
-#include <glib.h>
 #include <ccoin/util.h>
 #include <ccoin/script.h>
 #include <ccoin/core.h>
@@ -37,7 +36,7 @@ static void test_txout(const struct bp_txout *txout)
 	while (bsp_getop(&op, &bsp)) {
 		struct bscript_op *op_p;
 
-		op_p = g_memdup(&op, sizeof(op));
+		op_p = memdup(&op, sizeof(op));
 		ops = clist_append(ops, op_p);
 	}
 

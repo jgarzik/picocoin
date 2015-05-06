@@ -36,4 +36,6 @@
 
 #endif // __APPLE__
 
+#include <byteswap.h>
+
 #endif /* __LIBCCOIN_ENDIAN_H__ */

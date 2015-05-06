@@ -5,7 +5,6 @@
 #include "picocoin-config.h"
 
 #include <assert.h>
-#include <glib.h>
 #include <ccoin/script.h>
 #include <ccoin/serialize.h>
 #include <ccoin/util.h>
@@ -69,12 +68,12 @@ parr *bsp_parse_all(const void *data_, size_t data_len)
 	struct const_buffer buf = { data_, data_len };
 	struct bscript_parser bp;
 	struct bscript_op op;
-	parr *arr = parr_new(16, g_free);
+	parr *arr = parr_new(16, free);
 
 	bsp_start(&bp, &buf);
 
 	while (bsp_getop(&op, &bp))
-		parr_add(arr, g_memdup(&op, sizeof(op)));
+		parr_add(arr, memdup(&op, sizeof(op)));
 	if (bp.error)
 		goto err_out;
 
@@ -246,31 +245,31 @@ void bsp_push_data(cstring *s, const void *data, size_t data_len)
 	if (data_len < OP_PUSHDATA1) {
 		uint8_t c = (uint8_t) data_len;
 
-		cstr_append_buf(s, (gchar *) &c, sizeof(c));
+		cstr_append_buf(s, &c, sizeof(c));
 	}
 
 	else if (data_len <= 0xff) {
 		uint8_t opcode = OP_PUSHDATA1;
 		uint8_t v8 = (uint8_t) data_len;
 
-		cstr_append_buf(s, (gchar *) &opcode, sizeof(opcode));
-		cstr_append_buf(s, (gchar *) &v8, sizeof(v8));
+		cstr_append_buf(s, &opcode, sizeof(opcode));
+		cstr_append_buf(s, &v8, sizeof(v8));
 	}
 
 	else if (data_len <= 0xffff) {
 		uint8_t opcode = OP_PUSHDATA2;
 		uint16_t v16_le = htole16((uint16_t) data_len);
 
-		cstr_append_buf(s, (gchar *) &opcode, sizeof(opcode));
-		cstr_append_buf(s, (gchar *) &v16_le, sizeof(v16_le));
+		cstr_append_buf(s, &opcode, sizeof(opcode));
+		cstr_append_buf(s, &v16_le, sizeof(v16_le));
 	}
 
 	else {
 		uint8_t opcode = OP_PUSHDATA4;
 		uint32_t v32_le = htole32((uint32_t) data_len);
 
-		cstr_append_buf(s, (gchar *) &opcode, sizeof(opcode));
-		cstr_append_buf(s, (gchar *) &v32_le, sizeof(v32_le));
+		cstr_append_buf(s, &opcode, sizeof(opcode));
+		cstr_append_buf(s, &v32_le, sizeof(v32_le));
 	}
 
 	cstr_append_buf(s, data, data_len);
@@ -280,7 +279,7 @@ void bsp_push_int64(cstring *s, int64_t n)
 {
 	if (n == -1 || (n >= 1 && n <= 16)) {
 		unsigned char c = (unsigned char) (n + (OP_1 - 1));
-		cstr_append_buf(s, (gchar *) &c, 1);
+		cstr_append_buf(s, &c, 1);
 		return;
 	}
 
@@ -316,7 +315,7 @@ void bsp_push_uint64(cstring *s, uint64_t n)
 {
 	if (n >= 1 && n <= 16) {
 		unsigned char c = (unsigned char) (n + (OP_1 - 1));
-		cstr_append_buf(s, (gchar *) &c, 1);
+		cstr_append_buf(s, &c, 1);
 		return;
 	}
 

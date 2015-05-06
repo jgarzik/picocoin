@@ -6,7 +6,6 @@
 
 #include <string.h>
 #include <openssl/bn.h>
-#include <glib.h>
 #include <ccoin/buint.h>
 #include <ccoin/hexcode.h>
 #include <ccoin/endian.h>
@@ -63,14 +62,14 @@ void bu256_swap(bu256_t *v)
 {
 	unsigned int i;
 	for (i = 0; i < 8; i++)
-		v->dword[i] = GUINT32_SWAP_LE_BE(v->dword[i]);
+		v->dword[i] = bswap_32(v->dword[i]);
 }
 
 void bu256_copy_swap(bu256_t *vo, const bu256_t *vi)
 {
 	unsigned int i;
 	for (i = 0; i < 8; i++)
-		vo->dword[i] = GUINT32_SWAP_LE_BE(vi->dword[i]);
+		vo->dword[i] = bswap_32(vi->dword[i]);
 }
 
 void bu256_copy_swap_dwords(bu256_t *vo, const bu256_t *vi)

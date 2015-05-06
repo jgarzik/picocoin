@@ -12,7 +12,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <glib.h>			// for g_random_int_range
+#include <time.h>
 #include <openssl/sha.h>
 #include <openssl/ripemd.h>
 #include <ccoin/coredefs.h>
@@ -154,6 +154,27 @@ unsigned long djb2_hash(unsigned long hash, const void *_buf, size_t buflen)
 	return hash;
 }
 
+static void init_rng(void)
+{
+	static bool done = false;
+
+	if (done)
+		return;
+
+	srand(time(NULL));
+
+	done = true;
+}
+
+static int random_int_range(int begin, int end)
+{
+	init_rng();
+
+	int l = end - begin + 1;
+	int r = rand() % l;
+	return begin + r;
+}
+
 void clist_shuffle(clist *l)
 {
 	unsigned int len = clist_length(l);
@@ -161,7 +182,7 @@ void clist_shuffle(clist *l)
 
 	clist *tmp = l;
 	while (tmp) {
-		unsigned int ridx = g_random_int_range(0, len - 1);
+		unsigned int ridx = random_int_range(0, len - 1);
 
 		if (ridx != idx) {
 			clist *swap = clist_nth(l, ridx);
