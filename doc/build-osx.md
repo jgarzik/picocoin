@@ -3,51 +3,41 @@ Building `picocoin` on OS X
 
 Instructions by @[colindean](http://github.com/colindean).
 
-Note that these instructions were written on OS X 10.8. They may apply to 
-earlier versions of OS X. Unsure? Try!
+
 
 Dependencies
 ------------
 
-This guide assumes usage of [Homebrew](http://mxcl.github.com/homebrew/) or
-[MacPorts](http://www.marcports.org) for installing dependencies.
+This guide assumes usage of [Homebrew](http://brew.sh) or
+[MacPorts](https://www.macports.org) for installing dependencies.
 
 You will need to install `OpenSSL` in order to build *libccoin*, and
 those plus `libevent` and `jansson` to build *picocoin*.
 
 Install these packages. It will take a few minutes.
 
-    brew install openssl libevent jansson
+    brew install autoconf automake argp-standalone jansson libevent openssl
 
 or
 
-    sudo port install openssl libevent jansson
+    sudo port install autoconf automake argp-standalone jansson libevent pkgconfig openssl
 
-You may also need to install some development dependencies, if you have not
-already installed them for other projects.
-
-    brew install autoconf automake
-
-or
-
-    sudo port install autoconf automake pkgconfig
 
 Building
 --------
 
-Now, you can build!
+Homebrew
 
     ./autogen.sh
     ./configure CPPFLAGS="-I`brew --prefix openssl`/include"
     make
 
-if you used Homebrew, or:
+MacPorts
 
     ./autogen.sh
     ./configure CPPFLAGS="-I /opt/local/include -L /opt/local/lib"
     make
 
-if you used MacPorts.
 
 You should also run `make check` in order to run tests. This is a vital step
 early in the development of `picocoin`.
@@ -64,12 +54,14 @@ To ensure that at least the basics compiled correctly, execute a command:
 
     src/picocoin list-settings
 
-You should see some output formatted in JSON, and looking like this:
+You should see output formatted in JSON,
 
     {
       "wallet": "picocoin.wallet",
+      "chain": "bitcoin",
+      "net.connect.timeout": "11",
       "peers": "picocoin.peers",
-      "chain": "bitcoin"
+      "blkdb": "picocoin.blkdb"
     }
 
 If that works, `picocoin` is ready for use.
