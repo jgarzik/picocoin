@@ -21,6 +21,7 @@ struct wallet *wallet_new(const struct chain_info *chain)
 	wlt = calloc(1, sizeof(*wlt));
 	wlt->keys = parr_new(1000, free);
 	wlt->chain = chain;
+	wlt->version = 1;
 
 	return wlt;
 }
