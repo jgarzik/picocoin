@@ -92,6 +92,22 @@ static void check_serialization(const struct wallet *wlt)
 	wallet_free(deser);
 }
 
+static bool check_sequential_consistency(const struct wallet *wlt)
+{
+	const struct wallet_key *wkey1, *wkey2;
+	unsigned int i;
+
+	for (i = 0; i < 99; i++) {
+		wkey1 = parr_idx(wlt->keys, i);
+		wkey2 = parr_idx(wlt->keys, i+1);
+
+		if (wkey1->birthday > wkey2->birthday)
+			return false;
+	}
+
+	return true;
+}
+
 static void check_with_chain(const struct chain_info *chain)
 {
 	struct wallet *wlt;
@@ -99,6 +115,8 @@ static void check_with_chain(const struct chain_info *chain)
 
 	wlt = wallet_new(chain);
 	assert(wlt != NULL);
+
+	assert(wallet_oldest_key_time(wlt) == 0);
 
 	for (i = 0; i < 100; i++) {
 		cstring *addr;
@@ -110,6 +128,9 @@ static void check_with_chain(const struct chain_info *chain)
 	}
 
 	check_serialization(wlt);
+
+	assert(check_sequential_consistency(wlt));
+	assert(time(NULL) >= wallet_oldest_key_time(wlt));
 
 	wallet_free(wlt);
 

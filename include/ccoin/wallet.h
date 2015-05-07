@@ -10,7 +10,13 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <ccoin/cstr.h>
+#include <ccoin/key.h>
 #include <ccoin/parr.h>
+
+struct wallet_key {
+	struct bp_key		key;
+	uint64_t		birthday;
+};
 
 struct chain_info;
 
@@ -23,11 +29,18 @@ struct wallet {
 
 struct const_buffer;
 
+extern struct wallet_key *wallet_key_new(void);
+extern struct wallet_key *wallet_key_new_generate(void);
+extern void wallet_key_free(struct wallet_key *wkey);
+extern cstring *ser_wallet_key(const struct wallet_key *wkey);
+extern bool deser_wallet_key(struct wallet_key *wkey, struct const_buffer *buf);
+
 extern struct wallet *wallet_new(const struct chain_info *chain);
 extern void wallet_free(struct wallet *wlt);
 extern cstring *wallet_new_address(struct wallet *wlt);
 extern cstring *ser_wallet(const struct wallet *wlt);
 extern bool deser_wallet(struct wallet *wlt, struct const_buffer *buf);
+extern uint64_t wallet_oldest_key_time(const struct wallet *wlt);
 
 #define wallet_for_each_key_numbered(_wlt, _key, _num)			\
 	(_num) = 0;							\

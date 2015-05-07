@@ -14,6 +14,90 @@
 #include <ccoin/wallet.h>
 #include <ccoin/serialize.h>
 
+struct wallet_key *wallet_key_new(void)
+{
+	struct wallet_key *wkey;
+
+	wkey = calloc(1, sizeof(*wkey));
+	if (!wkey)
+		return NULL;
+
+	if (!bp_key_init(&wkey->key))
+		goto err_free;
+
+	return wkey;
+
+err_free:
+	free(wkey);
+	return NULL;
+}
+
+struct wallet_key *wallet_key_new_generate(void)
+{
+	struct wallet_key *wkey;
+
+	wkey = wallet_key_new();
+	if (!wkey)
+		goto err_free;
+
+	if (!bp_key_generate(&wkey->key))
+		goto err_free;
+
+	wkey->birthday = time(NULL);
+
+	return wkey;
+
+err_free:
+	free(wkey);
+	return NULL;
+}
+
+void wallet_key_free(struct wallet_key *wkey)
+{
+	if (!wkey)
+		return;
+
+	free(wkey);
+}
+
+cstring *ser_wallet_key(const struct wallet_key *wkey)
+{
+	void *privkey;
+	size_t pk_len;
+	cstring *rs;
+
+	if (!bp_privkey_get(&wkey->key, &privkey, &pk_len))
+		goto err_out;
+
+	rs = cstr_new_sz(sizeof(uint64_t) + pk_len);
+	if (!rs)
+		goto err_free;
+
+	ser_u64(rs, wkey->birthday);
+	cstr_append_buf(rs, privkey, pk_len);
+
+	free(privkey);
+	return rs;
+
+err_free:
+	free(privkey);
+err_out:
+	return NULL;
+}
+
+bool deser_wallet_key(struct wallet_key *wkey, struct const_buffer *buf)
+{
+	if (!deser_u64(&wkey->birthday, buf))
+		return false;
+
+	if (!bp_privkey_set(&wkey->key, buf->p, buf->len))
+		return false;
+
+	buf->p += buf->len;
+	buf->len = 0;
+	return true;
+}
+
 struct wallet *wallet_new(const struct chain_info *chain)
 {
 	struct wallet *wlt;
@@ -28,13 +112,13 @@ struct wallet *wallet_new(const struct chain_info *chain)
 
 void wallet_free(struct wallet *wlt)
 {
-	struct bp_key *key;
+	struct wallet_key *wkey;
 
 	if (!wlt)
 		return;
 
-	wallet_for_each_key(wlt, key)
-		bp_key_free(key);
+	wallet_for_each_key(wlt, wkey)
+		wallet_key_free(wkey);
 
 	parr_free(wlt->keys, true);
 	wlt->keys = NULL;
@@ -45,25 +129,15 @@ void wallet_free(struct wallet *wlt)
 
 cstring *wallet_new_address(struct wallet *wlt)
 {
-	struct bp_key *key;
+	struct wallet_key *wkey;
 
-	key = calloc(1, sizeof(*key));
-	if (!bp_key_init(key)) {
-		free(key);
-		fprintf(stderr, "wallet: key init failed\n");
+	wkey = wallet_key_new_generate();
+	if (!wkey)
 		return NULL;
-	}
 
-	if (!bp_key_generate(key)) {
-		bp_key_free(key);
-		free(key);
-		fprintf(stderr, "wallet: key gen failed\n");
-		return NULL;
-	}
+	parr_add(wlt->keys, wkey);
 
-	parr_add(wlt->keys, key);
-
-	return bp_pubkey_get_address(key, wlt->chain->addr_pubkey);
+	return bp_pubkey_get_address(&wkey->key, wlt->chain->addr_pubkey);
 }
 
 static cstring *ser_wallet_root(const struct wallet *wlt)
@@ -78,7 +152,7 @@ static cstring *ser_wallet_root(const struct wallet *wlt)
 
 cstring *ser_wallet(const struct wallet *wlt)
 {
-	struct bp_key *key;
+	struct wallet_key *wkey;
 
 	cstring *rs = cstr_new_sz(20 * 1024);
 
@@ -93,16 +167,16 @@ cstring *ser_wallet(const struct wallet *wlt)
 	cstr_free(s_root, true);
 
 	/* ser "privkey" records */
-	wallet_for_each_key(wlt, key) {
-		void *privkey = NULL;
-		size_t pk_len = 0;
-
-		bp_privkey_get(key, &privkey, &pk_len);
+	wallet_for_each_key(wlt, wkey) {
+		cstring *keydata = ser_wallet_key(wkey);
+		if (!keydata)
+			continue;
 
 		cstring *recdata = message_str(wlt->chain->netmagic,
 					       "privkey",
-					       privkey, pk_len);
-		free(privkey);
+					       keydata->str,
+					       keydata->len);
+		cstr_free(keydata, true);
 
 		cstr_append_buf(rs, recdata->str, recdata->len);
 		cstr_free(recdata, true);
@@ -128,24 +202,24 @@ static bool deser_wallet_root(struct wallet *wlt, struct const_buffer *buf)
 	return true;
 }
 
-static bool load_rec_privkey(struct wallet *wlt, const void *privkey, size_t pk_len)
+static bool load_rec_privkey(struct wallet *wlt, const void *data, size_t data_len)
 {
-	struct bp_key *key;
+	struct const_buffer buf = { data, data_len };
+	struct wallet_key *wkey;
 
-	key = calloc(1, sizeof(*key));
-	if (!bp_key_init(key))
-		goto err_out;
-	if (!bp_privkey_set(key, privkey, pk_len))
-		goto err_out_kf;
+	wkey = wallet_key_new();
+	if (!wkey)
+		return false;
 
-	parr_add(wlt->keys, key);
+	if (!deser_wallet_key(wkey, &buf))
+		goto err_out_wkf;
+
+	parr_add(wlt->keys, wkey);
 
 	return true;
 
-err_out_kf:
-	bp_key_free(key);
-err_out:
-	free(key);
+err_out_wkf:
+	wallet_key_free(wkey);
 	return false;
 }
 
@@ -198,4 +272,16 @@ bool deser_wallet(struct wallet *wlt, struct const_buffer *buf)
 err_out:
 	fprintf(stderr, "wallet: invalid data found\n");
 	return false;
+}
+
+uint64_t wallet_oldest_key_time(const struct wallet *wlt)
+{
+	struct wallet_key *wkey, *oldest_wkey = NULL;
+
+	wallet_for_each_key(wlt, wkey)
+		if (!oldest_wkey ||
+		    wkey->birthday < oldest_wkey->birthday)
+			oldest_wkey = wkey;
+
+	return oldest_wkey ? oldest_wkey->birthday : 0;
 }
