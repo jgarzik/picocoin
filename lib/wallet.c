@@ -23,22 +23,6 @@ bool wallet_init(struct wallet *wlt, const struct chain_info *chain)
 	return wlt->keys != NULL;
 }
 
-struct wallet *wallet_new(const struct chain_info *chain)
-{
-	struct wallet *wlt;
-
-	wlt = calloc(1, sizeof(*wlt));
-	if (!wlt)
-		return NULL;
-
-	if (!wallet_init(wlt, chain)) {
-		free(wlt);
-		return NULL;
-	}
-
-	return wlt;
-}
-
 void wallet_free(struct wallet *wlt)
 {
 	struct bp_key *key;
@@ -53,7 +37,6 @@ void wallet_free(struct wallet *wlt)
 	wlt->keys = NULL;
 
 	memset(wlt, 0, sizeof(*wlt));
-	free(wlt);
 }
 
 cstring *wallet_new_address(struct wallet *wlt)

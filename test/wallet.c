@@ -94,24 +94,23 @@ static void check_serialization(const struct wallet *wlt)
 
 static void check_with_chain(const struct chain_info *chain)
 {
-	struct wallet *wlt;
+	struct wallet wlt;
 	unsigned int i;
 
-	wlt = wallet_new(chain);
-	assert(wlt != NULL);
+	assert(wallet_init(&wlt, chain));
 
 	for (i = 0; i < 100; i++) {
 		cstring *addr;
 
-		addr = wallet_new_address(wlt);
+		addr = wallet_new_address(&wlt);
 		assert(addr != NULL);
 
 		cstr_free(addr, true);
 	}
 
-	check_serialization(wlt);
+	check_serialization(&wlt);
 
-	wallet_free(wlt);
+	wallet_free(&wlt);
 
 }
 
