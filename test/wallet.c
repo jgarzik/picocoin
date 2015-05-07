@@ -13,7 +13,7 @@ static bool key_eq(const struct bp_key *key1,
 {
 	void *data1, *data2;
 	size_t len1, len2;
-	bool eq;
+	int ret;
 
 	if (!bp_privkey_get(key1, &data1, &len1))
 		return false;
@@ -29,12 +29,12 @@ static bool key_eq(const struct bp_key *key1,
 		return false;
 	}
 
-	eq = memcmp(data1, data2, len1);
+	ret = memcmp(data1, data2, len1);
 
 	free(data1);
 	free(data2);
 
-	return eq;
+	return ret == 0;
 }
 
 static bool wallet_eq(const struct wallet *wlt1,
