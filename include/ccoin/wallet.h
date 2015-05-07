@@ -23,6 +23,7 @@ struct wallet {
 
 struct const_buffer;
 
+extern bool wallet_init(struct wallet *wlt, const struct chain_info *chain);
 extern struct wallet *wallet_new(const struct chain_info *chain);
 extern void wallet_free(struct wallet *wlt);
 extern cstring *wallet_new_address(struct wallet *wlt);

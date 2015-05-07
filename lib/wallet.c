@@ -14,14 +14,27 @@
 #include <ccoin/wallet.h>
 #include <ccoin/serialize.h>
 
+bool wallet_init(struct wallet *wlt, const struct chain_info *chain)
+{
+	wlt->version = 1;
+	wlt->chain = chain;
+	wlt->keys = parr_new(1000, free);
+
+	return wlt->keys != NULL;
+}
+
 struct wallet *wallet_new(const struct chain_info *chain)
 {
 	struct wallet *wlt;
 
 	wlt = calloc(1, sizeof(*wlt));
-	wlt->keys = parr_new(1000, free);
-	wlt->chain = chain;
-	wlt->version = 1;
+	if (!wlt)
+		return NULL;
+
+	if (!wallet_init(wlt, chain)) {
+		free(wlt);
+		return NULL;
+	}
 
 	return wlt;
 }
