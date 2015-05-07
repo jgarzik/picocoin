@@ -13,7 +13,7 @@ static bool key_eq(const struct bp_key *key1,
 {
 	void *data1, *data2;
 	size_t len1, len2;
-	bool eq;
+	int ret;
 
 	if (!bp_privkey_get(key1, &data1, &len1))
 		return false;
@@ -29,12 +29,12 @@ static bool key_eq(const struct bp_key *key1,
 		return false;
 	}
 
-	eq = memcmp(data1, data2, len1);
+	ret = memcmp(data1, data2, len1);
 
 	free(data1);
 	free(data2);
 
-	return eq;
+	return ret == 0;
 }
 
 static bool wallet_eq(const struct wallet *wlt1,
@@ -75,19 +75,21 @@ static bool wallet_eq(const struct wallet *wlt1,
  */
 static void check_serialization(const struct wallet *wlt)
 {
+	struct wallet *deser = wallet_new(wlt->chain);
 	cstring *ser = ser_wallet(wlt);
 	struct const_buffer buf;
-	struct wallet deser;
 
-	assert(ser);
+	assert(deser != NULL);
+	assert(ser != NULL);
 
 	buf.p = ser->str;
 	buf.len = ser->len;
 
-	assert(!deser_wallet(&deser, &buf));
-	assert(wallet_eq(wlt, &deser));
+	assert(deser_wallet(deser, &buf));
+	assert(wallet_eq(wlt, deser));
 
 	cstr_free(ser, true);
+	wallet_free(deser);
 }
 
 static void check_with_chain(const struct chain_info *chain)
@@ -107,8 +109,7 @@ static void check_with_chain(const struct chain_info *chain)
 		cstr_free(addr, true);
 	}
 
-	if (0)			// FIXME: make me work
-		check_serialization(wlt);
+	check_serialization(wlt);
 
 	wallet_free(wlt);
 
