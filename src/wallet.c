@@ -51,9 +51,18 @@ static struct wallet *load_wallet(void)
 		return NULL;
 	}
 
-	struct wallet *wlt;
+	struct wallet *wlt = calloc(1, sizeof(*wlt));
+	if (!wlt) {
+		fprintf(stderr, "wallet: failed to allocate wallet\n");
+		cstr_free(data, true);
+		return NULL;
+	}
 
-	wlt = wallet_new(chain);
+	if (!wallet_init(wlt, chain)) {
+		free(wlt);
+		cstr_free(data, true);
+		return NULL;
+	}
 
 	struct const_buffer buf = { data->str, data->len };
 
@@ -162,15 +171,25 @@ void cur_wallet_create(void)
 		return;
 	}
 
-	struct wallet *wlt;
+	struct wallet *wlt = calloc(1, sizeof(*wlt));
 
-	wlt = wallet_new(chain);
-	wlt->version = 1;
+	if (!wlt) {
+		fprintf(stderr, "wallet: failed to allocate wallet\n");
+		return;
+	}
+
+	if (!wallet_init(wlt, chain)) {
+		fprintf(stderr, "wallet: failed to initialize wallet\n");
+		free(wlt);
+		return;
+	}
 
 	cur_wallet_update(wlt);
 
 	if (!store_wallet(wlt)) {
 		fprintf(stderr, "wallet: failed to store %s\n", filename);
+		wallet_free(wlt);
+		free(wlt);
 		return;
 	}
 }
