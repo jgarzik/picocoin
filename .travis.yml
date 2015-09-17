@@ -8,6 +8,8 @@ compiler:
 os:
   - linux
 
+sudo: false
+
 env:
   global:
     - MAKEJOBS=-j3
@@ -17,6 +19,13 @@ env:
 cache:
   apt: true
 
+addons:
+  apt:
+    packages:
+      - libssl-dev
+      - libjansson-dev
+      - libevent-dev
+
 matrix:
   fast_finish: true
   include:
@@ -25,11 +34,7 @@ matrix:
 #    - compiler: ": 32-bit + dash"
 #      env: HOST=i686-pc-linux-gnu PACKAGES="g++-multilib libjansson-dev libssl-dev libevent-dev" RUN_TESTS=true GOAL="install" PICOCOIN_CONFIG="--enable-glibc-back-compat --enable-reduce-exports LDFLAGS=-static-libstdc++" USE_SHELL="/bin/dash"
     - compiler: ": picocoin"
-      env: HOST=x86_64-unknown-linux-gnu PACKAGES="libjansson-dev libssl-dev libevent-dev" DEP_OPTS="DEBUG=1" RUN_TESTS=true GOAL="install" PICOCOIN_CONFIG="--enable-glibc-back-compat --enable-reduce-exports"
-
-install:
-  - if [ -n "$PACKAGES" ]; then travis_retry sudo apt-get update; fi
-  - if [ -n "$PACKAGES" ]; then travis_retry sudo apt-get install --no-install-recommends --no-upgrade -qq $PACKAGES; fi
+      env: HOST=x86_64-unknown-linux-gnu DEP_OPTS="DEBUG=1" RUN_TESTS=true GOAL="install" PICOCOIN_CONFIG="--enable-glibc-back-compat --enable-reduce-exports"
 
 script:
   - if [ -n "$USE_SHELL" ]; then export CONFIG_SHELL="$USE_SHELL"; fi
