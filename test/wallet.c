@@ -75,43 +75,42 @@ static bool wallet_eq(const struct wallet *wlt1,
  */
 static void check_serialization(const struct wallet *wlt)
 {
-	struct wallet *deser = wallet_new(wlt->chain);
+	struct wallet deser;
 	cstring *ser = ser_wallet(wlt);
 	struct const_buffer buf;
 
-	assert(deser != NULL);
+	assert(wallet_init(&deser, wlt->chain));
 	assert(ser != NULL);
 
 	buf.p = ser->str;
 	buf.len = ser->len;
 
-	assert(deser_wallet(deser, &buf));
-	assert(wallet_eq(wlt, deser));
+	assert(deser_wallet(&deser, &buf));
+	assert(wallet_eq(wlt, &deser));
 
 	cstr_free(ser, true);
-	wallet_free(deser);
+	wallet_free(&deser);
 }
 
 static void check_with_chain(const struct chain_info *chain)
 {
-	struct wallet *wlt;
+	struct wallet wlt;
 	unsigned int i;
 
-	wlt = wallet_new(chain);
-	assert(wlt != NULL);
+	assert(wallet_init(&wlt, chain));
 
 	for (i = 0; i < 100; i++) {
 		cstring *addr;
 
-		addr = wallet_new_address(wlt);
+		addr = wallet_new_address(&wlt);
 		assert(addr != NULL);
 
 		cstr_free(addr, true);
 	}
 
-	check_serialization(wlt);
+	check_serialization(&wlt);
 
-	wallet_free(wlt);
+	wallet_free(&wlt);
 
 }
 
