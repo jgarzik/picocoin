@@ -4,6 +4,12 @@
 autom4te.cache
 
 *.o
+*.la
+*.lo
+
+.libs/
+/libtool
+/ltmain.sh
 
 aclocal.m4
 Makefile

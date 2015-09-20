@@ -26,7 +26,7 @@ TESTS		= clist cstr hex hashtab base58 fileio util keyset bloom \
 		  parr script-parse tx block blockfile blkdb script \
 		  tx-valid wallet wallet-basics chain-verf
 
-COMMON_LDADD	= libtest.a ../lib/libccoin.a \
+COMMON_LDADD	= libtest.a ../lib/libccoin.la \
 		  @CRYPTO_LIBS@ @JANSSON_LIBS@ @MATH_LIBS@
 
 base58_LDADD		= $(COMMON_LDADD)
