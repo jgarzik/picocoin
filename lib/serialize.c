@@ -36,6 +36,11 @@ void ser_u64(cstring *s, uint64_t v_)
 	cstr_append_buf(s, &v, sizeof(v));
 }
 
+void ser_bool(cstring *s, bool v_)
+{
+	cstr_append_c(s, v_?1:0);
+}
+
 void ser_varlen(cstring *s, uint32_t vlen)
 {
 	unsigned char c;
@@ -147,6 +152,17 @@ bool deser_u64(uint64_t *vo, struct const_buffer *buf)
 		return false;
 
 	*vo = le64toh(v);
+	return true;
+}
+
+bool deser_bool(bool *vo, struct const_buffer *buf)
+{
+	uint8_t v;
+
+	if (!deser_bytes(&v, buf, sizeof(v)))
+		return false;
+
+	*vo = (0 != v);
 	return true;
 }
 
