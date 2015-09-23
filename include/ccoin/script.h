@@ -15,6 +15,10 @@
 #include <ccoin/key.h>
 #include <ccoin/parr.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** Signature hash types/flags */
 enum
 {
@@ -287,5 +291,9 @@ static inline void bsp_push_op(cstring *s, enum opcodetype op)
 
 	cstr_append_buf(s, &c, sizeof(c));
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __LIBCCOIN_SCRIPT_H__ */

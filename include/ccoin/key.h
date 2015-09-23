@@ -11,6 +11,10 @@
 #include <ccoin/hashtab.h>
 #include <ccoin/cstr.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct bp_key {
 	EC_KEY		*k;
 };
@@ -51,5 +55,9 @@ extern bool bkeys_key_get(struct bp_keystore *ks, const bu160_t *key_id,
 		      struct bp_key *key);
 extern bool bkeys_pubkey_append(struct bp_keystore *ks, const bu160_t *key_id,
 			cstring *scriptSig);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __LIBCCOIN_KEY_H__ */

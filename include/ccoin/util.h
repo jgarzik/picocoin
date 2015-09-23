@@ -20,6 +20,10 @@
 #define MIN(a,b) (((a) < (b)) ? (a) : (b))
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum {
 	VALSTR_SZ	= 18,
 #define VALSTR_SZ VALSTR_SZ
@@ -58,5 +62,9 @@ static inline void *memdup(const void *data, size_t sz)
 		memcpy(ret, data, sz);
 	return ret;
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __LIBCCOIN_UTIL_H__ */

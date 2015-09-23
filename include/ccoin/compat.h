@@ -9,6 +9,10 @@
 
 #include <unistd.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef HAVE_FDATASYNC
 static inline int fdatasync(int fd)
 {
@@ -32,5 +36,9 @@ extern void *memmem(const void *haystack, size_t haystacklen,
 #ifndef HAVE_STRNDUP
 #define strndup(s,n) g_strndup(s,n)
 #endif /* !HAVE_STRNDUP */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __LIBCCOIN_COMPAT_H__ */

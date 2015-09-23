@@ -12,6 +12,10 @@
 #include <openssl/bn.h>
 #include <ccoin/endian.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum {
 	BU160_WORDS	= (160 / 32),
 #define BU160_WORDS BU160_WORDS
@@ -112,5 +116,9 @@ static inline bool bu160_equal_(const void *a, const void *b)
 {
 	return bu160_equal(a, b);
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __LIBCCOIN_BUINT_H__ */

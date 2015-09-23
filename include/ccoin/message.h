@@ -11,6 +11,10 @@
 #include <ccoin/core.h>
 #include <ccoin/buffer.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct p2p_blockfile_hdr {
 	unsigned char	netmagic[4];
 	uint32_t	data_len;
@@ -147,5 +151,9 @@ extern cstring *ser_msg_vinv(const struct msg_vinv *mv);
 extern void msg_vinv_free(struct msg_vinv *mv);
 extern void msg_vinv_push(struct msg_vinv *mv, uint32_t msg_type,
 		   const bu256_t *hash_in);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __LIBCCOIN_MESSAGE_H__ */

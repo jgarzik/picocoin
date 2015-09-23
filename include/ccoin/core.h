@@ -15,6 +15,10 @@
 #include <ccoin/cstr.h>
 #include <ccoin/parr.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum service_bits {
 	NODE_NETWORK	= (1 << 0),
 };
@@ -253,5 +257,9 @@ static inline int64_t bp_block_value(unsigned int height, int64_t fees)
 	subsidy >>= (height / 210000);
 	return subsidy + fees;
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __LIBCCOIN_CORE_H__ */

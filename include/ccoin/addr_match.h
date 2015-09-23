@@ -9,6 +9,10 @@
 #include <openssl/bn.h>
 #include <ccoin/parr.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct bp_txout;
 struct bp_keyset;
 struct bp_tx;
@@ -32,5 +36,9 @@ extern void bbm_free(void *bp_block_match_match);
 
 extern parr *bp_block_match(const struct bp_block *block,
 			    const struct bp_keyset *ks);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __LIBCCOIN_ADDR_MATCH_H__ */

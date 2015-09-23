@@ -13,6 +13,10 @@
 #include <ccoin/cstr.h>
 #include <ccoin/parr.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern void ser_bytes(cstring *s, const void *p, size_t len);
 extern void ser_u16(cstring *s, uint16_t v_);
 extern void ser_u32(cstring *s, uint32_t v_);
@@ -62,5 +66,9 @@ static inline bool deser_s64(int64_t *vo, struct const_buffer *buf)
 extern bool deser_u256_array(parr **ao, struct const_buffer *buf);
 
 extern void u256_from_compact(BIGNUM *vo, uint32_t c);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __LIBCCOIN_SERIALIZE_H__ */
