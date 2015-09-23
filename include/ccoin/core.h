@@ -168,7 +168,7 @@ static inline bool bp_tx_coinbase(const struct bp_tx *tx)
 	if (!tx->vin || tx->vin->len != 1)
 		return false;
 
-	struct bp_txin *txin = parr_idx(tx->vin, 0);
+	struct bp_txin *txin = (struct bp_txin *)parr_idx(tx->vin, 0);
 	if (!bp_outpt_null(&txin->prevout))
 		return false;
 
@@ -208,7 +208,7 @@ static inline void bp_utxo_set_add(struct bp_utxo_set *uset,
 static inline struct bp_utxo *bp_utxo_lookup(struct bp_utxo_set *uset,
 					     const bu256_t *hash)
 {
-	return bp_hashtab_get(uset->map, hash);
+	return (struct bp_utxo *)bp_hashtab_get(uset->map, hash);
 }
 
 

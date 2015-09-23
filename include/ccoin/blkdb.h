@@ -62,7 +62,7 @@ extern void blkdb_locator(struct blkdb *db, struct blkinfo *bi,
 
 static inline struct blkinfo *blkdb_lookup(struct blkdb *db,const bu256_t *hash)
 {
-	return bp_hashtab_get(db->blocks, hash);
+	return (struct blkinfo *)bp_hashtab_get(db->blocks, hash);
 }
 
 #ifdef __cplusplus

@@ -235,7 +235,7 @@ static inline bool is_bsp_pushdata(enum opcodetype op)
 
 static inline bool is_bsp_p2sh(struct const_buffer *buf)
 {
-	const unsigned char *vch = buf->p;
+	const unsigned char *vch = (const unsigned char *)(buf->p);
 	return	(buf->len == 23 &&
 		 vch[0] == OP_HASH160 &&
 		 vch[1] == 0x14 &&
