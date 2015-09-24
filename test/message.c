@@ -118,6 +118,10 @@ static void test_version()
             mv.nStartingHeight = 212672;
 
             serialize_version_and_check(&mv, expected, sizeof(expected));
+
+            mv.bRelay = false; /* should have no effect here */
+            serialize_version_and_check(&mv, expected, sizeof(expected));
+
             msg_version_free(&mv);
         }
 
@@ -125,6 +129,8 @@ static void test_version()
         {
             struct msg_version mv;
             msg_version_init(&mv);
+
+            assert(mv.bRelay); /* should be true by default */
 
             struct const_buffer buf = { expected, sizeof(expected) };
             assert(deser_msg_version(&mv, &buf));
@@ -139,6 +145,159 @@ static void test_version()
             assert(0x6517e68c5db32e3b == mv.nonce);
             assert(0 == strcmp(mv.strSubVer, "/Satoshi:0.7.2/"));
             assert(212672 == mv.nStartingHeight);
+            assert(mv.bRelay);
+
+            msg_version_free(&mv);
+        }
+    }
+
+    /* Equivalent message, but protocol version 70001 ('relay' == 1 by */
+    /* default) */
+
+    {
+        const uint8_t expected[] = {
+            /* version */
+            0x71, 0x11, 0x01, 0x00,
+            /* services */
+            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            /* timestamp */
+            0x11, 0xb2, 0xd0, 0x50, 0x00, 0x00, 0x00, 0x00,
+            /* addr_recv */
+            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00,
+            /* addr_from */
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00,
+            /* nonce */
+            0x3b, 0x2e, 0xb3, 0x5d, 0x8c, 0xe6, 0x17, 0x65,
+            /* user_agent */
+            0x0f, 0x2f, 0x53, 0x61, 0x74, 0x6f, 0x73, 0x68,
+            0x69, 0x3a, 0x30, 0x2e, 0x37, 0x2e, 0x32, 0x2f,
+            /* start_height */
+            0xc0, 0x3e, 0x03, 0x00,
+            /* relay */
+            0x01
+        };
+
+        /* serialize */
+        {
+            struct msg_version mv;
+
+            msg_version_init(&mv);
+            mv.nVersion = 70001;
+            mv.nServices = 1;
+            mv.nTime = 0x50d0b211;
+            mv.addrTo.nServices = 1;
+            mv.addrTo.ip[10] = mv.addrTo.ip[11] = 255;
+            mv.addrFrom.nServices = 0;
+            mv.addrFrom.ip[10] = mv.addrFrom.ip[11] = 255;
+            mv.nonce = 0x6517e68c5db32e3b;
+            strcpy(mv.strSubVer, "/Satoshi:0.7.2/");
+            mv.nStartingHeight = 212672;
+
+            serialize_version_and_check(&mv, expected, sizeof(expected));
+
+            msg_version_free(&mv);
+        }
+
+        /* deserialize */
+        {
+            struct msg_version mv;
+            msg_version_init(&mv);
+
+            struct const_buffer buf = { expected, sizeof(expected) };
+            assert(deser_msg_version(&mv, &buf));
+
+            assert(70001 == mv.nVersion);
+            assert(1 == mv.nServices);
+            assert(0x50d0b211 == mv.nTime);
+            assert(1 == mv.addrTo.nServices);
+            assert(0 == memcmp(mv.addrTo.ip, expectIP, sizeof(expectIP)));
+            assert(0 == mv.addrFrom.nServices);
+            assert(0 == memcmp(mv.addrFrom.ip, expectIP, sizeof(expectIP)));
+            assert(0x6517e68c5db32e3b == mv.nonce);
+            assert(0 == strcmp(mv.strSubVer, "/Satoshi:0.7.2/"));
+            assert(212672 == mv.nStartingHeight);
+            assert(mv.bRelay);
+
+            msg_version_free(&mv);
+        }
+    }
+
+    /* Protocol version 70001 with 'relay' explicitly set to false */
+
+    {
+        const uint8_t expected[] = {
+            /* version */
+            0x71, 0x11, 0x01, 0x00,
+            /* services */
+            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            /* timestamp */
+            0x11, 0xb2, 0xd0, 0x50, 0x00, 0x00, 0x00, 0x00,
+            /* addr_recv */
+            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00,
+            /* addr_from */
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00,
+            /* nonce */
+            0x3b, 0x2e, 0xb3, 0x5d, 0x8c, 0xe6, 0x17, 0x65,
+            /* user_agent */
+            0x0f, 0x2f, 0x53, 0x61, 0x74, 0x6f, 0x73, 0x68,
+            0x69, 0x3a, 0x30, 0x2e, 0x37, 0x2e, 0x32, 0x2f,
+            /* start_height */
+            0xc0, 0x3e, 0x03, 0x00,
+            /* relay */
+            0x00
+        };
+
+        /* serialize */
+        {
+            struct msg_version mv;
+
+            msg_version_init(&mv);
+            mv.nVersion = 70001;
+            mv.nServices = 1;
+            mv.nTime = 0x50d0b211;
+            mv.addrTo.nServices = 1;
+            mv.addrTo.ip[10] = mv.addrTo.ip[11] = 255;
+            mv.addrFrom.nServices = 0;
+            mv.addrFrom.ip[10] = mv.addrFrom.ip[11] = 255;
+            mv.nonce = 0x6517e68c5db32e3b;
+            strcpy(mv.strSubVer, "/Satoshi:0.7.2/");
+            mv.nStartingHeight = 212672;
+            mv.bRelay = false;
+
+            serialize_version_and_check(&mv, expected, sizeof(expected));
+
+            msg_version_free(&mv);
+        }
+
+        /* deserialize */
+        {
+            struct msg_version mv;
+            struct const_buffer buf = { expected, sizeof(expected) };
+            assert(deser_msg_version(&mv, &buf));
+
+            assert(70001 == mv.nVersion);
+            assert(1 == mv.nServices);
+            assert(0x50d0b211 == mv.nTime);
+            assert(1 == mv.addrTo.nServices);
+            assert(0 == memcmp(mv.addrTo.ip, expectIP, sizeof(expectIP)));
+            assert(0 == mv.addrFrom.nServices);
+            assert(0 == memcmp(mv.addrFrom.ip, expectIP, sizeof(expectIP)));
+            assert(0x6517e68c5db32e3b == mv.nonce);
+            assert(0 == strcmp(mv.strSubVer, "/Satoshi:0.7.2/"));
+            assert(212672 == mv.nStartingHeight);
+            assert(!mv.bRelay);
 
             msg_version_free(&mv);
         }

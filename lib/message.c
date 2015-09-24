@@ -263,6 +263,11 @@ bool deser_msg_version(struct msg_version *mv, struct const_buffer *buf)
 		if (mv->nVersion >= 209)
 			if (!deser_u32(&mv->nStartingHeight, buf)) return false;
 	}
+	if (mv->nVersion >= 70001) {
+		if (!deser_bool(&mv->bRelay, buf)) return false;
+	} else {
+		mv->bRelay = true;
+	}
 
 	return true;
 }
@@ -281,6 +286,9 @@ cstring *ser_msg_version(const struct msg_version *mv)
 	ser_u64(s, mv->nonce);
 	ser_str(s, mv->strSubVer, sizeof(mv->strSubVer));
 	ser_u32(s, mv->nStartingHeight);
+	if (mv->nVersion >= 70001) {
+		ser_bool(s, mv->bRelay);
+	}
 
 	return s;
 }
