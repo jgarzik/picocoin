@@ -18,7 +18,7 @@ dnl along with this program; if not, write to the Free Software
 dnl Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 AC_INIT(picocoin, 0.1git, [Jeff Garzik <jgarzik@exmulti.com>])
-AC_PREREQ(2.52)
+AC_PREREQ(2.60)
 AC_CONFIG_SRCDIR([src/main.c])
 AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_HEADERS([picocoin-config.h])
