@@ -122,11 +122,13 @@ struct msg_version {
 	uint64_t	nonce;
 	char		strSubVer[80];
 	uint32_t	nStartingHeight;
+	bool		bRelay;
 };
 
 static inline void msg_version_init(struct msg_version *mv)
 {
 	memset(mv, 0, sizeof(*mv));
+	mv->bRelay = true;
 }
 
 extern bool deser_msg_version(struct msg_version *mv, struct const_buffer *buf);

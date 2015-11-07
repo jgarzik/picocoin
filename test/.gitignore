@@ -13,6 +13,7 @@ fileio
 hashtab
 hex
 keyset
+message
 parr
 script
 script-parse
