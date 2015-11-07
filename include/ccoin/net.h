@@ -8,6 +8,10 @@
 #include <stdbool.h>
 #include <string.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern const char ipv4_mapped_pfx[12];
 
 static inline bool is_ipv4_mapped(const unsigned char *ipaddr)
@@ -18,5 +22,9 @@ static inline bool is_ipv4_mapped(const unsigned char *ipaddr)
 extern void bn_group(unsigned char *group, unsigned int *group_len,
 			const unsigned char *ipaddr);
 extern void bn_address_str(char *host, size_t hostsz, const unsigned char *ipaddr);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __LIBCCOIN_NET_H__ */

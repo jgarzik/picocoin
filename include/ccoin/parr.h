@@ -8,6 +8,10 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct parr {
 	void		**data;		// array of pointers
 	size_t		len;		// array element count
@@ -28,5 +32,9 @@ extern bool parr_resize(parr *pa, size_t newsz);
 extern ssize_t parr_find(parr *pa, void *data);
 
 #define parr_idx(pa, idx) ((pa)->data[(idx)])
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __LIBCCOIN_PARR_H__ */

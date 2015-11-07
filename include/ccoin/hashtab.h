@@ -7,6 +7,10 @@
 
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum {
 	BP_HT_INIT_TAB_SZ	= 11,
 	BP_HT_MAX_BUCKET_SZ	= 3,
@@ -83,5 +87,9 @@ static inline void *bp_hashtab_get(struct bp_hashtab *ht, const void *key)
 }
 
 extern void bp_hashtab_iter(struct bp_hashtab *ht, bp_kvu_func f, void *priv);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __LIBCCOIN_HASHTAB_H__ */

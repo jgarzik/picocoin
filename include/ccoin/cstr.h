@@ -8,6 +8,10 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct cstring {
 	char	*str;		// string data, incl. NUL
 	size_t	len;		// length of string, not including NUL
@@ -29,5 +33,9 @@ static inline bool cstr_append_c(cstring *s, char ch)
 {
 	return cstr_append_buf(s, &ch, 1);
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __LIBCCOIN_CSTR_H__ */

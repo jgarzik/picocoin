@@ -10,6 +10,10 @@
 #include <ccoin/buint.h>
 #include <ccoin/hashtab.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct blkinfo;
 
 struct blkinfo {
@@ -58,7 +62,11 @@ extern void blkdb_locator(struct blkdb *db, struct blkinfo *bi,
 
 static inline struct blkinfo *blkdb_lookup(struct blkdb *db,const bu256_t *hash)
 {
-	return bp_hashtab_get(db->blocks, hash);
+	return (struct blkinfo *)bp_hashtab_get(db->blocks, hash);
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __LIBCCOIN_BLKDB_H__ */

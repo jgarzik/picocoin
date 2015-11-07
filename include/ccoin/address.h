@@ -8,6 +8,14 @@
 #include <ccoin/key.h>
 #include <ccoin/cstr.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern cstring *bp_pubkey_get_address(struct bp_key *key, unsigned char addrtype);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __LIBCCOIN_ADDRESS_H__ */

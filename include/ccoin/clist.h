@@ -7,6 +7,10 @@
 
 #include <stdlib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct clist {
 	void		*data;
 
@@ -34,5 +38,9 @@ extern clist *clist_insert_sorted(clist *l, void *data,
 extern clist *clist_sort(clist *l,
 			 int (*compar)(const void *, const void *, void *),
 			 void *user_private);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __LIBCCOIN_CLIST_H__ */

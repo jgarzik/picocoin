@@ -9,6 +9,10 @@
 #include <ccoin/coredefs.h>
 #include <ccoin/buint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct bp_checkpoint {
 	unsigned int	height;
 	const char	*hashstr;
@@ -23,5 +27,9 @@ struct bp_checkpoint_set {
 extern const struct bp_checkpoint_set bp_ckpts[];
 extern bool bp_ckpt_block(enum chains chain, unsigned int height, const bu256_t *hash);
 extern unsigned int bp_ckpt_last(enum chains chain);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __LIBCCOIN_CHECKPOINTS_H__ */

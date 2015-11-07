@@ -12,6 +12,10 @@
 #include <openssl/bn.h>
 #include <ccoin/endian.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum {
 	BU160_WORDS	= (160 / 32),
 #define BU160_WORDS BU160_WORDS
@@ -82,7 +86,7 @@ static inline bool bu256_equal(const bu256_t *a, const bu256_t *b)
 
 static inline bool bu256_equal_(const void *a, const void *b)
 {
-	return bu256_equal(a, b);
+	return bu256_equal((const bu256_t *)a, (const bu256_t *)b);
 }
 
 static inline void bu256_copy(bu256_t *vo, const bu256_t *vi)
@@ -95,10 +99,10 @@ static inline bu256_t *bu256_new(const bu256_t *init_val)
 	bu256_t *v;
 
 	if (init_val) {
-		v = malloc(sizeof(bu256_t));
+		v = (bu256_t *)malloc(sizeof(bu256_t));
 		bu256_copy(v, init_val);
 	} else
-		v = calloc(1, sizeof(bu256_t));
+		v = (bu256_t *)calloc(1, sizeof(bu256_t));
 
 	return v;
 }
@@ -110,7 +114,11 @@ static inline bool bu160_equal(const bu160_t *a, const bu160_t *b)
 
 static inline bool bu160_equal_(const void *a, const void *b)
 {
-	return bu160_equal(a, b);
+	return bu160_equal((bu160_t *)a, (bu160_t *)b);
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __LIBCCOIN_BUINT_H__ */

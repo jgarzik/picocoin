@@ -12,6 +12,10 @@
 #include <ccoin/cstr.h>
 #include <ccoin/parr.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct chain_info;
 
 struct wallet {
@@ -39,5 +43,8 @@ extern bool deser_wallet(struct wallet *wlt, struct const_buffer *buf);
 	unsigned int ___i;					\
 	wallet_for_each_key_numbered(_wlt, _key, ___i)
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif
