@@ -18,6 +18,7 @@ extern "C" {
 #endif
 
 extern void ser_bytes(cstring *s, const void *p, size_t len);
+extern void ser_bool(cstring *s, bool v_);
 extern void ser_u16(cstring *s, uint16_t v_);
 extern void ser_u32(cstring *s, uint32_t v_);
 extern void ser_u64(cstring *s, uint64_t v_);
@@ -45,6 +46,7 @@ extern void ser_u256_array(cstring *s, parr *arr);
 
 extern bool deser_skip(struct const_buffer *buf, size_t len);
 extern bool deser_bytes(void *po, struct const_buffer *buf, size_t len);
+extern bool deser_bool(bool *vo, struct const_buffer *buf);
 extern bool deser_u16(uint16_t *vo, struct const_buffer *buf);
 extern bool deser_u32(uint32_t *vo, struct const_buffer *buf);
 extern bool deser_u64(uint64_t *vo, struct const_buffer *buf);
