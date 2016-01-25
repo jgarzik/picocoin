@@ -56,7 +56,9 @@ case "${host}" in
 		[/* OSX naturally supports 64-bit files */
 		#ifndef O_LARGEFILE
 		# define O_LARGEFILE 0
-		#endif])
+		#endif
+		/* OpenSSL deprecation warnings */
+		#pragma GCC diagnostic ignored "-Wdeprecated-declarations"])
 		;;
 esac
 
