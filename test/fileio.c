@@ -2,6 +2,11 @@
  * Distributed under the MIT/X11 software license, see the accompanying
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.
  */
+
+#if defined(__APPLE__)
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
