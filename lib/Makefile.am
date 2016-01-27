@@ -20,6 +20,7 @@ libccoin_a_SOURCES=	\
 	coredefs.c	\
 	cstr.c		\
 	dns.c		\
+	hdkeys.c	\
 	hexcode.c	\
 	file_seq.c	\
 	hashtab.c	\

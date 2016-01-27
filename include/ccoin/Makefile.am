@@ -15,6 +15,7 @@ EXTRA_DIST = \
 	cstr.h		\
 	endian.h	\
 	hashtab.h	\
+	hdkeys.h	\
 	hexcode.h	\
 	key.h		\
 	mbr.h		\
