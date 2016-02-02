@@ -29,3 +29,14 @@ cstring *bp_pubkey_get_address(const struct bp_key *key, unsigned char addrtype)
 	return btc_addr;
 }
 
+cstring *bp_privkey_get_address(const struct bp_key *key, unsigned char addrtype)
+{
+	// secret (32 bytes), 0x01 (compressed)
+	unsigned char priv [33];
+	if (bp_key_secret_get(&priv[0], 32, key))
+	{
+		priv[32] = 0x01;
+		return base58_encode_check(addrtype, true, &priv[0], 33);
+	}
+	return NULL;
+}

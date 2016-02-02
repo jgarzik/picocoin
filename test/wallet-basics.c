@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <jansson.h>
+#include <openssl/err.h>
 #include <ccoin/core.h>
 #include <ccoin/util.h>
 #include <ccoin/parr.h>
@@ -24,6 +25,9 @@ static void load_json_key(json_t *wallet, struct bp_key *key)
 
 	const char *address_str = json_string_value(json_object_get(key_o, "address"));
 	assert(address_str != NULL);
+
+	const char *privkey_address_str = json_string_value(json_object_get(key_o, "privkey_address"));
+	assert(privkey_address_str);
 
 	const char *pubkey_str = json_string_value(json_object_get(key_o, "pubkey"));
 	assert(pubkey_str != NULL);
@@ -57,6 +61,12 @@ static void load_json_key(json_t *wallet, struct bp_key *key)
 	assert(strlen(address_str) == btc_addr->len);
 	assert(memcmp(address_str, btc_addr->str, btc_addr->len) == 0);
 
+	/* verify the private key address (WIF) */
+	cstring *privkey_addr = bp_privkey_get_address(key, PRIVKEY_ADDRESS_TEST);
+	assert(strlen(privkey_address_str) == privkey_addr->len);
+	assert(memcmp(privkey_address_str, privkey_addr->str, privkey_addr->len) == 0);
+
+	cstr_free(privkey_addr, true);
 	cstr_free(btc_addr, true);
 }
 
@@ -154,6 +164,8 @@ int main (int argc, char *argv[])
 	runtest("wallet-basics.json", "tn_blk35133.ser",
 	    "00000000003bf8f8f24e0c5f592a38bb7c18352745ef7192f1a576d855fd6b2d",
 	    "bf1938abc33cc0b4cde7d94002412b17e35e3c657689e1be7ff588f3fda8d463");
+
+	ERR_remove_state(0);
 
 	return 0;
 }
