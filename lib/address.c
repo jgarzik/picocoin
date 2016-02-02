@@ -10,7 +10,7 @@
 #include <ccoin/util.h>
 #include <ccoin/cstr.h>
 
-cstring *bp_pubkey_get_address(struct bp_key *key, unsigned char addrtype)
+cstring *bp_pubkey_get_address(const struct bp_key *key, unsigned char addrtype)
 {
 	void *pubkey = NULL;
 	size_t pk_len = 0;
