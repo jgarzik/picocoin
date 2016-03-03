@@ -11,6 +11,7 @@ clist
 cstr
 fileio
 hashtab
+hdkeys
 hex
 keyset
 message

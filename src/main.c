@@ -19,7 +19,6 @@
 #include <netdb.h>
 #endif
 #include <ctype.h>
-#include <openssl/bn.h>
 #include <openssl/rand.h>
 #include "picocoin.h"
 #include <ccoin/coredefs.h>

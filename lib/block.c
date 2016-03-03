@@ -6,7 +6,6 @@
 
 #include <string.h>
 #include <time.h>
-#include <openssl/bn.h>
 #include <ccoin/core.h>
 #include <ccoin/util.h>
 #include <ccoin/parr.h>
@@ -178,17 +177,17 @@ void bp_check_merkle_branch(bu256_t *hash, const bu256_t *txhash_in,
 
 static bool bp_block_valid_target(struct bp_block *block)
 {
-	BIGNUM target, sha256;
-	BN_init(&target);
-	BN_init(&sha256);
+	mpz_t target, sha256;
+	mpz_init(target);
+	mpz_init(sha256);
 
-	u256_from_compact(&target, block->nBits);
-	bu256_bn(&sha256, &block->sha256);
+	u256_from_compact(target, block->nBits);
+	bu256_bn(sha256, &block->sha256);
 
-	int cmp = BN_cmp(&sha256, &target);
+	int cmp = mpz_cmp(sha256, target);
 
-	BN_clear_free(&target);
-	BN_clear_free(&sha256);
+	mpz_clear(target);
+	mpz_clear(sha256);
 
 	if (cmp > 0)			/* sha256 > target */
 		return false;

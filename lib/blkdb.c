@@ -10,7 +10,6 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <string.h>
-#include <openssl/bn.h>
 #include <ccoin/blkdb.h>
 #include <ccoin/message.h>
 #include <ccoin/serialize.h>
@@ -25,7 +24,7 @@ struct blkinfo *bi_new(void)
 	struct blkinfo *bi;
 
 	bi = calloc(1, sizeof(*bi));
-	BN_init(&bi->work);
+	mpz_init(bi->work);
 	bi->height = -1;
 	bi->n_file = -1;
 	bi->n_pos = -1LL;
@@ -40,7 +39,7 @@ void bi_free(struct blkinfo *bi)
 	if (!bi)
 		return;
 
-	BN_clear_free(&bi->work);
+	mpz_clear(bi->work);
 
 	bp_block_free(&bi->hdr);
 
@@ -73,10 +72,10 @@ static bool blkdb_connect(struct blkdb *db, struct blkinfo *bi,
 		return false;
 
 	bool rc = false;
-	BIGNUM cur_work;
-	BN_init(&cur_work);
+	mpz_t cur_work;
+	mpz_init(cur_work);
 
-	u256_from_compact(&cur_work, bi->hdr.nBits);
+	u256_from_compact(cur_work, bi->hdr.nBits);
 
 	bool best_chain = false;
 
@@ -88,7 +87,7 @@ static bool blkdb_connect(struct blkdb *db, struct blkinfo *bi,
 		/* bi->prev = NULL; */
 		bi->height = 0;
 
-		BN_copy(&bi->work, &cur_work);
+		mpz_set(bi->work, cur_work);
 
 		best_chain = true;
 	}
@@ -102,10 +101,9 @@ static bool blkdb_connect(struct blkdb *db, struct blkinfo *bi,
 		bi->prev = prev;
 		bi->height = prev->height + 1;
 
-		if (!BN_add(&bi->work, &cur_work, &prev->work))
-			goto out;
+		mpz_add(bi->work, cur_work, prev->work);
 
-		if (BN_cmp(&bi->work, &db->best_chain->work) > 0)
+		if (mpz_cmp(bi->work, db->best_chain->work) > 0)
 			best_chain = true;
 	}
 
@@ -156,7 +154,7 @@ static bool blkdb_connect(struct blkdb *db, struct blkinfo *bi,
 	rc = true;
 
 out:
-	BN_clear_free(&cur_work);
+	mpz_clear(cur_work);
 	return rc;
 }
 

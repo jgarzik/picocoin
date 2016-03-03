@@ -28,10 +28,16 @@ extern bool cstr_resize(cstring *s, size_t sz);
 extern bool cstr_erase(cstring *s, size_t pos, ssize_t len);
 
 extern bool cstr_append_buf(cstring *s, const void *buf, size_t sz);
+extern bool cstr_prepend_buf(cstring *s, const void *buf, size_t sz);
 
 static inline bool cstr_append_c(cstring *s, char ch)
 {
 	return cstr_append_buf(s, &ch, 1);
+}
+
+static inline bool cstr_prepend_c(cstring *s, char ch)
+{
+	return cstr_prepend_buf(s, &ch, 1);
 }
 
 #ifdef __cplusplus

@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <openssl/bn.h>
+#include <gmp.h>
 #include <ccoin/buffer.h>
 #include <ccoin/buint.h>
 #include <ccoin/cstr.h>
@@ -67,7 +67,7 @@ static inline bool deser_s64(int64_t *vo, struct const_buffer *buf)
 
 extern bool deser_u256_array(parr **ao, struct const_buffer *buf);
 
-extern void u256_from_compact(BIGNUM *vo, uint32_t c);
+extern void u256_from_compact(mpz_t vo, uint32_t c);
 
 #ifdef __cplusplus
 }

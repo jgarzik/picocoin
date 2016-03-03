@@ -6,7 +6,7 @@
  */
 
 #include <stdbool.h>
-#include <openssl/bn.h>
+#include <gmp.h>
 #include <ccoin/parr.h>
 
 #ifdef __cplusplus
@@ -21,12 +21,12 @@ struct bp_block;
 extern bool bp_txout_match(const struct bp_txout *txout,
 		    const struct bp_keyset *ks);
 extern bool bp_tx_match(const struct bp_tx *tx, const struct bp_keyset *ks);
-extern bool bp_tx_match_mask(BIGNUM *mask, const struct bp_tx *tx,
+extern bool bp_tx_match_mask(mpz_t mask, const struct bp_tx *tx,
 		      const struct bp_keyset *ks);
 
 struct bp_block_match {
 	unsigned int	n;		/* block.vtx array index */
-	BIGNUM		mask;		/* bitmask of matched txout's */
+	mpz_t		mask;		/* bitmask of matched txout's */
 	bool		self_alloc;	/* alloc'd by bbm_new? */
 };
 

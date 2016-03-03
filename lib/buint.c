@@ -4,28 +4,28 @@
  */
 #include "picocoin-config.h"
 
+#include <stdio.h>
 #include <string.h>
-#include <openssl/bn.h>
 #include <ccoin/buint.h>
 #include <ccoin/hexcode.h>
 #include <ccoin/endian.h>
 
-void bu256_bn(BIGNUM *vo, const bu256_t *vi)
+void bu256_bn(mpz_t vo, const bu256_t *vi)
 {
-	BN_zero(vo);
+	mpz_set_ui(vo, 0);
 
-	BIGNUM tmp;
-	BN_init(&tmp);
+	mpz_t tmp;
+	mpz_init(tmp);
 
 	unsigned int i;
 	for (i = 0; i < 8; i++) {
-		BN_set_word(&tmp, le32toh(vi->dword[i]));
-		BN_lshift(&tmp, &tmp, (i * 32));
+		mpz_set_ui(tmp, le32toh(vi->dword[i]));
+		mpz_mul_2exp(tmp, tmp, (i * 32));
 
-		BN_add(vo, vo, &tmp);
+		mpz_add(vo, vo, tmp);
 	}
 
-	BN_free(&tmp);
+	mpz_clear(tmp);
 }
 
 bool hex_bu256(bu256_t *vo, const char *hexstr)

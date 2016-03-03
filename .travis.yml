@@ -24,6 +24,7 @@ addons:
   apt:
     packages:
       - libssl-dev
+      - libgmp-dev
       - libjansson-dev
       - libevent-dev
 

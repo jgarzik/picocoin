@@ -1,18 +1,22 @@
 #Picocoin
 
+[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/jgarzik/picocoin/master/COPYING) [![Build Status](https://travis-ci.org/jgarzik/picocoin.svg?branch=master)](https://travis-ci.org/jgarzik/picocoin)
 
 Tiny bitcoin library, with lightweight client and utils
 
 libccoin library dependencies:
 	OpenSSL
+	GMP
 
 picocoin client dependencies:
 	OpenSSL
+	GMP
 	libevent 2.x
 	jansson 2.x (2.1 used for development)
 
 block relay daemon (brd) dependencies:
 	OpenSSL
+	GMP
 	libevent 2.x
 
 
