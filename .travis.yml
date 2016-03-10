@@ -15,6 +15,7 @@ env:
   global:
     - MAKEJOBS=-j3
     - RUN_TESTS=true
+    - COVERAGE_STATS=true
     - BASE_OUTDIR=$TRAVIS_BUILD_DIR/out
 
 cache:
@@ -26,6 +27,7 @@ addons:
       - libssl-dev
       - libjansson-dev
       - libevent-dev
+      - lcov
 
 before_install:
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew update; fi
@@ -34,16 +36,23 @@ install:
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install jansson; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install libevent; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install argp-standalone; fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install lcov; fi
+  - if [ "$COVERAGE_STATS" = "true" ]; then gem install coveralls-lcov; fi
 
 before_script:
   - if [ -n "$USE_SHELL" ]; then export CONFIG_SHELL="$USE_SHELL"; fi
   - test -n "$USE_SHELL" && eval '"$USE_SHELL" -c "./autogen.sh"' || ./autogen.sh
+  - if [ "$COVERAGE_STATS" = "true" ]; then COVERAGE_OPT="--enable-coverage"; fi
 
 script:
   - OUTDIR=$BASE_OUTDIR/$TRAVIS_PULL_REQUEST/$TRAVIS_JOB_NUMBER-$HOST
   - PICOCOIN_CONFIG_ALL="--prefix=$TRAVIS_BUILD_DIR/depends/$HOST --bindir=$OUTDIR/bin --libdir=$OUTDIR/lib"
-  - ./configure --cache-file=config.cache $PICOCOIN_CONFIG_ALL $PICOCOIN_CONFIG || ( cat config.log && false)
+  - ./configure --cache-file=config.cache $COVERAGE_OPT $PICOCOIN_CONFIG_ALL $PICOCOIN_CONFIG || ( cat config.log && false)
   - make -s $MAKEJOBS $GOAL || ( echo "Build failure. Verbose build follows." && make $GOAL ; false )
   - export LD_LIBRARY_PATH=$TRAVIS_BUILD_DIR/depends/$HOST/lib
   - if [ "$RUN_TESTS" = "true" ]; then make $MAKEJOBS distcheck; fi
+  - if [ "$COVERAGE_STATS" = "true" ]; then make $MAKEJOBS check; fi
 
+after_success:
+  - if [ "$COVERAGE_STATS" = "true" ]; then lcov --compat-libtool --directory . --capture --output-file coverage.info; fi
+  - if [ "$COVERAGE_STATS" = "true" ]; then coveralls-lcov coverage.info; fi
