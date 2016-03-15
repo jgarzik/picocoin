@@ -12,7 +12,9 @@
 extern "C" {
 #endif
 
-extern cstring *bp_pubkey_get_address(struct bp_key *key, unsigned char addrtype);
+extern cstring *bp_pubkey_get_address(const struct bp_key *key, unsigned char addrtype);
+
+extern cstring *bp_privkey_get_address(const struct bp_key *key, unsigned char addrtype);
 
 #ifdef __cplusplus
 }
