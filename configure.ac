@@ -83,6 +83,24 @@ dnl -----------------
 dnl Configure options
 dnl -----------------
 
+dnl Coverage
+AC_MSG_CHECKING([whether to code coverage])
+AC_ARG_ENABLE([coverage],
+	[AS_HELP_STRING([--enable-coverage],[generate code coverage instrumentation])],
+	[],
+	[enable_coverage=no])
+AC_MSG_RESULT([$enable_coverage])
+
+AS_IF([test "$enable_coverage" = "yes"], [
+	AC_PATH_PROG(GCOV, gcov, no)
+	AS_IF([test "$GCOV" = "no"], [
+		AC_MSG_ERROR(gcov tool is not available)])
+	AC_PATH_PROG(LCOV, lcov, no)
+	AS_IF([test "$LCOV" = "no"], [
+		AC_MSG_ERROR(lcov tool is not installed)])
+	CFLAGS="$CFLAGS -O0 -fprofile-arcs -ftest-coverage"
+])
+
 dnl --------------------------
 dnl autoconf output generation
 dnl --------------------------
@@ -103,4 +121,3 @@ AC_CONFIG_FILES([
 	test/Makefile
 	])
 AC_OUTPUT
-
