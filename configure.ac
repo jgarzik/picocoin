@@ -101,6 +101,21 @@ AS_IF([test "$enable_coverage" = "yes"], [
 	CFLAGS="$CFLAGS -O0 -fprofile-arcs -ftest-coverage"
 ])
 
+dnl Valgrind
+AC_MSG_CHECKING([whether to use valgrind])
+AC_ARG_ENABLE([valgrind],
+	[AS_HELP_STRING([--enable-valgrind],[Use valgrind when running unit tests])],
+	[],
+	[enable_valgrind=no])
+AC_MSG_RESULT([$enable_valgrind])
+
+AS_IF([test "$enable_valgrind" = "yes"], [
+	AC_PATH_PROG(VALGRIND, valgrind, no)
+	AS_IF([test "$VALGRIND" = "no"], [
+		AC_MSG_ERROR(valgrind tool is not installed)])
+])
+AM_CONDITIONAL(ENABLE_VALGRIND, [test "$enable_valgrind" = "yes"])
+
 dnl --------------------------
 dnl autoconf output generation
 dnl --------------------------
