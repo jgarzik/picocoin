@@ -1,9 +1,10 @@
 
 AM_CPPFLAGS	= -I$(top_srcdir)/include
 
-noinst_LIBRARIES= libccoin.a
+lib_LTLIBRARIES= libccoin.la
 
-libccoin_a_SOURCES=	\
+libccoin_la_LIBADD= -lm
+libccoin_la_SOURCES=	\
 	address.c	\
 	addr_match.c	\
 	base58.c	\

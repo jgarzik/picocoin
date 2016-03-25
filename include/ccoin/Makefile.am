@@ -1,5 +1,7 @@
 
-EXTRA_DIST = \
+ccoinincludedir=$(includedir)/ccoin
+
+ccoininclude_HEADERS = \
 	address.h	\
 	addr_match.h	\
 	base58.h	\

@@ -19,6 +19,8 @@ dnl Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 AC_INIT(picocoin, 0.1git, [Jeff Garzik <jgarzik@exmulti.com>])
 AC_PREREQ(2.60)
+LT_INIT
+AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/main.c])
 AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_HEADERS([picocoin-config.h])
@@ -30,7 +32,6 @@ AC_CANONICAL_HOST
 
 dnl Checks for programs
 AC_PROG_CC
-AC_PROG_RANLIB
 AC_PROG_GCC_TRADITIONAL
 
 dnl Checks for header files.
@@ -128,6 +129,7 @@ AC_SUBST(ARGP_LIBS)
 
 AC_CONFIG_FILES([
 	Makefile
+	m4/Makefile
 	doc/Makefile
 	include/Makefile
 	include/ccoin/Makefile
