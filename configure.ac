@@ -19,6 +19,8 @@ dnl Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 AC_INIT(picocoin, 0.1git, [Jeff Garzik <jgarzik@exmulti.com>])
 AC_PREREQ(2.60)
+LT_INIT
+AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/main.c])
 AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_HEADERS([picocoin-config.h])
@@ -30,7 +32,6 @@ AC_CANONICAL_HOST
 
 dnl Checks for programs
 AC_PROG_CC
-AC_PROG_RANLIB
 AC_PROG_GCC_TRADITIONAL
 
 dnl Checks for header files.
@@ -103,6 +104,21 @@ AS_IF([test "$enable_coverage" = "yes"], [
 	CFLAGS="$CFLAGS -O0 -fprofile-arcs -ftest-coverage"
 ])
 
+dnl Valgrind
+AC_MSG_CHECKING([whether to use valgrind])
+AC_ARG_ENABLE([valgrind],
+	[AS_HELP_STRING([--enable-valgrind],[Use valgrind when running unit tests])],
+	[],
+	[enable_valgrind=no])
+AC_MSG_RESULT([$enable_valgrind])
+
+AS_IF([test "$enable_valgrind" = "yes"], [
+	AC_PATH_PROG(VALGRIND, valgrind, no)
+	AS_IF([test "$VALGRIND" = "no"], [
+		AC_MSG_ERROR(valgrind tool is not installed)])
+])
+AM_CONDITIONAL(ENABLE_VALGRIND, [test "$enable_valgrind" = "yes"])
+
 dnl --------------------------
 dnl autoconf output generation
 dnl --------------------------
@@ -116,6 +132,7 @@ AC_SUBST(ARGP_LIBS)
 
 AC_CONFIG_FILES([
 	Makefile
+	m4/Makefile
 	doc/Makefile
 	include/Makefile
 	include/ccoin/Makefile

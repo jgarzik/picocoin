@@ -2,4 +2,11 @@
 set -e
 srcdir="$(dirname $0)"
 cd "$srcdir"
-autoreconf --install --force
+
+if which glibtoolize
+then
+	glibtoolize && autoreconf --install --force
+else
+	libtoolize && autoreconf --install --force
+fi
+

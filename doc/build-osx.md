@@ -16,11 +16,11 @@ those plus `libevent` and `jansson` to build *picocoin*.
 
 Install these packages. It will take a few minutes.
 
-    brew install autoconf automake argp-standalone jansson libevent openssl gmp
+    brew install autoconf automake libtool argp-standalone jansson libevent openssl gmp
 
 or
 
-    sudo port install autoconf automake argp-standalone jansson libevent pkgconfig openssl gmp
+    sudo port install autoconf automake libtool argp-standalone jansson libevent pkgconfig openssl gmp
 
 
 Building
