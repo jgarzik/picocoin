@@ -30,6 +30,8 @@ addons:
       - libevent-dev
       - lcov
       - valgrind
+      - libtool
+      - libltdl-dev
 
 before_install:
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew update; fi
@@ -37,6 +39,7 @@ before_install:
 install:
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install jansson; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install libevent; fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install libtool; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install argp-standalone; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ] && [ "$COVERAGE_STATS" = "true" ]; then brew install lcov; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ] && [ "$USE_VALGRIND" = "true" ]; then brew install valgrind; fi
