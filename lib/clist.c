@@ -155,11 +155,12 @@ clist *clist_sort(clist *l,
 		  void *user_priv)
 {
 	clist *new_l = NULL;
+	clist *tmp_l = l;
 
-	while (l) {
-		new_l = clist_insert_sorted(new_l, l->data, compar, user_priv);
+	while (tmp_l) {
+		new_l = clist_insert_sorted(new_l, tmp_l->data, compar, user_priv);
 
-		l = l->next;
+		tmp_l = tmp_l->next;
 	}
 
 	clist_free(l);
