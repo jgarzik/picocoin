@@ -13,7 +13,7 @@
 extern "C" {
 #endif
 
-#ifndef HAVE_FDATASYNC
+#if defined(__APPLE__) || !defined(HAVE_FDATASYNC)
 static inline int fdatasync(int fd)
 {
 #ifdef WIN32
