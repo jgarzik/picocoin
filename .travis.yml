@@ -40,6 +40,7 @@ install:
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install jansson; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install libevent; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install argp-standalone; fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install openssl; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ] && [ "$COVERAGE_STATS" = "true" ]; then brew install lcov; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ] && [ "$USE_VALGRIND" = "true" ]; then brew install valgrind; fi
   - if [ "$COVERAGE_STATS" = "true" ]; then gem install coveralls-lcov; fi

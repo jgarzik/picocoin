@@ -9,6 +9,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <unistd.h>
+#if defined(__APPLE__)
+# include <sys/uio.h>
+#endif
 #include <fcntl.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -29,6 +32,11 @@
 #include <ccoin/hexcode.h>
 #include "peerman.h"
 #include "brd.h"
+
+#if defined(__GNUC__)
+/* For add_orphan */
+# pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 
 struct bp_hashtab *settings;
 const struct chain_info *chain = NULL;
