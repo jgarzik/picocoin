@@ -11,16 +11,16 @@ Dependencies
 This guide assumes usage of [Homebrew](http://brew.sh) or
 [MacPorts](https://www.macports.org) for installing dependencies.
 
-You will need to install `OpenSSL` in order to build *libccoin*, and
+You will need to install `OpenSSL` and `GMP` in order to build *libccoin*, and
 those plus `libevent` and `jansson` to build *picocoin*.
 
 Install these packages. It will take a few minutes.
 
-    brew install autoconf automake libtool argp-standalone jansson libevent openssl
+    brew install autoconf automake libtool argp-standalone jansson libevent openssl gmp
 
 or
 
-    sudo port install autoconf automake libtool argp-standalone jansson libevent pkgconfig openssl
+    sudo port install autoconf automake libtool argp-standalone jansson libevent pkgconfig openssl gmp
 
 
 Building

@@ -151,24 +151,13 @@ static const unsigned char disabled_op[256] = {
 	[OP_RSHIFT] = 1,
 };
 
-static bool CastToBigNum(BIGNUM *vo, const struct buffer *buf)
+static bool CastToBigNum(mpz_t vo, const struct buffer *buf)
 {
 	if (buf->len > nMaxNumSize)
 		return false;
 
-	// Get rid of extra leading zeros:
-	// buf -> bn -> buf -> bn
+	bn_setvch(vo, buf->p, buf->len);
 
-	BIGNUM bn;
-	BN_init(&bn);
-
-	bn_setvch(&bn, buf->p, buf->len);
-	cstring *bn_s = bn_getvch(&bn);
-
-	bn_setvch(vo, bn_s->str, bn_s->len);
-
-	cstr_free(bn_s, true);
-	BN_clear_free(&bn);
 	return true;
 }
 
@@ -184,7 +173,6 @@ static bool CastToBool(const struct buffer *buf)
 			return true;
 		}
 	}
-
 	return false;
 }
 
@@ -233,24 +221,18 @@ static struct buffer *stacktop(parr *stack, int index)
 static int stackint(parr *stack, int index)
 {
 	struct buffer *buf = stacktop(stack, index);
-	BIGNUM bn;
-	BN_init(&bn);
+	mpz_t bn;
+	mpz_init(bn);
 
 	int ret = -1;
 
-	if (!CastToBigNum(&bn, buf))
+	if (!CastToBigNum(bn, buf))
 		goto out;
 
-	if (!BN_is_negative(&bn))
-		ret = BN_get_word(&bn);
-	else {
-		BN_set_negative(&bn, 0);
-		ret = BN_get_word(&bn);
-		ret = -ret;
-	}
+	ret = mpz_get_si(bn);
 
 out:
-	BN_clear_free(&bn);
+	mpz_clear(bn);
 	return ret;
 }
 
@@ -284,16 +266,6 @@ static unsigned int count_false(cstring *vfExec)
 			count++;
 
 	return count;
-}
-
-static void bn_set_int(BIGNUM *n, int val)
-{
-	if (val >= 0)
-		BN_set_word(n, val);
-	else {
-		BN_set_word(n, -val);
-		BN_set_negative(n, 1);
-	}
 }
 
 static bool bp_checksig(const struct buffer *vchSigHT,
@@ -358,8 +330,8 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 	bool rc = false;
 	cstring *vfExec = cstr_new(NULL);
 	parr *altstack = parr_new(0, buffer_free);
-	BIGNUM bn;
-	BN_init(&bn);
+	mpz_t bn;
+	mpz_init(bn);
 
 	if (script->len > 10000)
 		goto out;
@@ -409,18 +381,16 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 		case OP_14:
 		case OP_15:
 		case OP_16:
-			bn_set_int(&bn, (int)opcode - (int)(OP_1 - 1));
-			stack_push_str(stack, bn_getvch(&bn));
+			mpz_set_si(bn, (int)opcode - (int)(OP_1 - 1));
+			stack_push_str(stack, bn_getvch(bn));
 			break;
 
 		//
 		// Control
 		//
 		case OP_NOP:
-		case OP_NOP1: case OP_NOP2: case OP_NOP3: case OP_NOP4: case
-OP_NOP5:
-		case OP_NOP6: case OP_NOP7: case OP_NOP8: case OP_NOP9: case
-OP_NOP10:
+		case OP_NOP1: case OP_NOP2: case OP_NOP3: case OP_NOP4: case OP_NOP5:
+		case OP_NOP6: case OP_NOP7: case OP_NOP8: case OP_NOP9: case OP_NOP10:
 			break;
 
 		case OP_IF:
@@ -561,8 +531,8 @@ OP_NOP10:
 
 		case OP_DEPTH:
 			// -- stacksize
-			BN_set_word(&bn, stack->len);
-			stack_push_str(stack, bn_getvch(&bn));
+			mpz_set_ui(bn, stack->len);
+			stack_push_str(stack, bn_getvch(bn));
 			break;
 
 		case OP_DROP:
@@ -651,8 +621,8 @@ OP_NOP10:
 			if (stack->len < 1)
 				goto out;
 			struct buffer *vch = stacktop(stack, -1);
-			BN_set_word(&bn, vch->len);
-			stack_push_str(stack, bn_getvch(&bn));
+			mpz_set_ui(bn, vch->len);
+			stack_push_str(stack, bn_getvch(bn));
 			break;
 		}
 
@@ -695,35 +665,34 @@ OP_NOP10:
 			// (in -- out)
 			if (stack->len < 1)
 				goto out;
-			if (!CastToBigNum(&bn, stacktop(stack, -1)))
+			if (!CastToBigNum(bn, stacktop(stack, -1)))
 				goto out;
 			switch (opcode)
 			{
 			case OP_1ADD:
-				BN_add_word(&bn, 1);
+				mpz_add_ui(bn, bn, 1);
 				break;
 			case OP_1SUB:
-				BN_sub_word(&bn, 1);
+				mpz_sub_ui(bn, bn, 1);
 				break;
 			case OP_NEGATE:
-				BN_set_negative(&bn, !BN_is_negative(&bn));
+				mpz_neg(bn, bn);
 				break;
 			case OP_ABS:
-				if (BN_is_negative(&bn))
-					BN_set_negative(&bn, 0);
+				mpz_abs(bn, bn);
 				break;
 			case OP_NOT:
-				BN_set_word(&bn, BN_is_zero(&bn) ? 1 : 0);
+				mpz_set_ui(bn, mpz_sgn(bn) == 0 ? 1 : 0);
 				break;
 			case OP_0NOTEQUAL:
-				BN_set_word(&bn, BN_is_zero(&bn) ? 0 : 1);
+				mpz_set_ui(bn, mpz_sgn(bn) == 0 ? 0 : 1);
 				break;
 			default:
 				// impossible
 				goto out;
 			}
 			popstack(stack);
-			stack_push_str(stack, bn_getvch(&bn));
+			stack_push_str(stack, bn_getvch(bn));
 			break;
 		}
 
@@ -744,70 +713,70 @@ OP_NOP10:
 			if (stack->len < 2)
 				goto out;
 
-			BIGNUM bn1, bn2;
-			BN_init(&bn1);
-			BN_init(&bn2);
-			if (!CastToBigNum(&bn1, stacktop(stack, -2)) ||
-			    !CastToBigNum(&bn2, stacktop(stack, -1))) {
-				BN_clear_free(&bn1);
-				BN_clear_free(&bn2);
+			mpz_t bn1, bn2;
+			mpz_init(bn1);
+			mpz_init(bn2);
+			if (!CastToBigNum(bn1, stacktop(stack, -2)) ||
+			    !CastToBigNum(bn2, stacktop(stack, -1))) {
+				mpz_clear(bn1);
+				mpz_clear(bn2);
 				goto out;
 			}
 
 			switch (opcode)
 			{
 			case OP_ADD:
-				BN_add(&bn, &bn1, &bn2);
+				mpz_add(bn, bn1, bn2);
 				break;
 			case OP_SUB:
-				BN_sub(&bn, &bn1, &bn2);
+				mpz_sub(bn, bn1, bn2);
 				break;
 			case OP_BOOLAND:
-				BN_set_word(&bn,
-				    (!BN_is_zero(&bn1) && !BN_is_zero(&bn2)) ?
+				mpz_set_ui(bn,
+				    !(mpz_sgn(bn1) == 0) && !(mpz_sgn(bn2) == 0) ?
 				    1 : 0);
 				break;
 			case OP_BOOLOR:
-				BN_set_word(&bn,
-				    (!BN_is_zero(&bn1) || !BN_is_zero(&bn2)) ?
+				mpz_set_ui(bn,
+				    !(mpz_sgn(bn1) == 0) || !(mpz_sgn(bn2) == 0) ?
 				    1 : 0);
 				break;
 			case OP_NUMEQUAL:
 			case OP_NUMEQUALVERIFY:
-				BN_set_word(&bn,
-				    (BN_cmp(&bn1, &bn2) == 0) ?  1 : 0);
+				mpz_set_ui(bn,
+				    mpz_cmp(bn1, bn2) == 0 ?  1 : 0);
 				break;
 			case OP_NUMNOTEQUAL:
-				BN_set_word(&bn,
-				    (BN_cmp(&bn1, &bn2) != 0) ?  1 : 0);
+				mpz_set_ui(bn,
+				    mpz_cmp(bn1, bn2) != 0 ?  1 : 0);
 				break;
 			case OP_LESSTHAN:
-				BN_set_word(&bn,
-				    (BN_cmp(&bn1, &bn2) < 0) ?  1 : 0);
+				mpz_set_ui(bn,
+				    mpz_cmp(bn1, bn2) < 0 ?  1 : 0);
 				break;
 			case OP_GREATERTHAN:
-				BN_set_word(&bn,
-				    (BN_cmp(&bn1, &bn2) > 0) ?  1 : 0);
+				mpz_set_ui(bn,
+				    mpz_cmp(bn1, bn2) > 0 ?  1 : 0);
 				break;
 			case OP_LESSTHANOREQUAL:
-				BN_set_word(&bn,
-				    (BN_cmp(&bn1, &bn2) <= 0) ?  1 : 0);
+				mpz_set_ui(bn,
+				    mpz_cmp(bn1, bn2) <= 0 ?  1 : 0);
 				break;
 			case OP_GREATERTHANOREQUAL:
-				BN_set_word(&bn,
-				    (BN_cmp(&bn1, &bn2) >= 0) ?  1 : 0);
+				mpz_set_ui(bn,
+				    mpz_cmp(bn1, bn2) >= 0 ?  1 : 0);
 				break;
 			case OP_MIN:
-				if (BN_cmp(&bn1, &bn2) < 0)
-					BN_copy(&bn, &bn1);
+				if (mpz_cmp(bn1, bn2) < 0)
+					mpz_set(bn, bn1);
 				else
-					BN_copy(&bn, &bn2);
+					mpz_set(bn, bn2);
 				break;
 			case OP_MAX:
-				if (BN_cmp(&bn1, &bn2) > 0)
-					BN_copy(&bn, &bn1);
+				if (mpz_cmp(bn1, bn2) > 0)
+					mpz_set(bn, bn1);
 				else
-					BN_copy(&bn, &bn2);
+					mpz_set(bn, bn2);
 				break;
 			default:
 				// impossible
@@ -815,9 +784,9 @@ OP_NOP10:
 			}
 			popstack(stack);
 			popstack(stack);
-			stack_push_str(stack, bn_getvch(&bn));
-			BN_clear_free(&bn1);
-			BN_clear_free(&bn2);
+			stack_push_str(stack, bn_getvch(bn));
+			mpz_clear(bn1);
+			mpz_clear(bn2);
 
 			if (opcode == OP_NUMEQUALVERIFY)
 			{
@@ -833,22 +802,22 @@ OP_NOP10:
 			// (x min max -- out)
 			if (stack->len < 3)
 				goto out;
-			BIGNUM bn1, bn2, bn3;
-			BN_init(&bn1);
-			BN_init(&bn2);
-			BN_init(&bn3);
-			bool rc1 = CastToBigNum(&bn1, stacktop(stack, -3));
-			bool rc2 = CastToBigNum(&bn2, stacktop(stack, -2));
-			bool rc3 = CastToBigNum(&bn3, stacktop(stack, -1));
-			bool fValue = (BN_cmp(&bn2, &bn1) <= 0 &&
-				       BN_cmp(&bn1, &bn3) < 0);
+			mpz_t bn1, bn2, bn3;
+			mpz_init(bn1);
+			mpz_init(bn2);
+			mpz_init(bn3);
+			bool rc1 = CastToBigNum(bn1, stacktop(stack, -3));
+			bool rc2 = CastToBigNum(bn2, stacktop(stack, -2));
+			bool rc3 = CastToBigNum(bn3, stacktop(stack, -1));
+			bool fValue = (mpz_cmp(bn2, bn1) <= 0 &&
+				       mpz_cmp(bn1, bn3) < 0);
 			popstack(stack);
 			popstack(stack);
 			popstack(stack);
 			stack_push_char(stack, fValue ? 1 : 0);
-			BN_clear_free(&bn1);
-			BN_clear_free(&bn2);
-			BN_clear_free(&bn3);
+			mpz_clear(bn1);
+			mpz_clear(bn2);
+			mpz_clear(bn3);
 			if (!rc1 || !rc2 || !rc3)
 				goto out;
 			break;
@@ -1051,7 +1020,7 @@ OP_NOP10:
 	rc = (vfExec->len == 0 && bp.error == false);
 
 out:
-	BN_clear_free(&bn);
+	mpz_clear(bn);
 	parr_free(altstack, true);
 	cstr_free(vfExec, true);
 	return rc;

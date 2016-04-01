@@ -4,6 +4,7 @@
  */
 #include "picocoin-config.h"
 
+#include <stdio.h>
 #include <string.h>
 #include "peerman.h"
 #include <ccoin/mbr.h>

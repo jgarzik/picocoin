@@ -20,7 +20,7 @@ struct blkinfo {
 	bu256_t		hash;
 	struct bp_block	hdr;
 
-	BIGNUM		work;
+	mpz_t		work;
 	int		height;
 
 	int32_t		n_file;		/* uninitialized == -1 */

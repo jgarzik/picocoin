@@ -14,7 +14,7 @@ brd_SOURCES=		\
 	brd.h
 
 brd_LDADD	= libnode.a ../lib/libccoin.la \
-		  @CRYPTO_LIBS@ @EVENT_LIBS@
+		  @CRYPTO_LIBS@ @GMP_LIBS@ @EVENT_LIBS@
 
 picocoin_SOURCES=	\
 	aes.c		\
@@ -25,12 +25,12 @@ picocoin_SOURCES=	\
 	wallet.c wallet.h
 
 picocoin_LDADD	= libnode.a ../lib/libccoin.la \
-		  @CRYPTO_LIBS@ @ARGP_LIBS@ \
+		  @CRYPTO_LIBS@ @GMP_LIBS@ @ARGP_LIBS@ \
 		  @EVENT_LIBS@ @JANSSON_LIBS@
 
 blkscan_LDADD	= ../lib/libccoin.la \
-		  @CRYPTO_LIBS@ @ARGP_LIBS@
+		  @CRYPTO_LIBS@ @GMP_LIBS@ @ARGP_LIBS@
 blkstats_LDADD	= ../lib/libccoin.la \
-		  @CRYPTO_LIBS@ @ARGP_LIBS@
+		  @CRYPTO_LIBS@ @GMP_LIBS@ @ARGP_LIBS@
 rawtx_LDADD	= ../lib/libccoin.la \
-		  @CRYPTO_LIBS@ @ARGP_LIBS@ @JANSSON_LIBS@
+		  @CRYPTO_LIBS@ @GMP_LIBS@ @ARGP_LIBS@ @JANSSON_LIBS@

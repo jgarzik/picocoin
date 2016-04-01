@@ -115,6 +115,19 @@ bool cstr_append_buf(cstring *s, const void *buf, size_t sz)
 	return true;
 }
 
+bool cstr_prepend_buf(cstring *s, const void *buf, size_t sz)
+{
+	if (!cstr_alloc_min_sz(s, s->len + sz))
+		return false;
+
+	memmove(s->str + sz, s->str, s->len);
+	memcpy(s->str, buf, sz);
+	s->len += sz;
+	s->str[s->len] = 0;
+
+	return true;
+}
+
 bool cstr_equal(const cstring *a, const cstring *b)
 {
 	if (a == b)

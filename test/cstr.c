@@ -39,6 +39,16 @@ static void test_basic(void)
 
 	cstr_free(s, true);
 
+	s = cstr_new(NULL);
+	assert(s != NULL);
+	cstr_prepend_buf(s, "o", 1);
+	cstr_prepend_buf(s, "o", 1);
+	cstr_prepend_buf(s, "f", 1);
+	assert(s->len == 3);
+	assert(strcmp(s->str, "foo") == 0);
+
+	cstr_free(s, true);
+
 	s = cstr_new("foo");
 	assert(s != NULL);
 

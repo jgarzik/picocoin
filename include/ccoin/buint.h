@@ -9,7 +9,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
-#include <openssl/bn.h>
+#include <gmp.h>
 #include <ccoin/endian.h>
 
 #ifdef __cplusplus
@@ -39,7 +39,7 @@ typedef struct bu256 {
 
 extern unsigned long bu160_hash(const void *key_);
 
-extern void bu256_bn(BIGNUM *vo, const bu256_t *vi);
+extern void bu256_bn(mpz_t vo, const bu256_t *vi);
 extern bool hex_bu256(bu256_t *vo, const char *hexstr);
 extern void bu256_hex(char *hexstr, const bu256_t *v);
 extern void bu256_swap(bu256_t *v);

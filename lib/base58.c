@@ -6,7 +6,7 @@
 
 #include <ctype.h>
 #include <string.h>
-#include <openssl/bn.h>
+#include <gmp.h>
 #include <ccoin/util.h>
 #include <ccoin/cstr.h>
 
@@ -16,33 +16,17 @@ static const char base58_chars[] =
 cstring *base58_encode(const void *data_, size_t data_len)
 {
 	const unsigned char *data = data_;
-	BIGNUM bn58, bn0, bn, dv, rem;
-	BN_CTX *ctx;
+	mpz_t bn;
 
-	ctx = BN_CTX_new();
-	BN_init(&bn58);
-	BN_init(&bn0);
-	BN_init(&bn);
-	BN_init(&dv);
-	BN_init(&rem);
+	mpz_init(bn);
 
-	BN_set_word(&bn58, 58);
-	BN_set_word(&bn0, 0);
-
-	unsigned char swapbuf[data_len + 1];
-	bu_reverse_copy(swapbuf, data, data_len);
-	swapbuf[data_len] = 0;
-
-	bn_setvch(&bn, swapbuf, sizeof(swapbuf));
+	mpz_import(bn, data_len, 1, 1, 1, 0, data);
 
 	cstring *rs = cstr_new_sz(data_len * 138 / 100 + 1);
 
-	while (BN_cmp(&bn, &bn0) > 0) {
-		if (!BN_div(&dv, &rem, &bn, &bn58, ctx))
-			goto err_out;
-		BN_copy(&bn, &dv);
+	while (mpz_sgn(bn) > 0) {
+		unsigned int c = mpz_tdiv_q_ui(bn, bn, 58);
 
-		unsigned int c = BN_get_word(&rem);
 		cstr_append_c(rs, base58_chars[c]);
 	}
 
@@ -62,20 +46,9 @@ cstring *base58_encode(const void *data_, size_t data_len)
 	cstr_free(rs, true);
 	rs = rs_swap;
 
-out:
-	BN_clear_free(&bn58);
-	BN_clear_free(&bn0);
-	BN_clear_free(&bn);
-	BN_clear_free(&dv);
-	BN_clear_free(&rem);
-	BN_CTX_free(ctx);
+	mpz_clear(bn);
 
 	return rs;
-
-err_out:
-	cstr_free(rs, true);
-	rs = NULL;
-	goto out;
 }
 
 cstring *base58_encode_check(unsigned char addrtype, bool have_addrtype,
@@ -101,17 +74,10 @@ cstring *base58_encode_check(unsigned char addrtype, bool have_addrtype,
 
 cstring *base58_decode(const char *s_in)
 {
-	BIGNUM bn58, bn, bnChar;
-	BN_CTX *ctx;
+	mpz_t bn;
 	cstring *ret = NULL;
 
-	ctx = BN_CTX_new();
-	BN_init(&bn58);
-	BN_init(&bn);
-	BN_init(&bnChar);
-
-	BN_set_word(&bn58, 58);
-	BN_set_word(&bn, 0);
+	mpz_init(bn);
 
 	while (isspace(*s_in))
 		s_in++;
@@ -126,44 +92,27 @@ cstring *base58_decode(const char *s_in)
 				goto out;
 			break;
 		}
-
-		BN_set_word(&bnChar, p1 - base58_chars);
-
-		if (!BN_mul(&bn, &bn, &bn58, ctx))
-			goto out;
-
-		if (!BN_add(&bn, &bn, &bnChar))
-			goto out;
+		mpz_mul_ui(bn, bn, 58);
+		mpz_add_ui(bn, bn, p1 - base58_chars);
 	}
 
-	cstring *tmp = bn_getvch(&bn);
+	size_t buf_sz;
+	char *buf = mpz_export(NULL, &buf_sz, 1, 1, 1, 0, bn);
+	cstring *tmp = cstr_new_buf(buf,buf_sz);
+	free(buf);
 
 	if ((tmp->len >= 2) &&
 	    (tmp->str[tmp->len - 1] == 0) &&
 	    ((unsigned char)tmp->str[tmp->len - 2] >= 0x80))
 		cstr_resize(tmp, tmp->len - 1);
 
-	unsigned int leading_zero = 0;
 	for (p = s_in; *p == base58_chars[0]; p++)
-		leading_zero++;
+		cstr_prepend_c(tmp, '\0');
 
-	unsigned int be_sz = tmp->len + leading_zero;
-	cstring *tmp_be = cstr_new_sz(be_sz);
-	cstr_resize(tmp_be, be_sz);
-	memset(tmp_be->str, 0, be_sz);
-
-	bu_reverse_copy((unsigned char *)tmp_be->str + leading_zero,
-			(unsigned char *)tmp->str, tmp->len);
-
-	cstr_free(tmp, true);
-
-	ret = tmp_be;
+	ret = tmp;
 
 out:
-	BN_clear_free(&bn58);
-	BN_clear_free(&bn);
-	BN_clear_free(&bnChar);
-	BN_CTX_free(ctx);
+	mpz_clear(bn);
 	return ret;
 }
 

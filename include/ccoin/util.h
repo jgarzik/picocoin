@@ -5,11 +5,12 @@
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.
  */
 
+#include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <openssl/bn.h>
+#include <gmp.h>
 #include <ccoin/cstr.h>
 #include <ccoin/clist.h>
 
@@ -30,8 +31,8 @@ enum {
 };
 
 extern void btc_decimal(char *valstr, size_t valstr_sz, int64_t val);
-extern cstring *bn_getvch(const BIGNUM *v);
-extern void bn_setvch(BIGNUM *vo, const void *data_, size_t data_len);
+extern cstring *bn_getvch(const mpz_t v);
+extern void bn_setvch(mpz_t vo, const void *data_, size_t data_len);
 
 extern void bu_reverse_copy(unsigned char *dst, const unsigned char *src, size_t len);
 extern void bu_Hash(unsigned char *md256, const void *data, size_t data_len);

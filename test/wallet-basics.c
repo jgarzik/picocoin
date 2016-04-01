@@ -128,11 +128,10 @@ static void runtest(const char *json_base_fn, const char *ser_in_fn,
 	assert(strcmp(tx_hexstr, tx_in_hash) == 0);
 
 	/* verify mask matches 2nd txout (1 << 1) */
-	BIGNUM tmp_mask;
-	BN_init(&tmp_mask);
-	BN_one(&tmp_mask);
-	BN_lshift(&tmp_mask, &tmp_mask, 1);
-	assert(BN_cmp(&tmp_mask, &match->mask) == 0);
+	mpz_t tmp_mask;
+	mpz_init_set_ui(tmp_mask,1);
+	mpz_mul_2exp(tmp_mask, tmp_mask, 1);
+	assert(mpz_cmp(tmp_mask, match->mask) == 0);
 
 	/* build merkle tree, tx's branch */
 	parr *mtree = bp_block_merkle_tree(&block_in);
@@ -148,7 +147,7 @@ static void runtest(const char *json_base_fn, const char *ser_in_fn,
 	/* release resources */
 	parr_free(mtree, true);
 	parr_free(mbranch, true);
-	BN_clear_free(&tmp_mask);
+	mpz_clear(tmp_mask);
 	parr_free(matches, true);
 	bpks_free(&ks);
 	bp_key_free(&key);
