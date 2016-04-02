@@ -506,8 +506,8 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 			struct buffer *vch1 = stack_take(stack, -6);
 			struct buffer *vch2 = stack_take(stack, -5);
 			parr_remove_range(stack, stack->len - 6, 2);
-			stack_push(stack, vch1);
-			stack_push(stack, vch2);
+			stack_push_nocopy(stack, vch1);
+			stack_push_nocopy(stack, vch2);
 			break;
 		}
 
