@@ -1,7 +1,7 @@
 if ENABLE_VALGRIND
-    TESTS_ENVIRONMENT=valgrind --quiet --leak-check=full --error-exitcode=1
+    TESTS_ENVIRONMENT="$LIBTOOL --mode=execute valgrind --leak-check=full --error-exitcode=1"
 endif
- 
+
 AM_CPPFLAGS	= -DTEST_SRCDIR=\"$(top_srcdir)/test\" \
 		  -I$(top_srcdir)/include
 
