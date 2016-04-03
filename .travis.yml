@@ -14,10 +14,12 @@ sudo: false
 env:
   global:
     - MAKEJOBS=-j3
+    - BASE_OUTDIR=$TRAVIS_BUILD_DIR/out
+
+  matrix:
     - RUN_TESTS=true
     - COVERAGE_STATS=true
-    - USE_VALGRIND=false
-    - BASE_OUTDIR=$TRAVIS_BUILD_DIR/out
+    - USE_VALGRIND=true
 
 cache:
   apt: true
@@ -49,8 +51,8 @@ install:
 before_script:
   - if [ -n "$USE_SHELL" ]; then export CONFIG_SHELL="$USE_SHELL"; fi
   - test -n "$USE_SHELL" && eval '"$USE_SHELL" -c "./autogen.sh"' || ./autogen.sh
-  - if [ "$COVERAGE_STATS" = "true" ]; then COVERAGE_OPT="--enable-coverage"; fi
   - if [ "$USE_VALGRIND" = "true" ]; then VALGRIND_OPT="--enable-valgrind"; fi
+  - if [ "$COVERAGE_STATS" = "true" ]; then COVERAGE_OPT="--enable-coverage"; fi
 
 script:
   - OUTDIR=$BASE_OUTDIR/$TRAVIS_PULL_REQUEST/$TRAVIS_JOB_NUMBER-$HOST
@@ -59,7 +61,7 @@ script:
   - make -s $MAKEJOBS $GOAL || ( echo "Build failure. Verbose build follows." && make $GOAL ; false )
   - export LD_LIBRARY_PATH=$TRAVIS_BUILD_DIR/depends/$HOST/lib
   - if [ "$RUN_TESTS" = "true" ]; then make $MAKEJOBS distcheck; fi
-  - if [ "$COVERAGE_STATS" = "true" ] || [ "$USE_VALGRIND" = "true" ]; then make $MAKEJOBS check; fi
+  - if [ "$COVERAGE_STATS" = "true" ] || [ "$USE_VALGRIND" = "true" ]; then make check; fi
 
 after_success:
   - if [ "$COVERAGE_STATS" = "true" ]; then lcov --compat-libtool --directory . --capture --output-file coverage.info && coveralls-lcov coverage.info; fi

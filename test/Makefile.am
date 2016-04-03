@@ -1,7 +1,9 @@
 if ENABLE_VALGRIND
-    TESTS_ENVIRONMENT=valgrind --quiet --leak-check=full --error-exitcode=1
+    TESTS_ENVIRONMENT=$(LIBTOOL) --mode=execute valgrind --leak-check=full \
+                        --leak-resolution=high --num-callers=40 \
+                        --error-exitcode=1
 endif
- 
+
 AM_CPPFLAGS	= -DTEST_SRCDIR=\"$(top_srcdir)/test\" \
 		  -I$(top_srcdir)/include
 
@@ -54,4 +56,3 @@ tx_valid_LDADD		= $(COMMON_LDADD)
 util_LDADD		    = $(COMMON_LDADD)
 wallet_LDADD		= $(COMMON_LDADD)
 wallet_basics_LDADD	= $(COMMON_LDADD)
-
