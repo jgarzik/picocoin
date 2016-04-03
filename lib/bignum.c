@@ -13,7 +13,7 @@ void bn_setvch(mpz_t vo, const void *data_, size_t data_len)
 
 	mpz_import(vo, data_len, -1, 1, 1, 0, data);
 
-	if (data[data_len - 1] & 0x80) {
+	if ((data_len > 0) && (data[data_len - 1] & 0x80)) {
 		mpz_clrbit(vo, mpz_sizeinbase(vo, 2) - 1);
 		mpz_neg(vo, vo);
 	}
