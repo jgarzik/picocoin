@@ -120,7 +120,7 @@ AS_IF([test "$enable_valgrind" = "yes"], [
 		AC_MSG_ERROR(valgrind tool is not installed)])
 ])
 AM_CONDITIONAL(ENABLE_VALGRIND, [test "$enable_valgrind" = "yes"])
-
+ 
 dnl --------------------------
 dnl autoconf output generation
 dnl --------------------------

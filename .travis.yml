@@ -16,8 +16,11 @@ env:
     - MAKEJOBS=-j3
     - RUN_TESTS=true
     - COVERAGE_STATS=true
-    - USE_VALGRIND=false
     - BASE_OUTDIR=$TRAVIS_BUILD_DIR/out
+
+  matrix:
+    - USE_VALGRIND=false
+    - USE_VALGRIND=true
 
 cache:
   apt: true
@@ -47,10 +50,13 @@ install:
   - if [ "$COVERAGE_STATS" = "true" ]; then gem install coveralls-lcov; fi
 
 before_script:
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then export LIBTOOL=glibtool; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then export LIBTOOL=libtool; fi
   - if [ -n "$USE_SHELL" ]; then export CONFIG_SHELL="$USE_SHELL"; fi
   - test -n "$USE_SHELL" && eval '"$USE_SHELL" -c "./autogen.sh"' || ./autogen.sh
-  - if [ "$COVERAGE_STATS" = "true" ]; then COVERAGE_OPT="--enable-coverage"; fi
+  - if [ "$USE_VALGRIND" = "true" ]; then COVERAGE_STATS=false; RUN_TESTS=false; fi
   - if [ "$USE_VALGRIND" = "true" ]; then VALGRIND_OPT="--enable-valgrind"; fi
+  - if [ "$COVERAGE_STATS" = "true" ]; then COVERAGE_OPT="--enable-coverage"; fi
 
 script:
   - OUTDIR=$BASE_OUTDIR/$TRAVIS_PULL_REQUEST/$TRAVIS_JOB_NUMBER-$HOST
