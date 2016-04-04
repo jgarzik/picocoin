@@ -634,8 +634,7 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 				goto out;
 			struct buffer *vch1 = stacktop(stack, -2);
 			struct buffer *vch2 = stacktop(stack, -1);
-			bool fEqual = ((vch1->len == vch2->len) &&
-				      memcmp(vch1->p, vch2->p, vch1->len) == 0);
+			bool fEqual = buffer_equal(vch1, vch2);
 			// OP_NOTEQUAL is disabled because it would be too easy to say
 			// something like n != 1 and have some wiseguy pass in 1 with extra
 			// zero bytes after it (numerically, 0x01 == 0x0001 == 0x000001)
@@ -1032,7 +1031,6 @@ bool bp_script_verify(const cstring *scriptSig, const cstring *scriptPubKey,
 {
 	bool rc = false;
 	parr *stack = parr_new(0, buffer_free);
-	cstring *pubkey2 = NULL;
 	parr *stackCopy = NULL;
 
 	if (!bp_script_eval(stack, scriptSig, txTo, nIn, flags, nHashType))
@@ -1082,8 +1080,6 @@ bool bp_script_verify(const cstring *scriptSig, const cstring *scriptPubKey,
 
 out:
 	parr_free(stack, true);
-	if (pubkey2)
-		cstr_free(pubkey2, true);
 	if (stackCopy)
 		parr_free(stackCopy, true);
 	return rc;
@@ -1109,4 +1105,3 @@ bool bp_verify_sig(const struct bp_utxo *txFrom, const struct bp_tx *txTo,
 	return bp_script_verify(txin->scriptSig, txout->scriptPubKey,
 				txTo, nIn, flags, nHashType);
 }
-

@@ -23,6 +23,8 @@ bool buffer_equal(const void *a_, const void *b_)
 
 	if (a->len != b->len)
 		return false;
+	if (a->len == 0)
+		return true;
 	return memcmp(a->p, b->p, a->len) == 0;
 }
 
@@ -38,17 +40,19 @@ void buffer_free(void *struct_buffer)
 
 struct buffer *buffer_copy(const void *data, size_t data_len)
 {
-	struct buffer *buf;
-	buf = malloc(sizeof(*buf));
+	struct buffer *buf = calloc(1, sizeof(struct buffer));
+
 	if (!buf)
 		goto err_out;
 
-	buf->p = malloc(data_len);
-	if (!buf->p)
-		goto err_out_free;
+	if (data_len > 0) {
+		buf->p = malloc(data_len);
+		if (!buf->p)
+			goto err_out_free;
 
-	memcpy(buf->p, data, data_len);
-	buf->len = data_len;
+		memcpy(buf->p, data, data_len);
+		buf->len = data_len;
+	} else buf->p = NULL;
 
 	return buf;
 
