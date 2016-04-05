@@ -121,6 +121,19 @@ AS_IF([test "$enable_valgrind" = "yes"], [
 ])
 AM_CONDITIONAL(ENABLE_VALGRIND, [test "$enable_valgrind" = "yes"])
 
+dnl Electric Fence
+AC_MSG_CHECKING([whether to enable electric fence (www.perens.com)])
+AC_ARG_ENABLE([efence],
+	[AS_HELP_STRING([--enable-efence],[Enable Electric Fence Malloc Debugger])],
+	[],
+	[enable_efence=no])
+AC_MSG_RESULT([$enable_efence])
+
+AS_IF([test "$enable_efence" = "yes"], [
+	AC_CHECK_LIB(efence, memalign,,
+	  [AC_MSG_ERROR([Missing required libefence])])
+])
+
 dnl --------------------------
 dnl autoconf output generation
 dnl --------------------------
