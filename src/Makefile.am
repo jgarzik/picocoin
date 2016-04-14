@@ -1,5 +1,6 @@
 
 AM_CPPFLAGS	= -I$(top_srcdir)/include
+                
 
 bin_PROGRAMS	= brd picocoin blkscan blkstats rawtx
 
@@ -14,7 +15,7 @@ brd_SOURCES=		\
 	brd.h
 
 brd_LDADD	= libnode.a ../lib/libccoin.la \
-		  @CRYPTO_LIBS@ @GMP_LIBS@ @EVENT_LIBS@
+            @CRYPTO_LIBS@ @GMP_LIBS@ @EVENT_LIBS@
 
 picocoin_SOURCES=	\
 	aes.c		\
