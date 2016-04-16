@@ -14,6 +14,8 @@
 #include <ccoin/wallet.h>
 #include <ccoin/serialize.h>
 
+#include <stdio.h>
+
 bool wallet_init(struct wallet *wlt, const struct chain_info *chain)
 {
 	wlt->version = 1;

@@ -73,6 +73,6 @@ int main (int argc, char *argv[])
 {
 	runtest(true, "script_valid.json");
 	runtest(false, "script_invalid.json");
+	bp_key_static_shutdown();
 	return 0;
 }
-

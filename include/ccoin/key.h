@@ -6,7 +6,9 @@
  */
 
 #include <stdbool.h>
-#include <openssl/ec.h>
+
+#include <secp256k1.h>
+
 #include <ccoin/buint.h>
 #include <ccoin/hashtab.h>
 #include <ccoin/cstr.h>
@@ -16,8 +18,12 @@ extern "C" {
 #endif
 
 struct bp_key {
-	EC_KEY		*k;
+	uint8_t 		secret[32];
+	secp256k1_pubkey	pubkey;
 };
+
+/// Frees any internally allocated static data.
+extern void bp_key_static_shutdown();
 
 extern bool bp_key_init(struct bp_key *key);
 extern void bp_key_free(struct bp_key *key);
@@ -32,6 +38,9 @@ extern bool bp_sign(const struct bp_key *key, const void *data, size_t data_len,
 	     void **sig_, size_t *sig_len_);
 extern bool bp_verify(const struct bp_key *key, const void *data, size_t data_len,
 	       const void *sig, size_t sig_len);
+extern bool bp_key_add_secret(struct bp_key *out,
+			      const struct bp_key *key,
+			      const uint8_t *tweak32);
 
 struct bp_keyset {
 	struct bp_hashtab	*pub;

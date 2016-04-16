@@ -3,210 +3,214 @@
  * Distributed under the MIT/X11 software license, see the accompanying
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.
  */
-#include "picocoin-config.h"
 
-#include <string.h>
-#include <openssl/ec.h>
-#include <openssl/ecdsa.h>
-#include <openssl/obj_mac.h>
-#include <openssl/ripemd.h>
+#include "picocoin-config.h"
 #include <ccoin/key.h>
 
-/* Generate a private key from just the secret parameter */
-static int EC_KEY_regenerate_key(EC_KEY *eckey, BIGNUM *priv_key)
+#include <lax_der_privatekey_parsing.c>
+#include <lax_der_parsing.c>
+#include <openssl/rand.h>
+#include <string.h>
+
+static secp256k1_context *s_context = NULL;
+secp256k1_context *get_secp256k1_context()
 {
-	int ok = 0;
-	BN_CTX *ctx = NULL;
-	EC_POINT *pub_key = NULL;
+	if (!s_context) {
+		secp256k1_context *ctx = secp256k1_context_create(
+			SECP256K1_CONTEXT_VERIFY | SECP256K1_CONTEXT_SIGN);
 
-	if (!eckey) return 0;
+		if (!ctx) {
+			return NULL;
+		}
 
-	const EC_GROUP *group = EC_KEY_get0_group(eckey);
+		uint8_t seed[32];
+		if (!RAND_bytes(seed, sizeof(seed)) ||
+		    !secp256k1_context_randomize(ctx, seed)) {
+			secp256k1_context_destroy(ctx);
+			return NULL;
+		}
 
-	if ((ctx = BN_CTX_new()) == NULL)
-		goto err;
+		s_context = ctx;
+	}
 
-	pub_key = EC_POINT_new(group);
+	return s_context;
+}
 
-	if (pub_key == NULL)
-		goto err;
-
-	if (!EC_POINT_mul(group, pub_key, priv_key, NULL, NULL, ctx))
-		goto err;
-
-	EC_KEY_set_private_key(eckey,priv_key);
-	EC_KEY_set_public_key(eckey,pub_key);
-
-	ok = 1;
-
-err:
-
-	if (pub_key)
-		EC_POINT_free(pub_key);
-	if (ctx != NULL)
-		BN_CTX_free(ctx);
-
-	return(ok);
+void bp_key_static_shutdown()
+{
+	if (s_context) {
+		secp256k1_context_destroy(s_context);
+		s_context = NULL;
+	}
 }
 
 bool bp_key_init(struct bp_key *key)
 {
-	memset(key, 0, sizeof(*key));
-
-	key->k = EC_KEY_new_by_curve_name(NID_secp256k1);
-	if (!key->k)
-		return false;
-
+	memset(key->secret, 0, sizeof(key->secret));
 	return true;
 }
 
 void bp_key_free(struct bp_key *key)
 {
-	if (key->k) {
-		EC_KEY_free(key->k);
-		key->k = NULL;
-	}
 }
 
 bool bp_key_generate(struct bp_key *key)
 {
-	if (!key->k)
+	secp256k1_context *ctx = get_secp256k1_context();
+	if (!ctx) {
 		return false;
+	}
 
-	if (!EC_KEY_generate_key(key->k))
-		return false;
-	if (!EC_KEY_check_key(key->k))
-		return false;
+	// Keep trying until public key generation passes (random
+	// secret is valid).
 
-	EC_KEY_set_conv_form(key->k, POINT_CONVERSION_COMPRESSED);
-
+	do {
+		if (!RAND_bytes(key->secret, (int )sizeof(key->secret))) {
+			return false;
+		}
+	} while (!secp256k1_ec_pubkey_create(ctx, &key->pubkey, key->secret));
 	return true;
 }
 
-bool bp_privkey_set(struct bp_key *key, const void *privkey_, size_t pk_len)
+bool bp_privkey_set(struct bp_key *key, const void *privkey, size_t pk_len)
 {
-	const unsigned char *privkey = privkey_;
-	if (!d2i_ECPrivateKey(&key->k, &privkey, pk_len))
+	secp256k1_context *ctx = get_secp256k1_context();
+	if (!ctx) {
 		return false;
-	if (!EC_KEY_check_key(key->k))
-		return false;
+	}
 
-	EC_KEY_set_conv_form(key->k, POINT_CONVERSION_COMPRESSED);
-
-	return true;
+	if (ec_privkey_import_der(ctx, key->secret, privkey, pk_len)) {
+		if (secp256k1_ec_pubkey_create(ctx, &key->pubkey, key->secret)) {
+			return true;
+		}
+	}
+	return false;
 }
 
-bool bp_pubkey_set(struct bp_key *key, const void *pubkey_, size_t pk_len)
+bool bp_pubkey_set(struct bp_key *key, const void *pubkey, size_t pk_len)
 {
-	const unsigned char *pubkey = pubkey_;
-	if (!o2i_ECPublicKey(&key->k, &pubkey, pk_len))
+	secp256k1_context *ctx = get_secp256k1_context();
+	if (!ctx) {
 		return false;
-	if (pk_len == 33)
-		EC_KEY_set_conv_form(key->k, POINT_CONVERSION_COMPRESSED);
-	return true;
+	}
+
+	if (secp256k1_ec_pubkey_parse(ctx, &key->pubkey, pubkey, pk_len)) {
+		memset(key->secret, 0, sizeof(key->secret));
+		return true;
+	}
+	return false;
 }
 
 bool bp_key_secret_set(struct bp_key *key, const void *privkey_, size_t pk_len)
 {
-	bp_key_free(key);
-
-	if (!privkey_ || pk_len != 32)
+	secp256k1_context *ctx = get_secp256k1_context();
+	if (!ctx) {
 		return false;
+	}
 
-	const unsigned char *privkey = privkey_;
-	BIGNUM *bn = BN_bin2bn(privkey, 32, BN_new());
-	if (!bn)
-		return false;
-
-	key->k = EC_KEY_new_by_curve_name(NID_secp256k1);
-	if (!key->k)
-		goto err_out;
-
-	if (!EC_KEY_regenerate_key(key->k, bn))
-		goto err_out;
-	if (!EC_KEY_check_key(key->k))
-		return false;
-
-	EC_KEY_set_conv_form(key->k, POINT_CONVERSION_COMPRESSED);
-
-	BN_clear_free(bn);
-	return true;
-
-err_out:
-	bp_key_free(key);
-	BN_clear_free(bn);
+	if (sizeof(key->secret) == pk_len) {
+		memcpy(key->secret, privkey_, sizeof(key->secret));
+		if (secp256k1_ec_pubkey_create(ctx, &key->pubkey, key->secret)) {
+			return true;
+		}
+	}
 	return false;
 }
 
 bool bp_privkey_get(const struct bp_key *key, void **privkey, size_t *pk_len)
 {
-	if (!EC_KEY_check_key(key->k))
+	secp256k1_context *ctx = get_secp256k1_context();
+	if (!ctx) {
 		return false;
+	}
 
-	size_t sz = i2d_ECPrivateKey(key->k, 0);
-	unsigned char *orig_mem, *mem = malloc(sz);
-	orig_mem = mem;
-	i2d_ECPrivateKey(key->k, &mem);
-
-	*privkey = orig_mem;
-	*pk_len = sz;
-
-	return true;
+	if (secp256k1_ec_seckey_verify(ctx, key->secret)) {
+		void *pk = malloc(279);
+		if (pk) {
+			if (ec_privkey_export_der(ctx, pk, pk_len, key->secret, 1)) {
+				*privkey = pk;
+				return true;
+			}
+			free(pk);
+		}
+	}
+	return false;
 }
 
 bool bp_pubkey_get(const struct bp_key *key, void **pubkey, size_t *pk_len)
 {
-	if (!EC_KEY_check_key(key->k))
+	secp256k1_context *ctx = get_secp256k1_context();
+	if (!ctx) {
 		return false;
+	}
 
-	size_t sz = i2o_ECPublicKey(key->k, 0);
-	unsigned char *orig_mem, *mem = malloc(sz);
-	orig_mem = mem;
-	i2o_ECPublicKey(key->k, &mem);
-
-	*pubkey = orig_mem;
-	*pk_len = sz;
-
-	return true;
+	void *pk = malloc(33);
+	if (pk) {
+		*pk_len = 33;
+		if (secp256k1_ec_pubkey_serialize(ctx, pk, pk_len,
+						  &key->pubkey,
+						  SECP256K1_EC_COMPRESSED)) {
+			*pubkey = pk;
+			return true;
+		}
+		free(pk);
+	}
+	return false;
 }
 
 bool bp_key_secret_get(void *p, size_t len, const struct bp_key *key)
 {
-	if (!p || len < 32 || !key)
+	if (!p || sizeof(key->secret) > len) {
 		return false;
+	}
 
-	/* zero buffer */
-	memset(p, 0, len);
-
-	/* get bignum secret */
-	const BIGNUM *bn = EC_KEY_get0_private_key(key->k);
-	if (!bn)
+	secp256k1_context *ctx = get_secp256k1_context();
+	if (!ctx) {
 		return false;
-	int nBytes = BN_num_bytes(bn);
+	}
 
-	/* store secret at end of buffer */
-	int n = BN_bn2bin(bn, p + (len - nBytes));
-	if (n != nBytes)
+	if (!secp256k1_ec_seckey_verify(ctx, key->secret)) {
 		return false;
+	}
 
+	memcpy(p, key->secret, sizeof(key->secret));
 	return true;
 }
 
 bool bp_sign(const struct bp_key *key, const void *data, size_t data_len,
 	     void **sig_, size_t *sig_len_)
 {
-	size_t sig_sz = ECDSA_size(key->k);
-	void *sig = calloc(1, sig_sz);
-	unsigned int sig_sz_out = sig_sz;
+	secp256k1_ecdsa_signature sig;
 
-	int src = ECDSA_sign(0, data, data_len, sig, &sig_sz_out, key->k);
-	if (src != 1) {
-		free(sig);
+	if (32 != data_len) {
 		return false;
 	}
 
-	*sig_ = sig;
-	*sig_len_ = sig_sz_out;
+	secp256k1_context *ctx = get_secp256k1_context();
+	if (!ctx) {
+		return false;
+	}
+
+	if (!secp256k1_ec_seckey_verify(ctx, key->secret)) {
+		return false;
+	}
+
+	if (!secp256k1_ecdsa_sign(ctx, &sig,
+				  data,
+				  key->secret,
+				  secp256k1_nonce_function_rfc6979,
+				  NULL)) {
+		return false;
+	}
+
+	*sig_ = malloc(72);
+	*sig_len_ = 72;
+
+	if (!secp256k1_ecdsa_signature_serialize_der(ctx, *sig_, sig_len_, &sig)) {
+		free(sig_);
+		*sig_ = NULL;
+		return false;
+	}
 
 	return true;
 }
@@ -214,22 +218,49 @@ bool bp_sign(const struct bp_key *key, const void *data, size_t data_len,
 bool bp_verify(const struct bp_key *key, const void *data, size_t data_len,
 	       const void *sig_, size_t sig_len)
 {
-	const unsigned char *sig = sig_;
-	ECDSA_SIG *esig;
-	bool b = false;
+	if (32 != data_len) {
+		return false;
+	}
 
-	esig = ECDSA_SIG_new();
-	if (!esig)
-		goto out;
+	secp256k1_ecdsa_signature sig;
+	secp256k1_context *ctx = get_secp256k1_context();
+	if (!ctx) {
+		return false;
+	}
 
-	if (!d2i_ECDSA_SIG(&esig, &sig, sig_len))
-		goto out_free;
+	if (ecdsa_signature_parse_der_lax(ctx, &sig, sig_, sig_len)) {
+		secp256k1_ecdsa_signature_normalize(ctx, &sig, &sig);
+		return secp256k1_ecdsa_verify(ctx, &sig, data, &key->pubkey);
+	}
 
-	b = ECDSA_do_verify(data, data_len, esig, key->k) == 1;
-
-out_free:
-	ECDSA_SIG_free(esig);
-out:
-	return b;
+	return false;
 }
 
+bool bp_key_add_secret(struct bp_key *out,
+		       const struct bp_key *key,
+		       const uint8_t *tweak32)
+{
+	secp256k1_context *ctx = get_secp256k1_context();
+	if (!ctx) {
+		return false;
+	}
+
+	// If the secret is valid, tweak it and calculate the
+	// resulting public key.  Otherwise tweak the public key (and
+	// ensure the output private key is invalid).
+
+	if (secp256k1_ec_seckey_verify(ctx, key->secret)) {
+
+		memcpy(out->secret, key->secret, sizeof(key->secret));
+		if (secp256k1_ec_privkey_tweak_add(ctx, out->secret, tweak32)) {
+			return secp256k1_ec_pubkey_create(
+				ctx, &out->pubkey, out->secret);
+		}
+
+		return false;
+	}
+
+	memset(out->secret, 0, sizeof(out->secret));
+	memcpy(&out->pubkey, &key->pubkey, sizeof(secp256k1_pubkey));
+	return secp256k1_ec_pubkey_tweak_add(ctx, &out->pubkey, tweak32);
+}

@@ -12,6 +12,7 @@
 #include <ccoin/message.h>
 #include <ccoin/mbr.h>
 #include <ccoin/util.h>
+#include <ccoin/key.h>
 #include "libtest.h"
 
 static void runtest(const char *json_fn_base, const char *ser_fn_base)
@@ -86,5 +87,6 @@ int main (int argc, char *argv[])
 {
 	runtest("tx3e0dc3da.json", "tx3e0dc3da.ser");
 
+	bp_key_static_shutdown();
 	return 0;
 }

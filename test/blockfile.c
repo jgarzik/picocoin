@@ -13,6 +13,7 @@
 #include <ccoin/mbr.h>
 #include <ccoin/buffer.h>
 #include <ccoin/util.h>
+#include <ccoin/key.h>
 #include "libtest.h"
 
 static void handle_block(struct p2p_message *msg)
@@ -59,5 +60,6 @@ int main (int argc, char *argv[])
 {
 	runtest("blks10.ser");
 
+	bp_key_static_shutdown();
 	return 0;
 }

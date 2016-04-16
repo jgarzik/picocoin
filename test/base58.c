@@ -304,6 +304,7 @@ int main (int argc, char *argv[])
 {
 	runtest_encdec("base58_encode_decode.json");
 	runtest_keys_valid("base58_keys_valid.json");
+
+	bp_key_static_shutdown();
 	return 0;
 }
-

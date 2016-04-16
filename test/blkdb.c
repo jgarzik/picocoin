@@ -14,6 +14,7 @@
 #include <ccoin/buint.h>
 #include <ccoin/buffer.h>
 #include <ccoin/util.h>
+#include <ccoin/key.h>
 #include "libtest.h"
 
 static void add_header(struct blkdb *db, char *raw)
@@ -101,6 +102,6 @@ int main (int argc, char *argv[])
 	runtest("tn_hdr35141.ser", &chain_metadata[CHAIN_TESTNET3], 35141,
 	    "0000000000dde6ce4b9ad1e2a5be59f1b7ace6ef8d077d846263b0bfbc984f7f");
 
+	bp_key_static_shutdown();
 	return 0;
 }
-

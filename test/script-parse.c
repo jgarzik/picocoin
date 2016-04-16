@@ -122,6 +122,6 @@ int main (int argc, char *argv[])
 
 	runtest("blk120383.ser");
 
+	bp_key_static_shutdown();
 	return 0;
 }
-

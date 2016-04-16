@@ -624,6 +624,7 @@ int main(int argc, char **argv)
 
 	// Keep valgrind happy
 	ERR_remove_state(0);
+	bp_key_static_shutdown();
 
 	return 0;
 }
