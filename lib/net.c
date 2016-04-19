@@ -217,7 +217,7 @@ void bn_group(unsigned char *group, unsigned int *group_len,
 		bits = 4;
 	}
 
-	else if (ipaddr[GB(15)] == 0x20 && ipaddr[GB(14)] == 0x11 &&
+	else if (ipaddr[GB(15)] == 0x20 && ipaddr[GB(14)] == 0x01 &&
 		 ipaddr[GB(13)] == 0x04 && ipaddr[GB(12)] == 0x70)
 		bits = 36;
 
