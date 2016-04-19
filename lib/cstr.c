@@ -136,6 +136,8 @@ bool cstr_equal(const cstring *a, const cstring *b)
 		return false;
 	if (a->len != b->len)
 		return false;
+	if (a->len == 0)
+		return true;
 	return (memcmp(a->str, b->str, a->len) == 0);
 }
 
