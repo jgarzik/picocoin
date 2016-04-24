@@ -131,6 +131,19 @@ AC_MSG_RESULT([$enable_secp256k1_tests])
 AS_IF([test "$enable_secp256k1_tests" = "no"],
 	[ac_configure_args="$ac_configure_args --enable-tests=no"])
 
+dnl Electric Fence
+AC_MSG_CHECKING([whether to enable electric fence (www.perens.com)])
+AC_ARG_ENABLE([efence],
+	[AS_HELP_STRING([--enable-efence],[Enable Electric Fence Malloc Debugger])],
+	[],
+	[enable_efence=no])
+AC_MSG_RESULT([$enable_efence])
+
+AS_IF([test "$enable_efence" = "yes"], [
+	AC_CHECK_LIB(efence, memalign,,
+	  [AC_MSG_ERROR([Missing required libefence])])
+])
+
 dnl --------------------------
 dnl autoconf output generation
 dnl --------------------------
