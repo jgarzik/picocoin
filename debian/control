@@ -1,0 +1,22 @@
+Source: picocoin
+Priority: optional
+Maintainer: Joel DeJesus <dejesus.joel@e-flamingo.jp>
+Build-Depends: debhelper (>= 9)
+Standards-Version: 3.9.5
+Section: libs
+#Homepage: <insert the upstream URL, if relevant>
+#Vcs-Git: git://anonscm.debian.org/collab-maint/picocoin.git
+#Vcs-Browser: http://anonscm.debian.org/?p=collab-maint/picocoin.git;a=summary
+
+Package: picocoin-dev
+Section: libdevel
+Architecture: any
+Depends: picocoin0 (= ${binary:Version}), ${misc:Depends}
+Description: bitcoin library - development files
+ This package contains headers for bitcoin c functions that allow for bitcoin operations and connection to the bitcoin network.
+
+Package: picocoin0
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: bitcoin library - shared library
+ This package contains bitcoin c functions that allow for bitcoin operations and connection to the bitcoin network.
