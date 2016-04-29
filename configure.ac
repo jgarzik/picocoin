@@ -17,7 +17,7 @@ dnl You should have received a copy of the GNU General Public License
 dnl along with this program; if not, write to the Free Software
 dnl Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-AC_INIT(picocoin, 0.1git, [Jeff Garzik <jgarzik@exmulti.com>])
+AC_INIT([picocoin], [0.1], [Jeff Garzik <jgarzik@exmulti.com>])
 AC_PREREQ(2.60)
 LT_INIT
 AC_CONFIG_MACRO_DIR([m4])
@@ -120,6 +120,19 @@ AS_IF([test "$enable_valgrind" = "yes"], [
 		AC_MSG_ERROR(valgrind tool is not installed)])
 ])
 AM_CONDITIONAL(ENABLE_VALGRIND, [test "$enable_valgrind" = "yes"])
+
+dnl Electric Fence
+AC_MSG_CHECKING([whether to enable electric fence (www.perens.com)])
+AC_ARG_ENABLE([efence],
+	[AS_HELP_STRING([--enable-efence],[Enable Electric Fence Malloc Debugger])],
+	[],
+	[enable_efence=no])
+AC_MSG_RESULT([$enable_efence])
+
+AS_IF([test "$enable_efence" = "yes"], [
+	AC_CHECK_LIB(efence, memalign,,
+	  [AC_MSG_ERROR([Missing required libefence])])
+])
 
 dnl --------------------------
 dnl autoconf output generation

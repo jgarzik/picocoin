@@ -23,7 +23,8 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 
 # debmake generated override targets
 # This is example for Cmake (See http://bugs.debian.org/641051 )
-#override_dh_auto_configure:
+override_dh_auto_configure:
+	dh_auto_configure -- --host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) --prefix=/usr 
 #	dh_auto_configure -- \
 #	-DCMAKE_LIBRARY_PATH=$(DEB_HOST_MULTIARCH)
 

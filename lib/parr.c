@@ -7,22 +7,35 @@
 #include <string.h>
 #include <ccoin/parr.h>
 
+static bool parr_grow(parr *pa, size_t min_sz)
+{
+	size_t new_alloc = 8;
+	while (new_alloc < min_sz)
+		new_alloc *= 2;
+
+	if (pa->alloc >= new_alloc)
+		return true;
+
+	void *new_data = realloc(pa->data, new_alloc * sizeof(void *));
+	if (!new_data)
+		return false;
+
+	pa->data = new_data;
+	pa->alloc = new_alloc;
+	return true;
+}
+
 parr *parr_new(size_t res, void (*free_f)(void *))
 {
 	parr *pa = calloc(1, sizeof(parr));
 	if (!pa)
 		return NULL;
 
-	pa->alloc = 8;
-	while (pa->alloc < res)
-		pa->alloc *= 2;
-
 	pa->elem_free_f = free_f;
-	pa->data = malloc(pa->alloc * sizeof(void *));
-	if (!pa->data) {
-		free(pa);
+	if (res == 0)
+		pa->data = NULL;
+	else if (!parr_grow(pa, res))
 		return NULL;
-	}
 
 	return pa;
 }
@@ -59,24 +72,6 @@ void parr_free(parr *pa, bool free_array)
 	free(pa);
 }
 
-static bool parr_grow(parr *pa, size_t min_sz)
-{
-	size_t new_alloc = pa->alloc;
-	while (new_alloc < min_sz)
-		new_alloc *= 2;
-
-	if (pa->alloc == new_alloc)
-		return true;
-
-	void *new_data = realloc(pa->data, new_alloc * sizeof(void *));
-	if (!new_data)
-		return false;
-
-	pa->data = new_data;
-	pa->alloc = new_alloc;
-	return true;
-}
-
 ssize_t parr_find(parr *pa, void *data)
 {
 	if (pa && pa->len) {
@@ -91,9 +86,8 @@ ssize_t parr_find(parr *pa, void *data)
 
 bool parr_add(parr *pa, void *data)
 {
-	if (pa->len == pa->alloc)
-		if (!parr_grow(pa, pa->len + 1))
-			return false;
+	if ((pa->len == pa->alloc) && (!parr_grow(pa, pa->len + 1)))
+		return false;
 
 	pa->data[pa->len] = data;
 	pa->len++;
@@ -164,4 +158,3 @@ bool parr_resize(parr *pa, size_t newsz)
 	pa->len = newsz;
 	return true;
 }
-

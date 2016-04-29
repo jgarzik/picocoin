@@ -14,13 +14,15 @@ static void test_basic(void)
 
 	pa = parr_new(0, free);
 	assert(pa != NULL);
-	assert(pa->data != NULL);
+	assert(pa->data == NULL);
 	assert(pa->len == 0);
-	assert(pa->alloc > 0);
+	assert(pa->alloc == 0);
 
 	rc = parr_add(pa, strdup("foo"));
 	assert(rc == true);
+	assert(pa->data != NULL);
 	assert(pa->len == 1);
+	assert(pa->alloc > 0);
 
 	rc = parr_add(pa, strdup("bar"));
 	assert(rc == true);
@@ -61,9 +63,9 @@ static void test_resize(void)
 
 	pa = parr_new(0, free);
 	assert(pa != NULL);
-	assert(pa->data != NULL);
+	assert(pa->data == NULL);
 	assert(pa->len == 0);
-	assert(pa->alloc > 0);
+	assert(pa->alloc == 0);
 
 	rc = parr_add(pa, strdup("foo"));
 	rc = parr_add(pa, strdup("bar"));
