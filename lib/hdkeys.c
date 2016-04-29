@@ -8,10 +8,8 @@
 #include <ccoin/buffer.h>
 #include <ccoin/serialize.h>
 #include <ccoin/util.h>
+#include <ccoin/crypto/hmac.h>
 
-#include <openssl/sha.h>
-#include <openssl/hmac.h>
-#include <openssl/evp.h>
 #include <openssl/ripemd.h>
 
 #define MAIN_PUBLIC 0x0488B21E
@@ -107,8 +105,7 @@ bool hd_extended_key_generate_master(struct hd_extended_key *ek,
 {
 	static const uint8_t key[12] = "Bitcoin seed";
 	uint8_t I[64];
-	HMAC(EVP_sha512(), key, (int)sizeof(key), (const uint8_t *)seed,
-	     (uint32_t)seed_len, &I[0], NULL);
+	hmac_sha512(key, (uint32_t )sizeof(key), seed, (uint32_t )seed_len, I);
 
 	if (bp_key_secret_set(&ek->key, I, 32)) {
 		memcpy(ek->chaincode.data, &I[32], 32);
@@ -160,11 +157,8 @@ bool hd_extended_key_generate_child(const struct hd_extended_key *parent,
 	memcpy(&data[33], &indexBE, sizeof(uint32_t));
 
 	uint8_t I[64];
-	if (NULL == HMAC(EVP_sha512(), parent->chaincode.data,
-			 (int)sizeof(parent->chaincode.data), data,
-			 (int)sizeof(data), &I[0], NULL)) {
-		goto free_parent_pub;
-	}
+	hmac_sha512(parent->chaincode.data, (int)sizeof(parent->chaincode.data),
+		    data, (int)sizeof(data), I);
 
 	if (!bp_key_add_secret(&out_child->key, &parent->key, I)) {
 		goto free_parent_pub;

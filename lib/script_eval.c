@@ -5,13 +5,14 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
-#include <openssl/sha.h>
 #include <openssl/ripemd.h>
 #include <ccoin/script.h>
 #include <ccoin/util.h>
 #include <ccoin/key.h>
 #include <ccoin/serialize.h>
 #include <ccoin/compat.h>		/* for parr_new */
+#include <ccoin/crypto/sha1.h>
+#include <ccoin/crypto/sha2.h>
 
 static const size_t nDefaultMaxNumSize = 4;
 
@@ -1200,11 +1201,11 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 				break;
 			case OP_SHA1:
 				hashlen = 20;
-				SHA1(vch->p, vch->len, md);
+				sha1_Raw(vch->p, vch->len, md);
 				break;
 			case OP_SHA256:
 				hashlen = 32;
-				SHA256(vch->p, vch->len, md);
+				sha256_Raw(vch->p, vch->len, md);
 				break;
 			case OP_HASH160:
 				hashlen = 20;
