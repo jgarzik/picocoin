@@ -155,9 +155,6 @@ AC_SUBST(EVENT_LIBS)
 AC_SUBST(JANSSON_LIBS)
 AC_SUBST(ARGP_LIBS)
 
-dnl Workaround for secp256k1 jni being enabled in distcheck
-ac_configure_args="$ac_configure_args --disable-jni"
-
 AC_CONFIG_SUBDIRS([external/secp256k1])
 AC_CONFIG_FILES([
 	Makefile
