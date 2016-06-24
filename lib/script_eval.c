@@ -307,7 +307,7 @@ out:
 	return rc;
 }
 
-static bool IsCanonicalSignature(const struct buffer *vch)
+static bool IsValidSignatureEncoding(const struct buffer *vch)
 {
     // Format: 0x30 [total-length] 0x02 [R-length] [R] 0x02 [S-length] [S] [sighash]
     // * total-length: 1-byte length descriptor of everything that follows,
@@ -381,6 +381,29 @@ static bool IsCanonicalPubKey(const struct buffer *vch)
 	return true;
 }
 
+static bool CheckSignatureEncoding(const struct buffer *vchSig, unsigned int flags) {
+    // Empty signature. Not strictly DER encoded, but allowed to provide a
+    // compact way to provide an invalid signature for use with CHECK(MULTI)SIG
+    if (vchSig->len == 0)
+        return true;
+
+    // TODO : Add SCRIPT_VERIFY_LOW_S
+
+    if ((flags & (SCRIPT_VERIFY_DERSIG | SCRIPT_VERIFY_STRICTENC)) != 0 && !IsValidSignatureEncoding(vchSig))
+        return false;
+
+    // TODO : Add IsLowDERSignature and IsDefinedHashtypeSignature
+
+    return true;
+}
+
+static bool CheckPubKeyEncoding(const struct buffer *vchPubKey, unsigned int flags) {
+    if ((flags & SCRIPT_VERIFY_STRICTENC) != 0 && !IsCanonicalPubKey(vchPubKey))
+        return false;
+
+    return true;
+}
+
 static bool bp_script_eval(parr *stack, const cstring *script,
 			   const struct bp_tx *txTo, unsigned int nIn,
 			   unsigned int flags, int nHashType)
@@ -398,7 +421,6 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 	if (script->len > 10000)
 		goto out;
 
-	bool fStrictEncodings = flags & SCRIPT_VERIFY_STRICTENC;
 	unsigned int nOpCount = 0;
 
 	struct bscript_parser bp;
@@ -959,12 +981,10 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 			// a signature to sign itself
 			string_find_del(scriptCode, vchSig);
 
-			bool fSuccess =
-				(!fStrictEncodings ||
-				 (IsCanonicalSignature(vchSig) &&
-				  IsCanonicalPubKey(vchPubKey)));
-			if (fSuccess)
-				fSuccess = bp_checksig(vchSig, vchPubKey,
+			if (!CheckSignatureEncoding(vchSig, flags) || !CheckPubKeyEncoding(vchPubKey, flags))
+				goto out;
+
+			bool fSuccess = bp_checksig(vchSig, vchPubKey,
 						       scriptCode,
 						       txTo, nIn, nHashType);
 
@@ -1032,12 +1052,10 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 				struct buffer *vchPubKey = stacktop(stack, -ikey);
 
 				// Check signature
-				bool fOk =
-					(!fStrictEncodings ||
-					 (IsCanonicalSignature(vchSig) &&
-					  IsCanonicalPubKey(vchPubKey)));
-				if (fOk)
-					fOk = bp_checksig(vchSig, vchPubKey,
+				if (!CheckSignatureEncoding(vchSig, flags) || !CheckPubKeyEncoding(vchPubKey, flags))
+					goto out;
+
+				bool fOk = bp_checksig(vchSig, vchPubKey,
 							  scriptCode, txTo, nIn,
 							  nHashType);
 

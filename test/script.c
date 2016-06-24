@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
 #include <jansson.h>
 #include <ccoin/script.h>
 #include <ccoin/core.h>
@@ -12,11 +13,10 @@
 
 static void test_script(bool is_valid,cstring *scriptSig, cstring *scriptPubKey,
 			unsigned int idx, const char *scriptSigEnc,
-			const char *scriptPubKeyEnc)
+			const char *scriptPubKeyEnc,
+			const unsigned int test_flags)
 {
 	struct bp_tx tx;
-	static const unsigned int test_flags =
-		SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC;
 
 	bp_tx_init(&tx);
 
@@ -40,6 +40,8 @@ static void runtest(bool is_valid, const char *basefn)
 	char *fn = test_filename(basefn);
 	json_t *tests = read_json(fn);
 	assert(json_is_array(tests));
+	static unsigned int test_flags;
+	const char *dersig = "DERSIG";
 
 	unsigned int idx;
 	for (idx = 0; idx < json_array_size(tests); idx++) {
@@ -58,8 +60,17 @@ static void runtest(bool is_valid, const char *basefn)
 		assert(scriptSig != NULL);
 		assert(scriptPubKey != NULL);
 
+		test_flags =
+		SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC;
+
+		if (json_array_size(test) > 2) {
+			const char *json_flag = json_string_value(json_array_get(test, 2));
+			if (strcmp(json_flag, dersig) == 0)
+				test_flags |= SCRIPT_VERIFY_DERSIG;
+		}
+
 		test_script(is_valid, scriptSig, scriptPubKey,
-			    idx, scriptSigEnc, scriptPubKeyEnc);
+			    idx, scriptSigEnc, scriptPubKeyEnc, test_flags);
 
 		cstr_free(scriptSig, true);
 		cstr_free(scriptPubKey, true);
