@@ -375,10 +375,29 @@ static bool IsValidSignatureEncoding(const struct buffer *vch)
     return true;
 }
 
-static bool IsCanonicalPubKey(const struct buffer *vch)
-{
-	// TODO
-	return true;
+bool static IsCompressedOrUncompressedPubKey(const struct buffer *vchPubKey) {
+
+	const unsigned char *pubkey = vchPubKey->p;
+
+    if (vchPubKey->len < 33) {
+        //  Non-canonical public key: too short
+        return false;
+    }
+    if (pubkey[0] == 0x04) {
+        if (vchPubKey->len != 65) {
+            //  Non-canonical public key: invalid length for uncompressed key
+            return false;
+        }
+    } else if (pubkey[0] == 0x02 || pubkey[0] == 0x03) {
+        if (vchPubKey->len != 33) {
+            //  Non-canonical public key: invalid length for compressed key
+            return false;
+        }
+    } else {
+          //  Non-canonical public key: neither compressed nor uncompressed
+          return false;
+    }
+    return true;
 }
 
 static bool CheckSignatureEncoding(const struct buffer *vchSig, unsigned int flags) {
@@ -398,7 +417,7 @@ static bool CheckSignatureEncoding(const struct buffer *vchSig, unsigned int fla
 }
 
 static bool CheckPubKeyEncoding(const struct buffer *vchPubKey, unsigned int flags) {
-    if ((flags & SCRIPT_VERIFY_STRICTENC) != 0 && !IsCanonicalPubKey(vchPubKey))
+    if ((flags & SCRIPT_VERIFY_STRICTENC) != 0 && !IsCompressedOrUncompressedPubKey(vchPubKey))
         return false;
 
     return true;
