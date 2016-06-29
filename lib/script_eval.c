@@ -377,7 +377,7 @@ static bool IsValidSignatureEncoding(const struct buffer *vch)
 
 bool static IsCompressedOrUncompressedPubKey(const struct buffer *vchPubKey) {
 
-	const unsigned char *pubkey = vchPubKey->p;
+    const unsigned char *pubkey = vchPubKey->p;
 
     if (vchPubKey->len < 33) {
         //  Non-canonical public key: too short
@@ -986,9 +986,6 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 			struct buffer *vchSig	= stacktop(stack, -2);
 			struct buffer *vchPubKey = stacktop(stack, -1);
 
-			if (!CheckSignatureEncoding(vchSig, flags) || !CheckPubKeyEncoding(vchPubKey, flags))
-				goto out;
-
 			////// debug print
 			//PrintHex(vchSig.begin(), vchSig.end(), "sig: %s\n");
 			//PrintHex(vchPubKey.begin(), vchPubKey.end(), "pubkey: %s\n");
@@ -1003,6 +1000,10 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 			// a signature to sign itself
 			string_find_del(scriptCode, vchSig);
 
+			if (!CheckSignatureEncoding(vchSig, flags) || !CheckPubKeyEncoding(vchPubKey, flags)) {
+				cstr_free(scriptCode, true);
+				goto out;
+			}
 
 			bool fSuccess = bp_checksig(vchSig, vchPubKey,
 						       scriptCode,

@@ -40,7 +40,7 @@ static void runtest(const char *basefn)
 	char *fn = test_filename(basefn);
 	json_t *tests = read_json(fn);
 	assert(json_is_array(tests));
-	static unsigned int test_flags;
+	static unsigned int verify_flags;
 	bool is_valid;
 
 	unsigned int idx;
@@ -56,11 +56,12 @@ static void runtest(const char *basefn)
 			assert(scriptPubKeyEnc != NULL);
 
 			cstring *scriptSig = parse_script_str(scriptSigEnc);
+
 			cstring *scriptPubKey = parse_script_str(scriptPubKeyEnc);
 			assert(scriptSig != NULL);
 			assert(scriptPubKey != NULL);
 
-			test_flags = 0U;
+			verify_flags = SCRIPT_VERIFY_NONE;
 
 			const char *json_flags = json_string_value(json_array_get(test, 2));
 
@@ -69,11 +70,11 @@ static void runtest(const char *basefn)
 
 				do {
 					if (strcmp(json_flag, "P2SH") == 0)
-						test_flags |= SCRIPT_VERIFY_P2SH;
+						verify_flags |= SCRIPT_VERIFY_P2SH;
 					else if (strcmp(json_flag, "STRICTENC") == 0)
-						test_flags |= SCRIPT_VERIFY_STRICTENC;
+						verify_flags |= SCRIPT_VERIFY_STRICTENC;
 					else if (strcmp(json_flag, "DERSIG") == 0)
-						test_flags |= SCRIPT_VERIFY_DERSIG;
+						verify_flags |= SCRIPT_VERIFY_DERSIG;
 					json_flag = strtok(NULL, ",");
 				} while (json_flag);
 			}
@@ -83,7 +84,7 @@ static void runtest(const char *basefn)
 
 			is_valid = strcmp(scriptError, "OK") == 0 ? true : false;
 			test_script(is_valid, scriptSig, scriptPubKey,
-				    idx, scriptSigEnc, scriptPubKeyEnc, test_flags);
+				    idx, scriptSigEnc, scriptPubKeyEnc, verify_flags);
 
 			cstr_free(scriptSig, true);
 			cstr_free(scriptPubKey, true);

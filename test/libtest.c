@@ -147,7 +147,11 @@ cstring *parse_script_str(const char *enc)
 	for (idx = 0; tokens[idx] != NULL; idx++) {
 		char *token = tokens[idx];
 
-		if (is_digitstr(token)) {
+		if (strcmp(token, "") == 0) {
+			// Empty string, ignore.
+		}
+
+		else if (is_digitstr(token)) {
 			int64_t v = strtoll(token, NULL, 10);
 			bsp_push_int64(script, v);
 		}
