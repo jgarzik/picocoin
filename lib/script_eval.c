@@ -307,6 +307,31 @@ out:
 	return rc;
 }
 
+bool static IsCompressedOrUncompressedPubKey(const struct buffer *vchPubKey) {
+
+    const unsigned char *pubkey = vchPubKey->p;
+
+    if (vchPubKey->len < 33) {
+		//  Non-canonical public key: too short
+		return false;
+    }
+    if (pubkey[0] == 0x04) {
+		if (vchPubKey->len != 65) {
+			//  Non-canonical public key: invalid length for uncompressed key
+			return false;
+		}
+	} else if (pubkey[0] == 0x02 || pubkey[0] == 0x03) {
+		if (vchPubKey->len != 33) {
+			//  Non-canonical public key: invalid length for compressed key
+			return false;
+		}
+	} else {
+		//  Non-canonical public key: neither compressed nor uncompressed
+		return false;
+    }
+    return true;
+}
+
 static bool IsValidSignatureEncoding(const struct buffer *vch)
 {
     // Format: 0x30 [total-length] 0x02 [R-length] [R] 0x02 [S-length] [S] [sighash]
@@ -375,28 +400,11 @@ static bool IsValidSignatureEncoding(const struct buffer *vch)
     return true;
 }
 
-bool static IsCompressedOrUncompressedPubKey(const struct buffer *vchPubKey) {
+static bool IsLowDERSignature(const struct buffer *vchSig) {
+    if (!IsValidSignatureEncoding(vchSig)) return false;
 
-    const unsigned char *pubkey = vchPubKey->p;
+    if (!bp_pubkey_checklowS(vchSig->p, vchSig->len)) return false;
 
-    if (vchPubKey->len < 33) {
-        //  Non-canonical public key: too short
-        return false;
-    }
-    if (pubkey[0] == 0x04) {
-        if (vchPubKey->len != 65) {
-            //  Non-canonical public key: invalid length for uncompressed key
-            return false;
-        }
-    } else if (pubkey[0] == 0x02 || pubkey[0] == 0x03) {
-        if (vchPubKey->len != 33) {
-            //  Non-canonical public key: invalid length for compressed key
-            return false;
-        }
-    } else {
-          //  Non-canonical public key: neither compressed nor uncompressed
-          return false;
-    }
     return true;
 }
 
@@ -406,12 +414,12 @@ static bool CheckSignatureEncoding(const struct buffer *vchSig, unsigned int fla
     if (vchSig->len == 0)
         return true;
 
-    // TODO : Add SCRIPT_VERIFY_LOW_S
+	if ((flags & (SCRIPT_VERIFY_DERSIG | SCRIPT_VERIFY_LOW_S | SCRIPT_VERIFY_STRICTENC)) != 0 && !IsValidSignatureEncoding(vchSig))
+		return false;
+    else if ((flags & SCRIPT_VERIFY_LOW_S) != 0 && !IsLowDERSignature(vchSig))
+		return false;
 
-    if ((flags & (SCRIPT_VERIFY_DERSIG | SCRIPT_VERIFY_STRICTENC)) != 0 && !IsValidSignatureEncoding(vchSig))
-        return false;
-
-    // TODO : Add IsLowDERSignature and IsDefinedHashtypeSignature
+	// TODO : Add IsDefinedHashtypeSignature
 
     return true;
 }
@@ -437,7 +445,7 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 	mpz_t bn;
 	mpz_init(bn);
 
-	if (script->len > 10000)
+	if (script->len > MAX_SCRIPT_SIZE)
 		goto out;
 
 	unsigned int nOpCount = 0;
@@ -452,9 +460,9 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 			goto out;
 		enum opcodetype opcode = op.op;
 
-		if (op.data.len > 520)
+		if (op.data.len > MAX_SCRIPT_ELEMENT_SIZE)
 			goto out;
-		if (opcode > OP_16 && ++nOpCount > 201)
+		if (opcode > OP_16 && ++nOpCount > MAX_OPS_PER_SCRIPT)
 			goto out;
 		if (disabled_op[opcode])
 			goto out;
@@ -1033,10 +1041,10 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 				goto out;
 
 			int nKeysCount = stackint(stack, -i);
-			if (nKeysCount < 0 || nKeysCount > 20)
+			if (nKeysCount < 0 || nKeysCount > MAX_PUBKEYS_PER_MULTISIG)
 				goto out;
 			nOpCount += nKeysCount;
-			if (nOpCount > 201)
+			if (nOpCount > MAX_OPS_PER_SCRIPT)
 				goto out;
 			int ikey = ++i;
 			i += nKeysCount;
@@ -1162,8 +1170,7 @@ bool bp_script_verify(const cstring *scriptSig, const cstring *scriptPubKey,
 		struct buffer *pubkey2_buf = stack_take(stackCopy, -1);
 		popstack(stackCopy);
 
-		cstring *pubkey2 = cstr_new_sz(pubkey2_buf->len);
-		cstr_append_buf(pubkey2, pubkey2_buf->p, pubkey2_buf->len);
+		cstring *pubkey2 = cstr_new_buf(pubkey2_buf->p, pubkey2_buf->len);
 
 		buffer_free(pubkey2_buf);
 

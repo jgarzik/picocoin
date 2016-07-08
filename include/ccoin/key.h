@@ -41,6 +41,7 @@ extern bool bp_verify(const struct bp_key *key, const void *data, size_t data_le
 extern bool bp_key_add_secret(struct bp_key *out,
 			      const struct bp_key *key,
 			      const uint8_t *tweak32);
+bool bp_pubkey_checklowS(const void *sig, size_t sig_len);
 
 struct bp_keyset {
 	struct bp_hashtab	*pub;
