@@ -408,6 +408,20 @@ static bool IsLowDERSignature(const struct buffer *vchSig) {
     return true;
 }
 
+bool static IsDefinedHashtypeSignature(const struct buffer *vchSig) {
+	if (vchSig->len == 0)
+		return false;
+
+	const unsigned char *sig = vchSig->p;
+
+    unsigned char nHashType = sig[vchSig->len - 1] & (~(SIGHASH_ANYONECANPAY));
+
+    if (nHashType < SIGHASH_ALL || nHashType > SIGHASH_SINGLE)
+        return false;
+
+    return true;
+}
+
 static bool CheckSignatureEncoding(const struct buffer *vchSig, unsigned int flags) {
     // Empty signature. Not strictly DER encoded, but allowed to provide a
     // compact way to provide an invalid signature for use with CHECK(MULTI)SIG
@@ -418,9 +432,9 @@ static bool CheckSignatureEncoding(const struct buffer *vchSig, unsigned int fla
 		return false;
     else if ((flags & SCRIPT_VERIFY_LOW_S) != 0 && !IsLowDERSignature(vchSig))
 		return false;
+	else if ((flags & SCRIPT_VERIFY_STRICTENC) != 0 && !IsDefinedHashtypeSignature(vchSig))
 
-	// TODO : Add IsDefinedHashtypeSignature
-
+        return false;
     return true;
 }
 
