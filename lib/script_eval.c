@@ -61,6 +61,14 @@ void bp_tx_sighash(bu256_t *hash, const cstring *scriptCode,
 		return;
 	}
 
+	// Check for invalid use of SIGHASH_SINGLE
+	if ((nHashType & 0x1f) == SIGHASH_SINGLE) {
+		if (nIn >= txTo->vin->len) {
+			bu256_set_u64(hash, 1);
+			return;
+		}
+	}
+
 	struct bp_tx txTmp;
 	bp_tx_init(&txTmp);
 	bp_tx_copy(&txTmp, txTo);
