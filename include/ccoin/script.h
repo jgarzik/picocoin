@@ -48,6 +48,9 @@ enum
     SCRIPT_VERIFY_STRICTENC = (1U << 1),
     SCRIPT_VERIFY_DERSIG    = (1U << 2),
     SCRIPT_VERIFY_LOW_S     = (1U << 3),
+    // TODO : SCRIPT_VERIFY_NULLDUMMY
+//    SCRIPT_VERIFY_NULLDUMMY = (1U << 4),
+    SCRIPT_VERIFY_SIGPUSHONLY = (1U << 5),
 };
 
 enum txnouttype

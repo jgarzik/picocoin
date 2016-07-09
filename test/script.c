@@ -79,6 +79,8 @@ static void runtest(const char *basefn)
 						verify_flags |= SCRIPT_VERIFY_DERSIG;
 					else if (strcmp(json_flag, "LOW_S") == 0)
 						verify_flags |= SCRIPT_VERIFY_LOW_S;
+					else if (strcmp(json_flag, "SIGPUSHONLY") == 0)
+						verify_flags |= SCRIPT_VERIFY_SIGPUSHONLY;
 					json_flag = strtok(NULL, ",");
 				} while (json_flag);
 			}
