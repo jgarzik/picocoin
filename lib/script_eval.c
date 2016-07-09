@@ -159,11 +159,31 @@ static const unsigned char disabled_op[256] = {
 	[OP_RSHIFT] = 1,
 };
 
-static bool CastToBigNum(mpz_t vo, const struct buffer *buf)
+static bool CastToBigNum(mpz_t vo, const struct buffer *buf, bool fRequireMinimal)
 {
 	if (buf->len > nMaxNumSize)
 		return false;
 
+	const unsigned char *vch = buf->p;
+
+	if (fRequireMinimal && buf->len > 0) {
+		// Check that the number is encoded with the minimum possible
+		// number of bytes.
+		//
+		// If the most-significant-byte - excluding the sign bit - is zero
+		// then we're not minimal. Note how this test also rejects the
+		// negative-zero encoding, 0x80.
+		if ((vch[buf->len - 1] & 0x7f) == 0) {
+			// One exception: if there's more than one byte and the most
+			// significant bit of the second-most-significant-byte is set
+			// it would conflict with the sign bit. An example of this case
+			// is +-255, which encode to 0xff00 and 0xff80 respectively.
+			// (big-endian).
+			if (buf->len <= 1 || (vch[buf->len - 2] & 0x80) == 0) {
+				return false;
+			}
+		}
+	}
 	bn_setvch(vo, buf->p, buf->len);
 
 	return true;
@@ -226,7 +246,7 @@ static struct buffer *stacktop(parr *stack, int index)
 	return stack->data[stack->len + index];
 }
 
-static int stackint(parr *stack, int index)
+static int stackint(parr *stack, int index, bool fRequireMinimal)
 {
 	struct buffer *buf = stacktop(stack, index);
 	mpz_t bn;
@@ -234,7 +254,7 @@ static int stackint(parr *stack, int index)
 
 	int ret = -1;
 
-	if (!CastToBigNum(bn, buf))
+	if (!CastToBigNum(bn, buf, fRequireMinimal))
 		goto out;
 
 	ret = mpz_get_si(bn);
@@ -453,6 +473,32 @@ static bool CheckPubKeyEncoding(const struct buffer *vchPubKey, unsigned int fla
     return true;
 }
 
+bool static CheckMinimalPush(struct const_buffer *data, enum opcodetype opcode) {
+
+	const unsigned char *vch = data->p;
+
+	if (data->len == 0) {
+		// Could have used OP_0.
+		return opcode == OP_0;
+	} else if (data->len == 1 && vch[0] >= 1 && vch[0] <= 16) {
+		// Could have used OP_1 .. OP_16.
+		return opcode == OP_1 + (vch[0] - 1);
+	} else if (data->len == 1 && vch[0] == 0x81) {
+		// Could have used OP_1NEGATE.
+		return opcode == OP_1NEGATE;
+	} else if (data->len <= 75) {
+		// Could have used a direct push (opcode indicating number of bytes pushed + those bytes).
+		return opcode == data->len;
+	} else if (data->len <= 255) {
+		// Could have used OP_PUSHDATA.
+		return opcode == OP_PUSHDATA1;
+	} else if (data->len <= 65535) {
+		// Could have used OP_PUSHDATA2.
+		return opcode == OP_PUSHDATA2;
+	}
+    return true;
+}
+
 static bool bp_script_eval(parr *stack, const cstring *script,
 			   const struct bp_tx *txTo, unsigned int nIn,
 			   unsigned int flags, int nHashType)
@@ -471,6 +517,7 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 		goto out;
 
 	unsigned int nOpCount = 0;
+	bool fRequireMinimal = (flags & SCRIPT_VERIFY_MINIMALDATA) != 0;
 
 	struct bscript_parser bp;
 	bsp_start(&bp, &pc);
@@ -489,9 +536,11 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 		if (disabled_op[opcode])
 			goto out;
 
-		if (fExec && is_bsp_pushdata(opcode))
+		if (fExec && is_bsp_pushdata(opcode)) {
+			if (fRequireMinimal && !CheckMinimalPush(&op.data, opcode))
+				goto out;
 			stack_push(stack, (struct buffer *) &op.data);
-		else if (fExec || (OP_IF <= opcode && opcode <= OP_ENDIF))
+		} else if (fExec || (OP_IF <= opcode && opcode <= OP_ENDIF))
 		switch (opcode) {
 
 		//
@@ -706,7 +755,8 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 			// (xn ... x2 x1 x0 n - ... x2 x1 x0 xn)
 			if (stack->len < 2)
 				goto out;
-			int n = stackint(stack, -1);
+
+			int n = stackint(stack, -1, fRequireMinimal);
 			popstack(stack);
 			if (n < 0 || n >= (int)stack->len)
 				goto out;
@@ -797,7 +847,7 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 			// (in -- out)
 			if (stack->len < 1)
 				goto out;
-			if (!CastToBigNum(bn, stacktop(stack, -1)))
+			if (!CastToBigNum(bn, stacktop(stack, -1), fRequireMinimal))
 				goto out;
 			switch (opcode)
 			{
@@ -848,8 +898,8 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 			mpz_t bn1, bn2;
 			mpz_init(bn1);
 			mpz_init(bn2);
-			if (!CastToBigNum(bn1, stacktop(stack, -2)) ||
-			    !CastToBigNum(bn2, stacktop(stack, -1))) {
+			if (!CastToBigNum(bn1, stacktop(stack, -2), fRequireMinimal) ||
+			    !CastToBigNum(bn2, stacktop(stack, -1), fRequireMinimal)) {
 				mpz_clear(bn1);
 				mpz_clear(bn2);
 				goto out;
@@ -938,9 +988,9 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 			mpz_init(bn1);
 			mpz_init(bn2);
 			mpz_init(bn3);
-			bool rc1 = CastToBigNum(bn1, stacktop(stack, -3));
-			bool rc2 = CastToBigNum(bn2, stacktop(stack, -2));
-			bool rc3 = CastToBigNum(bn3, stacktop(stack, -1));
+			bool rc1 = CastToBigNum(bn1, stacktop(stack, -3), fRequireMinimal);
+			bool rc2 = CastToBigNum(bn2, stacktop(stack, -2), fRequireMinimal);
+			bool rc3 = CastToBigNum(bn3, stacktop(stack, -1), fRequireMinimal);
 			bool fValue = (mpz_cmp(bn2, bn1) <= 0 &&
 				       mpz_cmp(bn1, bn3) < 0);
 			popstack(stack);
@@ -1062,7 +1112,7 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 			if ((int)stack->len < i)
 				goto out;
 
-			int nKeysCount = stackint(stack, -i);
+			int nKeysCount = stackint(stack, -i, fRequireMinimal);
 			if (nKeysCount < 0 || nKeysCount > MAX_PUBKEYS_PER_MULTISIG)
 				goto out;
 			nOpCount += nKeysCount;
@@ -1073,7 +1123,7 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 			if ((int)stack->len < i)
 				goto out;
 
-			int nSigsCount = stackint(stack, -i);
+			int nSigsCount = stackint(stack, -i, fRequireMinimal);
 			if (nSigsCount < 0 || nSigsCount > nKeysCount)
 				goto out;
 			int isig = ++i;

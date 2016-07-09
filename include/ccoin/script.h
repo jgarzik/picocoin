@@ -51,6 +51,7 @@ enum
     // TODO : SCRIPT_VERIFY_NULLDUMMY
 //    SCRIPT_VERIFY_NULLDUMMY = (1U << 4),
     SCRIPT_VERIFY_SIGPUSHONLY = (1U << 5),
+    SCRIPT_VERIFY_MINIMALDATA = (1U << 6),
 };
 
 enum txnouttype
