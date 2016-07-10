@@ -83,6 +83,8 @@ static void runtest(const char *basefn)
 						verify_flags |= SCRIPT_VERIFY_SIGPUSHONLY;
 					else if (strcmp(json_flag, "MINIMALDATA") == 0)
 						verify_flags |= SCRIPT_VERIFY_MINIMALDATA;
+					else if (strcmp(json_flag, "DISCOURAGE_UPGRADABLE_NOPS") == 0)
+						verify_flags |= SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS;
 					json_flag = strtok(NULL, ",");
 				} while (json_flag);
 			}

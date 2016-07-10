@@ -570,9 +570,13 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 		//
 		// Control
 		//
-		case OP_NOP:
-		case OP_NOP1: case OP_NOP2: case OP_NOP3: case OP_NOP4: case OP_NOP5:
+		case OP_NOP: case OP_NOP2: case OP_NOP3:
+			break;
+
+		case OP_NOP1: case OP_NOP4: case OP_NOP5:
 		case OP_NOP6: case OP_NOP7: case OP_NOP8: case OP_NOP9: case OP_NOP10:
+			if (flags & SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS)
+				goto out;
 			break;
 
 		case OP_IF:
