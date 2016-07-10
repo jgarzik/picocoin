@@ -1264,6 +1264,16 @@ bool bp_script_verify(const cstring *scriptSig, const cstring *scriptPubKey,
 		if (CastToBool(stacktop(stackCopy, -1)) == false)
 			goto out;
 	}
+	// The CLEANSTACK check is only performed after potential P2SH evaluation,
+	// as the non-P2SH evaluation of a P2SH script will obviously not result in
+	// a clean stack (the P2SH inputs remain).
+	if ((flags & SCRIPT_VERIFY_CLEANSTACK) != 0) {
+		// Disallow CLEANSTACK without P2SH, as otherwise a switch CLEANSTACK->P2SH+CLEANSTACK
+		// would be possible, which is not a softfork (and P2SH should be one).
+		assert((flags & SCRIPT_VERIFY_P2SH) != 0);
+		if (stack->len != 1)
+			goto out;
+	}
 
 	rc = true;
 
