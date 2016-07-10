@@ -13,7 +13,7 @@
 #include <ccoin/serialize.h>
 #include <ccoin/compat.h>		/* for parr_new */
 
-static const size_t nMaxNumSize = 4;
+static size_t nDefaultMaxNumSize = 4;
 
 static void string_find_del(cstring *s, const struct buffer *buf)
 {
@@ -161,7 +161,7 @@ static const unsigned char disabled_op[256] = {
 
 static bool CastToBigNum(mpz_t vo, const struct buffer *buf, bool fRequireMinimal)
 {
-	if (buf->len > nMaxNumSize)
+	if (buf->len > nDefaultMaxNumSize)
 		return false;
 
 	const unsigned char *vch = buf->p;
@@ -499,6 +499,46 @@ bool static CheckMinimalPush(struct const_buffer *data, enum opcodetype opcode) 
     return true;
 }
 
+bool CheckLockTime(const unsigned int nLockTime, const struct bp_tx *_txTo, unsigned int nIn)
+{
+	const struct bp_tx *txTo = _txTo;
+	// There are two kinds of nLockTime: lock-by-blockheight
+	// and lock-by-blocktime, distinguished by whether
+	// nLockTime < LOCKTIME_THRESHOLD.
+	//
+	// We want to compare apples to apples, so fail the script
+	// unless the type of nLockTime being tested is the same as
+	// the nLockTime in the transaction.
+	if (!(
+		(txTo->nLockTime <  LOCKTIME_THRESHOLD && nLockTime <  LOCKTIME_THRESHOLD) ||
+		(txTo->nLockTime >= LOCKTIME_THRESHOLD && nLockTime >= LOCKTIME_THRESHOLD)
+	))
+		return false;
+
+	// Now that we know we're comparing apples-to-apples, the
+	// comparison is a simple numeric one.
+	if (nLockTime > (int64_t)txTo->nLockTime)
+		return false;
+
+	// Finally the nLockTime feature can be disabled and thus
+	// CHECKLOCKTIMEVERIFY bypassed if every txin has been
+	// finalized by setting nSequence to maxint. The
+	// transaction would be allowed into the blockchain, making
+	// the opcode ineffective.
+	//
+	// Testing if this vin is not final is sufficient to
+	// prevent this condition. Alternatively we could test all
+	// inputs, but testing just this input minimizes the data
+	// required to prove correct CHECKLOCKTIMEVERIFY execution.
+	struct bp_txin *txin;
+	txin = parr_idx(txTo->vin, nIn);
+
+	if (0xffffffff == txin->nSequence)
+		return false;
+
+	return true;
+}
+
 static bool bp_script_eval(parr *stack, const cstring *script,
 			   const struct bp_tx *txTo, unsigned int nIn,
 			   unsigned int flags, int nHashType)
@@ -570,8 +610,58 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 		//
 		// Control
 		//
-		case OP_NOP: case OP_NOP2: case OP_NOP3:
+		case OP_NOP: case OP_NOP3:
 			break;
+
+		case OP_CHECKLOCKTIMEVERIFY: {
+			if (!(flags & SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY)) {
+				// not enabled; treat as a NOP2
+				if (flags & SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS)
+					goto out;
+				break;
+			}
+
+			if (stack->len < 1)
+				goto out;
+
+			// Note that elsewhere numeric opcodes are limited to
+			// operands in the range -2**31+1 to 2**31-1, however it is
+			// legal for opcodes to produce results exceeding that
+			// range. This limitation is implemented by CastToBigNum's
+			// default 4-byte limit.
+			//
+			// If we kept to that limit we'd have a year 2038 problem,
+			// even though the nLockTime field in transactions
+			// themselves is uint32 which only becomes meaningless
+			// after the year 2106.
+			//
+			// Thus as a special case we tell CastToBigNum to accept up
+			// to 5-byte bignums, which are good until 2**39-1, well
+			// beyond the 2**32-1 limit of the nLockTime field itself.
+
+			size_t nMaxNumSizeSwap = nDefaultMaxNumSize;
+			nDefaultMaxNumSize = 5;
+
+			if (!CastToBigNum(bn, stacktop(stack, -1), fRequireMinimal)) {
+				nDefaultMaxNumSize = nMaxNumSizeSwap;
+				goto out;
+			}
+			nDefaultMaxNumSize = nMaxNumSizeSwap;
+
+			// In the rare event that the argument may be < 0 due to
+			// some arithmetic being done first, you can always use
+			// 0 MAX CHECKLOCKTIMEVERIFY.
+			if (mpz_sgn(bn) < 0)
+				goto out;
+
+			uint64_t nLockTime = mpz_get_ui(bn);
+
+			// Actually compare the specified lock time with the transaction.
+			if (!CheckLockTime(nLockTime, txTo, nIn))
+				goto out;
+
+			break;
+		}
 
 		case OP_NOP1: case OP_NOP4: case OP_NOP5:
 		case OP_NOP6: case OP_NOP7: case OP_NOP8: case OP_NOP9: case OP_NOP10:
