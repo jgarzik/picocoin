@@ -23,6 +23,13 @@ enum service_bits {
 	NODE_NETWORK	= (1 << 0),
 };
 
+enum {
+	SEQUENCE_FINAL = 0xffffffff,
+	SEQUENCE_LOCKTIME_DISABLE_FLAG = (1 << 31),
+	SEQUENCE_LOCKTIME_TYPE_FLAG = (1 << 22),
+	SEQUENCE_LOCKTIME_MASK = 0x0000ffff,
+};
+
 static inline bool bp_valid_value(int64_t nValue)
 {
 	if (nValue < 0 || nValue > 21000000LL * COIN)

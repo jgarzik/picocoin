@@ -225,7 +225,7 @@ static void append_input(char *txid_str, char *vout_str)
 	bu256_copy(&txin->prevout.hash, &txid);
 	txin->prevout.n = vout;
 	txin->scriptSig = cstr_new(NULL);
-	txin->nSequence = 0xffffffffU;
+	txin->nSequence = SEQUENCE_FINAL;
 
 	parr_add(tx.vin, txin);
 }

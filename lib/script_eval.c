@@ -13,7 +13,7 @@
 #include <ccoin/serialize.h>
 #include <ccoin/compat.h>		/* for parr_new */
 
-static size_t nDefaultMaxNumSize = 4;
+static const size_t nDefaultMaxNumSize = 4;
 
 static void string_find_del(cstring *s, const struct buffer *buf)
 {
@@ -159,9 +159,9 @@ static const unsigned char disabled_op[256] = {
 	[OP_RSHIFT] = 1,
 };
 
-static bool CastToBigNum(mpz_t vo, const struct buffer *buf, bool fRequireMinimal)
+static bool CastToBigNum(mpz_t vo, const struct buffer *buf, bool fRequireMinimal, const size_t nMaxNumSize)
 {
-	if (buf->len > nDefaultMaxNumSize)
+	if (buf->len > nMaxNumSize)
 		return false;
 
 	const unsigned char *vch = buf->p;
@@ -254,7 +254,7 @@ static int stackint(parr *stack, int index, bool fRequireMinimal)
 
 	int ret = -1;
 
-	if (!CastToBigNum(bn, buf, fRequireMinimal))
+	if (!CastToBigNum(bn, buf, fRequireMinimal, nDefaultMaxNumSize))
 		goto out;
 
 	ret = mpz_get_si(bn);
@@ -499,9 +499,8 @@ bool static CheckMinimalPush(struct const_buffer *data, enum opcodetype opcode) 
     return true;
 }
 
-bool CheckLockTime(const unsigned int nLockTime, const struct bp_tx *_txTo, unsigned int nIn)
+bool CheckLockTime(const unsigned int nLockTime, const struct bp_tx *txTo, unsigned int nIn)
 {
-	const struct bp_tx *txTo = _txTo;
 	// There are two kinds of nLockTime: lock-by-blockheight
 	// and lock-by-blocktime, distinguished by whether
 	// nLockTime < LOCKTIME_THRESHOLD.
@@ -530,10 +529,57 @@ bool CheckLockTime(const unsigned int nLockTime, const struct bp_tx *_txTo, unsi
 	// prevent this condition. Alternatively we could test all
 	// inputs, but testing just this input minimizes the data
 	// required to prove correct CHECKLOCKTIMEVERIFY execution.
-	struct bp_txin *txin;
-	txin = parr_idx(txTo->vin, nIn);
+	struct bp_txin *txin = parr_idx(txTo->vin, nIn);
 
-	if (0xffffffff == txin->nSequence)
+	if (SEQUENCE_FINAL == txin->nSequence)
+		return false;
+
+	return true;
+}
+
+bool CheckSequence(const unsigned int nSequence, const struct bp_tx *txTo, unsigned int nIn)
+{
+	const struct bp_txin *txin = parr_idx(txTo->vin, nIn);
+
+	// Relative lock times are supported by comparing the passed
+	// in operand to the sequence number of the input.
+	const int64_t txToSequence = (int64_t)txin->nSequence;
+
+	// Fail if the transaction's version number is not set high
+	// enough to trigger BIP 68 rules.
+	if (txTo->nVersion < 2)
+		return false;
+
+	// Sequence numbers with their most significant bit set are not
+	// consensus constrained. Testing that the transaction's sequence
+	// number do not have this bit set prevents using this property
+	// to get around a CHECKSEQUENCEVERIFY check.
+	if (txToSequence & SEQUENCE_LOCKTIME_DISABLE_FLAG)
+		return false;
+
+	// Mask off any bits that do not have consensus-enforced meaning
+	// before doing the integer comparisons
+	const uint32_t nLockTimeMask = SEQUENCE_LOCKTIME_TYPE_FLAG | SEQUENCE_LOCKTIME_MASK;
+	const int64_t txToSequenceMasked = txToSequence & nLockTimeMask;
+	const uint64_t nSequenceMasked = nSequence & nLockTimeMask;
+
+	// There are two kinds of nSequence: lock-by-blockheight
+	// and lock-by-blocktime, distinguished by whether
+	// nSequenceMasked < CTxIn::SEQUENCE_LOCKTIME_TYPE_FLAG.
+	//
+	// We want to compare apples to apples, so fail the script
+	// unless the type of nSequenceMasked being tested is the same as
+	// the nSequenceMasked in the transaction.
+	if (!(
+		(txToSequenceMasked <  SEQUENCE_LOCKTIME_TYPE_FLAG && nSequenceMasked <  SEQUENCE_LOCKTIME_TYPE_FLAG) ||
+		(txToSequenceMasked >= SEQUENCE_LOCKTIME_TYPE_FLAG && nSequenceMasked >= SEQUENCE_LOCKTIME_TYPE_FLAG)
+	)) {
+		return false;
+	}
+
+	// Now that we know we're comparing apples-to-apples, the
+	// comparison is a simple numeric one.
+	if (nSequenceMasked > txToSequenceMasked)
 		return false;
 
 	return true;
@@ -610,7 +656,7 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 		//
 		// Control
 		//
-		case OP_NOP: case OP_NOP3:
+		case OP_NOP:
 			break;
 
 		case OP_CHECKLOCKTIMEVERIFY: {
@@ -639,14 +685,8 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 			// to 5-byte bignums, which are good until 2**39-1, well
 			// beyond the 2**32-1 limit of the nLockTime field itself.
 
-			size_t nMaxNumSizeSwap = nDefaultMaxNumSize;
-			nDefaultMaxNumSize = 5;
-
-			if (!CastToBigNum(bn, stacktop(stack, -1), fRequireMinimal)) {
-				nDefaultMaxNumSize = nMaxNumSizeSwap;
+			if (!CastToBigNum(bn, stacktop(stack, -1), fRequireMinimal, 5))
 				goto out;
-			}
-			nDefaultMaxNumSize = nMaxNumSizeSwap;
 
 			// In the rare event that the argument may be < 0 due to
 			// some arithmetic being done first, you can always use
@@ -658,6 +698,45 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 
 			// Actually compare the specified lock time with the transaction.
 			if (!CheckLockTime(nLockTime, txTo, nIn))
+				goto out;
+
+			break;
+		}
+
+		case OP_CHECKSEQUENCEVERIFY:
+		{
+			if (!(flags & SCRIPT_VERIFY_CHECKSEQUENCEVERIFY)) {
+				// not enabled; treat as a NOP3
+				if (flags & SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS)
+					goto out;
+				break;
+			}
+
+			if (stack->len < 1)
+				goto out;
+
+			// nSequence, like nLockTime, is a 32-bit unsigned integer
+			// field. See the comment in CHECKLOCKTIMEVERIFY regarding
+			// 5-byte numeric operands.
+			if (!CastToBigNum(bn, stacktop(stack, -1), fRequireMinimal, 5))
+				goto out;
+
+			// In the rare event that the argument may be < 0 due to
+			// some arithmetic being done first, you can always use
+			// 0 MAX CHECKSEQUENCEVERIFY.
+			if (mpz_sgn(bn) < 0)
+				goto out;
+
+			uint64_t nSequence = mpz_get_ui(bn);
+
+			// To provide for future soft-fork extensibility, if the
+			// operand has the disabled lock-time flag set,
+			// CHECKSEQUENCEVERIFY behaves as a NOP.
+			if ((nSequence & SEQUENCE_LOCKTIME_DISABLE_FLAG) != 0)
+				break;
+
+			// Compare the specified sequence number with the input.
+			if (!CheckSequence(nSequence, txTo, nIn))
 				goto out;
 
 			break;
@@ -941,7 +1020,7 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 			// (in -- out)
 			if (stack->len < 1)
 				goto out;
-			if (!CastToBigNum(bn, stacktop(stack, -1), fRequireMinimal))
+			if (!CastToBigNum(bn, stacktop(stack, -1), fRequireMinimal, nDefaultMaxNumSize))
 				goto out;
 			switch (opcode)
 			{
@@ -992,8 +1071,8 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 			mpz_t bn1, bn2;
 			mpz_init(bn1);
 			mpz_init(bn2);
-			if (!CastToBigNum(bn1, stacktop(stack, -2), fRequireMinimal) ||
-			    !CastToBigNum(bn2, stacktop(stack, -1), fRequireMinimal)) {
+			if (!CastToBigNum(bn1, stacktop(stack, -2), fRequireMinimal, nDefaultMaxNumSize) ||
+			    !CastToBigNum(bn2, stacktop(stack, -1), fRequireMinimal, nDefaultMaxNumSize)) {
 				mpz_clear(bn1);
 				mpz_clear(bn2);
 				goto out;
@@ -1082,9 +1161,9 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 			mpz_init(bn1);
 			mpz_init(bn2);
 			mpz_init(bn3);
-			bool rc1 = CastToBigNum(bn1, stacktop(stack, -3), fRequireMinimal);
-			bool rc2 = CastToBigNum(bn2, stacktop(stack, -2), fRequireMinimal);
-			bool rc3 = CastToBigNum(bn3, stacktop(stack, -1), fRequireMinimal);
+			bool rc1 = CastToBigNum(bn1, stacktop(stack, -3), fRequireMinimal, nDefaultMaxNumSize);
+			bool rc2 = CastToBigNum(bn2, stacktop(stack, -2), fRequireMinimal, nDefaultMaxNumSize);
+			bool rc3 = CastToBigNum(bn3, stacktop(stack, -1), fRequireMinimal, nDefaultMaxNumSize);
 			bool fValue = (mpz_cmp(bn2, bn1) <= 0 &&
 				       mpz_cmp(bn1, bn3) < 0);
 			popstack(stack);

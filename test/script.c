@@ -87,6 +87,8 @@ static void runtest(const char *basefn)
 						verify_flags |= SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS;
 					else if (strcmp(json_flag, "CLEANSTACK") == 0)
 						verify_flags |= SCRIPT_VERIFY_CLEANSTACK;
+					else if (strcmp(json_flag, "CHECKSEQUENCEVERIFY") == 0)
+						verify_flags |= SCRIPT_VERIFY_CHECKSEQUENCEVERIFY;
 					json_flag = strtok(NULL, ",");
 				} while (json_flag);
 			}
