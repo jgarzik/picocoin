@@ -22,7 +22,7 @@ AC_PREREQ(2.60)
 LT_INIT
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/main.c])
-AM_INIT_AUTOMAKE([foreign])
+AM_INIT_AUTOMAKE(foreign subdir-objects)
 AC_CONFIG_HEADERS([picocoin-config.h])
 
 dnl Make sure anyone changing configure.ac/Makefile.am has a clue
@@ -58,8 +58,8 @@ case "${host}" in
 		#ifndef O_LARGEFILE
 		# define O_LARGEFILE 0
 		#endif])
-		CPPFLAGS="$CPPFLAGS -I/usr/local/opt/openssl/include"
-		LDFLAGS="$LDFLAGS -L/usr/local/opt/openssl/lib"
+		CPPFLAGS="$CPPFLAGS -I/usr/local/opt/openssl/include -I/usr/local/include"
+		LDFLAGS="$LDFLAGS -L/usr/local/opt/openssl/lib -L/usr/local/lib"
 		;;
 esac
 

@@ -2,6 +2,7 @@
 # directories
 .deps
 autom4te.cache
+.dirstamp
 
 *.o
 *.lo

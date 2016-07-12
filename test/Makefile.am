@@ -17,8 +17,7 @@ EXTRA_DIST	= \
 	blks10.ser \
 	hdr193000.ser tn_hdr35141.ser \
 	tn_blk35133.ser wallet-basics.json \
-	script_valid.json script_invalid.json \
-	tx_valid.json tx_invalid.json
+	script_tests.json tx_valid.json tx_invalid.json
 
 noinst_LIBRARIES= libtest.a
 
@@ -55,6 +54,6 @@ script_LDADD		= $(COMMON_LDADD)
 script_parse_LDADD	= $(COMMON_LDADD)
 tx_LDADD            = $(COMMON_LDADD)
 tx_valid_LDADD		= $(COMMON_LDADD)
-util_LDADD		    = $(COMMON_LDADD)
+util_LDADD		    = $(COMMON_LDADD) ../lib/libccoinnet.la
 wallet_LDADD		= $(COMMON_LDADD)
 wallet_basics_LDADD	= $(COMMON_LDADD)
