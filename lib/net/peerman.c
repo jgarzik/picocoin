@@ -2,19 +2,24 @@
  * Distributed under the MIT/X11 software license, see the accompanying
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.
  */
-#include "picocoin-config.h"
+#include "picocoin-config.h"           // for VERSION, _LARGE_FILES, etc
 
-#include <stdio.h>
-#include <string.h>
-#include "peerman.h"
-#include <ccoin/mbr.h>
-#include <ccoin/util.h>
-#include <ccoin/coredefs.h>
-#include <ccoin/serialize.h>
-#include <ccoin/net.h>
-#include <ccoin/clist.h>
-#include <ccoin/compat.h>
-#include "picocoin.h"
+#include "ccoin/net/peerman.h"          // for peer, peer_manager, etc
+#include <ccoin/buffer.h>               // for const_buffer
+#include <ccoin/coredefs.h>             // for ::CADDR_TIME_VERSION, etc
+#include <ccoin/hashtab.h>              // for bp_hashtab_del, etc
+#include <ccoin/message.h>              // for p2p_message, etc
+#include <ccoin/mbr.h>                  // for fread_message
+#include <ccoin/net/dns.h>              // for bu_dns_lookup, etc
+#include <ccoin/net/netbase.h>          // for bn_group
+#include <ccoin/serialize.h>            // for deser_s64, deser_u32, etc
+#include <ccoin/util.h>                 // for clist_shuffle, djb2_hash, etc
+
+#include <stdio.h>                      // for NULL, fprintf, stderr, etc
+#include <stdlib.h>                     // for free, calloc, malloc, atoi, etc
+#include <unistd.h>                     // for close, write, unlink, etc
+
+static bool debugging = false;
 
 static unsigned long addr_hash(const void *key)
 {
@@ -91,6 +96,11 @@ static void peer_ent_free(void *data)
 	free(peer);
 }
 
+void peerman_debug(bool _debugging)
+{
+        debugging = _debugging;
+}
+
 void peerman_free(struct peer_manager *peers)
 {
 	if (!peers)
@@ -149,9 +159,9 @@ static bool peerman_read_rec(struct peer_manager *peers,
 	return true;
 }
 
-struct peer_manager *peerman_read(void)
+struct peer_manager *peerman_read(void *peers_file)
 {
-	char *filename = setting("peers");
+	char *filename = peers_file;
 	if (!filename)
 		return NULL;
 
@@ -225,7 +235,7 @@ struct peer_manager *peerman_seed(bool use_dns)
 	return peers;
 }
 
-static bool ser_peerman(struct peer_manager *peers, int fd)
+static bool ser_peerman(struct peer_manager *peers, int fd,  const struct chain_info *chain)
 {
 	/* write "magic number" (constant first file record) */
 	cstring *rec = message_str(chain->netmagic, "magic.peers", NULL, 0);
@@ -268,9 +278,9 @@ static bool ser_peerman(struct peer_manager *peers, int fd)
 	return true;
 }
 
-bool peerman_write(struct peer_manager *peers)
+bool peerman_write(struct peer_manager *peers, void *peer_file, const struct chain_info *chain)
 {
-	char *filename = setting("peers");
+	char *filename = peer_file;
 	if (!filename)
 		return false;
 
@@ -282,7 +292,7 @@ bool peerman_write(struct peer_manager *peers)
 	if (fd < 0)
 		return false;
 
-	if (!ser_peerman(peers, fd))
+	if (!ser_peerman(peers, fd, chain))
 		goto err_out;
 
 	close(fd);

@@ -2,153 +2,45 @@
  * Distributed under the MIT/X11 software license, see the accompanying
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.
  */
-#include "picocoin-config.h"
+#include "picocoin-config.h"            // for VERSION
 
-#include <sys/types.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <unistd.h>
+#include "ccoin/net/net.h"              // for nc_conn, net_child_info, etc
+#include <ccoin/net/netbase.h>          // for bn_address_str, etc
+#include <ccoin/blkdb.h>                // for blkdb, blkdb_locator, etc
+#include <ccoin/buffer.h>               // for buffer, const_buffer
+#include <ccoin/core.h>                 // for bp_address, bp_inv, etc
+#include <ccoin/coredefs.h>             // for ::CADDR_TIME_VERSION, etc
+#include <ccoin/cstr.h>                 // for cstring, cstr_free
+#include <ccoin/hashtab.h>              // for bp_hashtab_size
+#include <ccoin/parr.h>                 // for parr, parr_idx, parr_add, etc
+#include <ccoin/util.h>                 // for MIN
+
+#include <assert.h>                     // for assert
+#include <errno.h>                      // for errno, EAGAIN, EWOULDBLOCK, etc
+#include <event2/event.h>               // for event_free, event_del, etc
+#include <fcntl.h>                      // for fcntl
+#include <signal.h>                     // for kill, SIGTERM
+#include <stddef.h>                     // for size_t
+#include <stdlib.h>                     // for free, calloc, malloc
+#include <string.h>                     // for strncmp, memcmp, memset, etc
+#include <sys/time.h>                   // for timeval
+#include <sys/wait.h>                   // for waitpid, WNOHANG
+#include <unistd.h>                     // for close, read, write
 #ifdef WIN32
+#include <ccoin/net/fakepoll.h>
 #include <mingw.h>
-#include "fakepoll.h"
 #else
-#include <sys/wait.h>
-#include <sys/uio.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <poll.h>
+#include <netinet/in.h>                 // for sockaddr_in, sockaddr_in6, etc
+#include <poll.h>                       // for poll, POLLIN, pollfd
+#include <sys/socket.h>                 // for AF_INET, AF_INET6, connect, etc
+#include <sys/uio.h>                    // for iovec, writev
 #endif
-#include <string.h>
-#include <stdio.h>
-#include <fcntl.h>
-#include <assert.h>
-#include <signal.h>
-#include <time.h>
-#include <errno.h>
-#include <event2/event.h>
-#include <ccoin/util.h>
-#include <ccoin/mbr.h>
-#include <ccoin/core.h>
-#include <ccoin/net.h>
-#include <ccoin/message.h>
-#include "picocoin.h"
-#include "peerman.h"
-#include <ccoin/blkdb.h>
 
-struct net_engine {
-	bool		running;
-	int		rx_pipefd[2];
-	int		tx_pipefd[2];
-	int		par_read;
-	int		par_write;
-	pid_t		child;
-};
+struct net_settings *net_settings;
 
-enum netcmds {
-	NC_OK,
-	NC_ERR,
-	NC_TIMEOUT,
-	NC_START,
-	NC_STOP,
-};
-
-struct net_child_info {
-	int			read_fd;
-	int			write_fd;
-
-	struct peer_manager	*peers;
-	struct blkdb		*db;
-
-	parr		*conns;
-	struct event_base	*eb;
-};
-
-struct nc_conn {
-	bool			dead;
-
-	int			fd;
-
-	struct peer		peer;
-	char			addr_str[64];
-
-	bool			ipv4;
-	bool			connected;
-	struct event		*ev;
-	struct net_child_info	*nci;
-
-	struct event		*write_ev;
-	clist			*write_q;	/* of struct buffer */
-	unsigned int		write_partial;
-
-	struct p2p_message	msg;
-
-	void			*msg_p;
-	unsigned int		expected;
-	bool			reading_hdr;
-	unsigned char		hdrbuf[P2P_HDR_SZ];
-
-	bool			seen_version;
-	bool			seen_verack;
-	uint32_t		protover;
-};
-
-
-enum {
-	NC_MAX_CONN		= 8,
-};
-
-static unsigned int net_conn_timeout = 60;
-static bool network_child_running;
-static void nc_conn_kill(struct nc_conn *conn);
-static bool nc_conn_read_enable(struct nc_conn *conn);
-static bool nc_conn_read_disable(struct nc_conn *conn);
-static bool nc_conn_write_enable(struct nc_conn *conn);
-static bool nc_conn_write_disable(struct nc_conn *conn);
-
-static void pipwr(int fd, const void *buf, size_t len)
+void net_set(struct net_settings *_net_settings)
 {
-	while (len > 0) {
-		ssize_t wrc;
-
-		wrc = write(fd, buf, len);
-		if (wrc < 0) {
-			perror("pipe write");
-			return;
-		}
-
-		buf += wrc;
-		len -= wrc;
-	}
-}
-
-static void sendcmd(int fd, enum netcmds nc)
-{
-	uint8_t v = nc;
-	pipwr(fd, &v, 1);
-}
-
-static enum netcmds readcmd(int fd, int timeout_secs)
-{
-	struct pollfd pfd = { fd, POLLIN };
-	int prc = poll(&pfd, 1, timeout_secs ? timeout_secs * 1000 : -1);
-	if (prc < 0) {
-		perror("pipe poll");
-		return NC_ERR;
-	}
-	if (prc == 0)
-		return NC_TIMEOUT;
-
-	uint8_t v;
-	ssize_t rrc = read(fd, &v, 1);
-	if (rrc < 0) {
-		perror("pipe read");
-		return NC_ERR;
-	}
-	if (rrc != 1)
-		return NC_ERR;
-
-	return v;
+	net_settings = _net_settings;
 }
 
 static void nc_conn_build_iov(clist *write_q, unsigned int partial,
@@ -250,7 +142,7 @@ static bool nc_conn_send(struct nc_conn *conn, const char *command,
 			 const void *data, size_t data_len)
 {
 	/* build wire message */
-	cstring *msg = message_str(chain->netmagic, command, data, data_len);
+	cstring *msg = message_str(conn->nci->chain->netmagic, command, data, data_len);
 	if (!msg)
 		return false;
 
@@ -313,11 +205,11 @@ static bool nc_msg_version(struct nc_conn *conn)
 	if (!deser_msg_version(&mv, &buf))
 		goto out;
 
-	if (debugging) {
+	if (conn->nci->debugging) {
 		char fromstr[64], tostr[64];
 		bn_address_str(fromstr, sizeof(fromstr), mv.addrFrom.ip);
 		bn_address_str(tostr, sizeof(tostr), mv.addrTo.ip);
-		fprintf(stderr, "net: %s version(%u, 0x%llx, %lld, To:%s, From:%s, %s, %u)\n",
+		fprintf(conn->nci->plog, "net: %s version(%u, 0x%llx, %lld, To:%s, From:%s, %s, %u)\n",
 			conn->addr_str,
 			mv.nVersion,
 			(unsigned long long) mv.nServices,
@@ -330,7 +222,7 @@ static bool nc_msg_version(struct nc_conn *conn)
 
 	if (!(mv.nServices & NODE_NETWORK))	/* require NODE_NETWORK */
 		goto out;
-	if (mv.nonce == instance_nonce)		/* connected to ourselves? */
+	if (mv.nonce == *conn->nci->instance_nonce)		/* connected to ourselves? */
 		goto out;
 
 	conn->protover = MIN(mv.nVersion, PROTO_VERSION);
@@ -359,14 +251,14 @@ static bool nc_msg_addr(struct nc_conn *conn)
 
 	unsigned int i;
 	time_t cutoff = time(NULL) - (7 * 24 * 60 * 60);
-	if (debugging) {
+	if (conn->nci->debugging) {
 		unsigned int old = 0;
 		for (i = 0; i < ma.addrs->len; i++) {
 			struct bp_address *addr = parr_idx(ma.addrs, i);
 			if (addr->nTime < cutoff)
 				old++;
 		}
-		fprintf(stderr, "net: %s addr(%zu addresses, %u old)\n",
+		fprintf(conn->nci->plog, "net: %s addr(%zu addresses, %u old)\n",
 			conn->addr_str, ma.addrs->len, old);
 	}
 
@@ -395,6 +287,10 @@ static bool nc_msg_verack(struct nc_conn *conn)
 		return false;
 	conn->seen_verack = true;
 
+	if (conn->nci->debugging)
+		fprintf(conn->nci->plog, "net: %s verack\n",
+			conn->addr_str);
+
 	/*
 	 * When a connection attempt is made, the peer is deleted
 	 * from the peer list.  When we successfully connect,
@@ -411,21 +307,140 @@ static bool nc_msg_verack(struct nc_conn *conn)
 	    (!nc_conn_send(conn, "getaddr", NULL, 0)))
 		return false;
 
-	return true;
+	/* request blocks */
+	bool rc = true;
+	time_t now = time(NULL);
+	time_t cutoff = now - (24 * 60 * 60);
+	if (conn->nci->last_getblocks < cutoff) {
+		struct msg_getblocks gb;
+		msg_getblocks_init(&gb);
+		blkdb_locator(conn->nci->db, NULL, &gb.locator);
+		cstring *s = ser_msg_getblocks(&gb);
+
+		rc = nc_conn_send(conn, "getblocks", s->str, s->len);
+
+		cstr_free(s, true);
+		msg_getblocks_free(&gb);
+
+		conn->nci->last_getblocks = now;
+	}
+
+	return rc;
+}
+
+static bool nc_msg_inv(struct nc_conn *conn)
+{
+	struct const_buffer buf = { conn->msg.data, conn->msg.hdr.data_len };
+	struct msg_vinv mv, mv_out;
+	bool rc = false;
+
+	msg_vinv_init(&mv);
+	msg_vinv_init(&mv_out);
+
+	if (!deser_msg_vinv(&mv, &buf))
+		goto out;
+
+	if (conn->nci->debugging && mv.invs && mv.invs->len == 1) {
+		struct bp_inv *inv = parr_idx(mv.invs, 0);
+		char hexstr[BU256_STRSZ];
+		bu256_hex(hexstr, &inv->hash);
+
+		char typestr[32];
+		switch (inv->type) {
+		case MSG_TX: strcpy(typestr, "tx"); break;
+		case MSG_BLOCK: strcpy(typestr, "block"); break;
+		default: sprintf(typestr, "unknown 0x%x", inv->type); break;
+		}
+
+		fprintf(conn->nci->plog, "net: %s inv %s %s\n",
+			conn->addr_str, typestr, hexstr);
+	}
+	else if (conn->nci->debugging && mv.invs) {
+		fprintf(conn->nci->plog, "net: %s inv (%zu sz)\n",
+			conn->addr_str, mv.invs->len);
+	}
+
+	if (!mv.invs || !mv.invs->len)
+		goto out_ok;
+
+	/* scan incoming inv's for interesting material */
+	unsigned int i;
+	for (i = 0; i < mv.invs->len; i++) {
+		struct bp_inv *inv = parr_idx(mv.invs, i);
+		switch (inv->type) {
+		case MSG_BLOCK:
+			if (conn->nci->inv_block_process(&inv->hash))
+				msg_vinv_push(&mv_out, MSG_BLOCK, &inv->hash);
+			break;
+
+		case MSG_TX:
+		default:
+			break;
+		}
+	}
+
+	/* send getdata, if they have anything we want */
+	if (mv_out.invs && mv_out.invs->len) {
+		cstring *s = ser_msg_vinv(&mv_out);
+
+		rc = nc_conn_send(conn, "getdata", s->str, s->len);
+
+		cstr_free(s, true);
+	}
+
+out_ok:
+	rc = true;
+
+out:
+	msg_vinv_free(&mv);
+	msg_vinv_free(&mv_out);
+	return rc;
+}
+
+static bool nc_msg_block(struct nc_conn *conn)
+{
+	struct const_buffer buf = { conn->msg.data, conn->msg.hdr.data_len };
+	struct bp_block block;
+	bp_block_init(&block);
+
+	bool rc = false;
+
+	if (!deser_bp_block(&block, &buf))
+		goto out;
+	bp_block_calc_sha256(&block);
+	char hexstr[BU256_STRSZ];
+	bu256_hex(hexstr, &block.sha256);
+
+	if (conn->nci->debugging) {
+		fprintf(conn->nci->plog, "net: %s block %s\n",
+			conn->addr_str,
+			hexstr);
+	}
+
+	if (!bp_block_valid(&block)) {
+		fprintf(conn->nci->plog, "net: %s invalid block %s\n",
+			conn->addr_str,
+			hexstr);
+		goto out;
+	}
+
+    if (!conn->nci->block_process(&block, &conn->msg.hdr, &buf))
+    goto out;
+
+	rc = true;
+
+out:
+	bp_block_free(&block);
+	return rc;
 }
 
 static bool nc_conn_message(struct nc_conn *conn)
 {
 	char *command = conn->msg.hdr.command;
 
-	if (debugging)
-		fprintf(stderr, "net: %s message %s\n",
-			conn->addr_str,
-			command);
-
 	/* verify correct network */
-	if (memcmp(conn->msg.hdr.netmagic, chain->netmagic, 4)) {
-		fprintf(stderr, "net: %s invalid network\n",
+	if (memcmp(conn->msg.hdr.netmagic, conn->nci->chain->netmagic, 4)) {
+		fprintf(conn->nci->plog, "net: %s invalid network\n",
 			conn->addr_str);
 		return false;
 	}
@@ -436,7 +451,7 @@ static bool nc_conn_message(struct nc_conn *conn)
 
 	/* "version" must be first message */
 	if (!conn->seen_version) {
-		fprintf(stderr, "net: %s 'version' not first\n",
+		fprintf(conn->nci->plog, "net: %s 'version' not first\n",
 			conn->addr_str);
 		return false;
 	}
@@ -447,7 +462,7 @@ static bool nc_conn_message(struct nc_conn *conn)
 
 	/* "verack" must be second message */
 	if (!conn->seen_verack) {
-		fprintf(stderr, "net: %s 'verack' not second\n",
+		fprintf(conn->nci->plog, "net: %s 'verack' not second\n",
 			conn->addr_str);
 		return false;
 	}
@@ -455,6 +470,19 @@ static bool nc_conn_message(struct nc_conn *conn)
 	/* incoming message: addr */
 	if (!strncmp(command, "addr", 12))
 		return nc_msg_addr(conn);
+
+	/* incoming message: inv */
+	else if (!strncmp(command, "inv", 12))
+		return nc_msg_inv(conn);
+
+	/* incoming message: block */
+	else if (!strncmp(command, "block", 12))
+		return nc_msg_block(conn);
+
+	if (conn->nci->debugging)
+		fprintf(conn->nci->plog, "net: %s unknown message %s\n",
+			conn->addr_str,
+			command);
 
 	/* ignore unknown messages */
 	return true;
@@ -644,7 +672,7 @@ static bool nc_conn_got_header(struct nc_conn *conn)
 static bool nc_conn_got_msg(struct nc_conn *conn)
 {
 	if (!message_valid(&conn->msg)) {
-		fprintf(stderr, "llnet: %s invalid message\n",
+		fprintf(conn->nci->plog, "llnet: %s invalid message\n",
 			conn->addr_str);
 		return false;
 	}
@@ -670,11 +698,11 @@ static void nc_conn_read_evt(int fd, short events, void *priv)
 	ssize_t rrc = read(fd, conn->msg_p, conn->expected);
 	if (rrc <= 0) {
 		if (rrc < 0)
-			fprintf(stderr, "llnet: %s read: %s\n",
+			fprintf(conn->nci->plog, "llnet: %s read: %s\n",
 				conn->addr_str,
 				strerror(errno));
 		else
-			fprintf(stderr, "llnet: %s read EOF\n", conn->addr_str);
+			fprintf(conn->nci->plog, "llnet: %s read EOF\n", conn->addr_str);
 
 		goto err_out;
 	}
@@ -710,7 +738,7 @@ static cstring *nc_version_build(struct nc_conn *conn)
 
 	mv.nVersion = PROTO_VERSION;
 	mv.nTime = (int64_t) time(NULL);
-	mv.nonce = instance_nonce;
+	mv.nonce = *conn->nci->instance_nonce;
 	sprintf(mv.strSubVer, "/picocoin:%s/", VERSION);
 	mv.nStartingHeight =
 		conn->nci->db->best_chain ?
@@ -793,7 +821,7 @@ static void nc_conn_evt_connected(int fd, short events, void *priv)
 	struct nc_conn *conn = priv;
 
 	if ((events & EV_WRITE) == 0) {
-		fprintf(stderr, "net: %s connection timeout\n", conn->addr_str);
+		fprintf(conn->nci->plog, "net: %s connection timeout\n", conn->addr_str);
 		goto err_out;
 	}
 
@@ -803,13 +831,13 @@ static void nc_conn_evt_connected(int fd, short events, void *priv)
 	/* check success of connect(2) */
 	if ((getsockopt(conn->fd, SOL_SOCKET, SO_ERROR, &err, &len) < 0) ||
 	    (err != 0)) {
-		fprintf(stderr, "net: connect %s failed: %s\n",
+		fprintf(conn->nci->plog, "net: connect %s failed: %s\n",
 			conn->addr_str, strerror(err));
 		goto err_out;
 	}
 
-	if (debugging)
-		fprintf(stderr, "net: connected to %s\n", conn->addr_str);
+	if (conn->nci->debugging)
+		fprintf(conn->nci->plog, "net: connected to %s\n", conn->addr_str);
 
 	conn->connected = true;
 
@@ -823,7 +851,7 @@ static void nc_conn_evt_connected(int fd, short events, void *priv)
 	cstr_free(msg_data, true);
 
 	if (!rc) {
-		fprintf(stderr, "net: %s !conn_send\n", conn->addr_str);
+		fprintf(conn->nci->plog, "net: %s !conn_send\n", conn->addr_str);
 		goto err_out;
 	}
 
@@ -833,7 +861,7 @@ static void nc_conn_evt_connected(int fd, short events, void *priv)
 	conn->reading_hdr = true;
 
 	if (!nc_conn_read_enable(conn)) {
-		fprintf(stderr, "net: %s read not enabled\n", conn->addr_str);
+		fprintf(conn->nci->plog, "net: %s read not enabled\n", conn->addr_str);
 		goto err_out;
 	}
 
@@ -843,7 +871,7 @@ err_out:
 	nc_conn_kill(conn);
 }
 
-static void nc_conns_gc(struct net_child_info *nci)
+void nc_conns_gc(struct net_child_info *nci, bool free_all)
 {
 	clist *dead = NULL;
 	unsigned int n_gc = 0;
@@ -852,7 +880,7 @@ static void nc_conns_gc(struct net_child_info *nci)
 	unsigned int i;
 	for (i = 0; i < nci->conns->len; i++) {
 		struct nc_conn *conn = parr_idx(nci->conns, i);
-		if (conn->dead)
+		if (free_all || conn->dead)
 			dead = clist_prepend(dead, conn);
 	}
 
@@ -869,14 +897,14 @@ static void nc_conns_gc(struct net_child_info *nci)
 
 	clist_free(dead);
 
-	if (debugging)
-		fprintf(stderr, "net: gc'd %u connections\n", n_gc);
+	if (nci->debugging)
+		fprintf(nci->plog, "net: gc'd %u connections\n", n_gc);
 }
 
 static void nc_conns_open(struct net_child_info *nci)
 {
-	if (debugging)
-		fprintf(stderr, "net: open connections (have %zu, want %zu more)\n",
+	if (nci->debugging)
+		fprintf(nci->plog, "net: open connections (have %zu, want %zu more)\n",
 			nci->conns->len,
 			NC_MAX_CONN - nci->conns->len);
 
@@ -893,27 +921,27 @@ static void nc_conns_open(struct net_child_info *nci)
 		peer_free(peer);
 		free(peer);
 
-		if (debugging)
-			fprintf(stderr, "net: connecting to %s\n",
+		if (conn->nci->debugging)
+			fprintf(conn->nci->plog, "net: connecting to %s\n",
 				conn->addr_str);
 
 		/* are we already connected to this IP? */
 		if (nc_conn_ip_active(nci, conn->peer.addr.ip)) {
-			fprintf(stderr, "net: already connected to %s\n",
+			fprintf(conn->nci->plog, "net: already connected to %s\n",
 				conn->addr_str);
 			goto err_loop;
 		}
 
 		/* are we already connected to this network group? */
 		if (nc_conn_group_active(nci, &conn->peer)) {
-			fprintf(stderr, "net: already grouped to %s\n",
+			fprintf(conn->nci->plog, "net: already grouped to %s\n",
 				conn->addr_str);
 			goto err_loop;
 		}
 
 		/* initiate non-blocking connect(2) */
 		if (!nc_conn_start(conn)) {
-			fprintf(stderr, "net: failed to start connection to %s\n",
+			fprintf(conn->nci->plog, "net: failed to start connection to %s\n",
 				conn->addr_str);
 			goto err_loop;
 		}
@@ -922,14 +950,14 @@ static void nc_conns_open(struct net_child_info *nci)
 		conn->ev = event_new(nci->eb, conn->fd, EV_WRITE,
 				     nc_conn_evt_connected, conn);
 		if (!conn->ev) {
-			fprintf(stderr, "net: event_new failed on %s\n",
+			fprintf(conn->nci->plog, "net: event_new failed on %s\n",
 				conn->addr_str);
 			goto err_loop;
 		}
 
-		struct timeval timeout = { net_conn_timeout, };
+		struct timeval timeout = { conn->nci->net_conn_timeout, };
 		if (event_add(conn->ev, &timeout) != 0) {
-			fprintf(stderr, "net: event_add failed on %s\n",
+			fprintf(conn->nci->plog, "net: event_add failed on %s\n",
 				conn->addr_str);
 			goto err_loop;
 		}
@@ -944,13 +972,71 @@ err_loop:
 	}
 }
 
-static void nc_conns_process(struct net_child_info *nci)
+void nc_conns_process(struct net_child_info *nci)
 {
-	nc_conns_gc(nci);
+	nc_conns_gc(nci, false);
 	nc_conns_open(nci);
 }
 
-static void nc_pipe_evt(int fd, short events, void *priv)
+static void pipwr(int fd, const void *buf, size_t len)
+{
+	while (len > 0) {
+		ssize_t wrc;
+		wrc = write(fd, buf, len);
+		if (wrc < 0) {
+			perror("pipe write");
+			return;
+		}
+
+		buf += wrc;
+		len -= wrc;
+	}
+}
+
+static void sendcmd(int fd, enum netcmds nc)
+{
+	uint8_t v = nc;
+	pipwr(fd, &v, 1);
+if (nc == NC_STOP) {
+pipwr(fd, &v, 1);
+pipwr(fd, &v, 1);
+pipwr(fd, &v, 1);
+pipwr(fd, &v, 1);
+pipwr(fd, &v, 1);
+pipwr(fd, &v, 1);
+pipwr(fd, &v, 1);
+pipwr(fd, &v, 1);
+pipwr(fd, &v, 1);
+}
+
+
+}
+
+static enum netcmds readcmd(int fd, int timeout_secs)
+{
+	struct pollfd pfd = { fd, POLLIN };
+	int prc = poll(&pfd, 1, timeout_secs ? timeout_secs * 1000 : -1);
+
+	if (prc < 0) {
+		perror("pipe poll");
+		return NC_ERR;
+	}
+	if (prc == 0)
+		return NC_TIMEOUT;
+
+	uint8_t v;
+	ssize_t rrc = read(fd, &v, 1);
+	if (rrc < 0) {
+		perror("pipe read");
+		return NC_ERR;
+	}
+	if (rrc != 1)
+		return NC_ERR;
+
+	return v;
+}
+
+void nc_pipe_evt(int fd, short events, void *priv)
 {
 	struct net_child_info *nci = priv;
 
@@ -958,107 +1044,20 @@ static void nc_pipe_evt(int fd, short events, void *priv)
 	switch (nc) {
 
 	case NC_START:
+		nci->running = true;
+		event_base_loopbreak(nci->eb);
 		sendcmd(nci->write_fd, NC_OK);
 		break;
 
 	case NC_STOP:
-		network_child_running = false;
-		sendcmd(nci->write_fd, NC_OK);
+		nci->running = false;
 		event_base_loopbreak(nci->eb);
+		sendcmd(nci->write_fd, NC_OK);
 		break;
 
 	default:
 		exit(1);
 	}
-}
-
-static void network_child(int read_fd, int write_fd)
-{
-	network_child_running = true;
-
-	/*
-	 * read network peers
-	 */
-	struct peer_manager *peers;
-
-	peers = peerman_read();
-	if (!peers) {
-		fprintf(stderr, "net: initializing empty peer list\n");
-
-		peers = peerman_seed(setting("no_dns") == NULL ? true : false);
-		if (!peerman_write(peers)) {
-			fprintf(stderr, "net: failed to write peer list\n");
-			exit(1);
-		}
-	}
-
-	char *addnode = setting("addnode");
-	if (addnode)
-		peerman_addstr(peers, addnode);
-
-	peerman_sort(peers);
-
-	if (debugging)
-		fprintf(stderr, "net: have %u/%zu peers\n",
-			bp_hashtab_size(peers->map_addr),
-			clist_length(peers->addrlist));
-
-	/*
-	 * read block database
-	 */
-	struct blkdb db;
-	if (!blkdb_init(&db, chain->netmagic, &chain_genesis)) {
-		fprintf(stderr, "net: blkdb init failed\n");
-		exit(1);
-	}
-
-	char *blkdb_fn = setting("blkdb");
-	if (!blkdb_fn) {
-		fprintf(stderr, "net: blkdb filename not specified\n");
-		exit(1);
-	}
-	if ((access(blkdb_fn, F_OK) == 0) &&
-	    (!blkdb_read(&db, blkdb_fn))) {
-		fprintf(stderr, "net: failed to read blkdb %s\n", blkdb_fn);
-		exit(1);
-	}
-
-	/*
-	 * prep block database for new records
-	 */
-	db.fd = open(blkdb_fn, O_WRONLY | O_APPEND | O_CREAT, 0666);
-	if (db.fd < 0) {
-		fprintf(stderr, "net: open %s failed: %s\n",
-			blkdb_fn, strerror(errno));
-		exit(1);
-	}
-
-	if (debugging)
-		fprintf(stderr, "net: blkdb opened\n");
-
-	/*
-	 * set up libevent dispatch
-	 */
-	struct net_child_info nci = { read_fd, write_fd, peers, &db };
-	nci.conns = parr_new(NC_MAX_CONN, NULL);
-
-	struct event *pipe_evt;
-
-	nci.eb = event_base_new();
-	pipe_evt = event_new(nci.eb, read_fd, EV_READ | EV_PERSIST,
-			     nc_pipe_evt, &nci);
-	event_add(pipe_evt, NULL);
-
-	/* main loop */
-	do {
-		nc_conns_process(&nci);
-		event_base_dispatch(nci.eb);
-	} while (network_child_running);
-
-	/* cleanup: just the minimum for file I/O correctness */
-	peerman_write(peers);
-	blkdb_free(&db);
-	exit(0);
 }
 
 struct net_engine *neteng_new(void)
@@ -1083,10 +1082,9 @@ static void neteng_child_kill(pid_t child)
 }
 
 static bool neteng_cmd_exec(pid_t child, int read_fd, int write_fd,
-			    enum netcmds nc)
+			    enum netcmds nc, bool debugging)
 {
 	sendcmd(write_fd, nc);
-
 	enum netcmds ncr = readcmd(read_fd, debugging ? 1000 : 60);
 	if (ncr != NC_OK)
 		return false;
@@ -1114,23 +1112,23 @@ bool neteng_start(struct net_engine *neteng)
 
 	/* child execution path continues here */
 	if (neteng->child == 0) {
-		network_child(neteng->tx_pipefd[0], neteng->rx_pipefd[1]);
+		neteng->network_child_process(neteng->tx_pipefd[0], neteng->rx_pipefd[1]);
 		exit(0);
 	}
 
 	/* otherwise, we are the parent */
+	neteng->par_read = neteng->rx_pipefd[0];
+	neteng->par_write = neteng->tx_pipefd[1];
 
-	int par_read = neteng->par_read = neteng->rx_pipefd[0];
-	int par_write = neteng->par_write = neteng->tx_pipefd[1];
+	if (neteng->debugging)
+		fprintf(neteng->plog, "net: parent exec NC_START\n");
 
-	if (debugging)
-		fprintf(stderr, "net: parent exec NC_START\n");
-
-	if (!neteng_cmd_exec(neteng->child, par_read, par_write, NC_START))
+	if (!neteng_cmd_exec(neteng->child, neteng->par_read,
+			     neteng->par_write, NC_START, neteng->debugging))
 		goto err_out_child;
 
-	if (debugging)
-		fprintf(stderr, "net: parent after NC_START\n");
+	if (neteng->debugging)
+		fprintf(neteng->plog, "net: parent after NC_START\n");
 
 	neteng->running = true;
 	return true;
@@ -1155,12 +1153,13 @@ void neteng_stop(struct net_engine *neteng)
 	if (!neteng->running)
 		return;
 
-	if (debugging)
-		fprintf(stderr, "net: stopping engine\n");
+	if (neteng->debugging)
+		fprintf(neteng->plog, "net: stopping engine\n");
 
 	if (!neteng_cmd_exec(neteng->child, neteng->par_read,
-			     neteng->par_write, NC_STOP))
+			neteng->par_write, NC_STOP, neteng->debugging))
 		kill(neteng->child, SIGTERM);
+
 	sleep(1);
 	waitpid(neteng->child, NULL, WNOHANG);
 
@@ -1184,46 +1183,24 @@ void neteng_free(struct net_engine *neteng)
 	free(neteng);
 }
 
-static struct net_engine *neteng_new_start(void)
+struct net_engine *neteng_new_start(void (*network_child)(int read_fd, int write_fd), bool debugging, FILE *plog)
 {
 	struct net_engine *neteng;
 
 	neteng = neteng_new();
 	if (!neteng) {
-		fprintf(stderr, "neteng new fail\n");
+		fprintf(plog, "net: neteng new fail\n");
 		exit(1);
 	}
 
+	neteng->network_child_process = network_child;
+    neteng->debugging = debugging;
+    neteng->plog = plog;
+
 	if (!neteng_start(neteng)) {
-		fprintf(stderr, "failed to start engine\n");
+		fprintf(plog, "net: failed to start engine\n");
 		exit(1);
 	}
 
 	return neteng;
 }
-
-void network_sync(void)
-{
-	char *sleep_str = setting("sleep");
-	int nsec = atoi(sleep_str ? sleep_str : "");
-	if (nsec < 1)
-		nsec = 10 * 60;
-
-	char *timeout_str = setting("net.connect.timeout");
-	int v = atoi(timeout_str ? timeout_str : "0");
-	if (v > 0)
-		net_conn_timeout = (unsigned int) v;
-
-	struct net_engine *neteng = neteng_new_start();
-
-	if (debugging)
-		fprintf(stderr, "net: engine started. sleeping %d %s (cxn tmout %u sec)\n",
-			(nsec > 60) ? nsec/60 : nsec,
-			(nsec > 60) ? "minutes" : "seconds",
-			net_conn_timeout);
-
-	sleep(nsec);
-
-	neteng_free(neteng);
-}
-

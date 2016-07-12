@@ -1,15 +1,17 @@
-#ifndef __PICOCOIN_PEERMAN_H__
-#define __PICOCOIN_PEERMAN_H__
+#ifndef __LIBCCOIN_NET_PEERMAN_H__
+#define __LIBCCOIN_NET_PEERMAN_H__
 /* Copyright 2012 exMULTI, Inc.
  * Distributed under the MIT/X11 software license, see the accompanying
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.
  */
 
-#include <stdbool.h>
-#include <string.h>
-#include <ccoin/core.h>
-#include <ccoin/clist.h>
-#include <ccoin/hashtab.h>
+#include <ccoin/clist.h>                // for clist
+#include <ccoin/core.h>                 // for bp_addr_free, bp_addr_init, etc
+#include <ccoin/cstr.h>                 // for cstring
+
+#include <stdbool.h>                    // for bool
+#include <stdint.h>                     // for int64_t, uint32_t
+#include <string.h>                     // for memcpy, memset
 
 struct peer {
 	/* serialized */
@@ -51,10 +53,11 @@ struct peer_manager {
 	clist		*addrlist;	/* of struct bp_address */
 };
 
+extern void peerman_debug(bool debugging);
 extern void peerman_free(struct peer_manager *peers);
-extern struct peer_manager *peerman_read(void);
+extern struct peer_manager *peerman_read(void *peer_file);
 extern struct peer_manager *peerman_seed(bool use_dns);
-extern bool peerman_write(struct peer_manager *peers);
+extern bool peerman_write(struct peer_manager *peers, void *peer_file, const struct chain_info *chain);
 extern struct peer *peerman_pop(struct peer_manager *peers);
 extern void peerman_sort(struct peer_manager *peers);
 extern void peerman_add(struct peer_manager *peers,
@@ -63,4 +66,4 @@ extern void peerman_add_addr(struct peer_manager *peers,
 		 const struct bp_address *addr_in, bool known_working);
 extern void peerman_addstr(struct peer_manager *peers, const char *addr_str);
 
-#endif /* __PICOCOIN_PEERMAN_H__ */
+#endif /* __LIBCCOIN_NET_PEERMAN_H__ */

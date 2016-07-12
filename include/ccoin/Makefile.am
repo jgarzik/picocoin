@@ -22,10 +22,17 @@ ccoininclude_HEADERS = \
 	key.h		\
 	mbr.h		\
 	message.h	\
-	net.h		\
 	parr.h		\
 	script.h	\
 	serialize.h	\
 	util.h		\
 	wallet.h
 
+ccoinnetincludedir=$(includedir)/ccoin/net
+
+ccoinnetinclude_HEADERS = \
+    net/dns.h	\
+    net/fakepoll.h	\
+    net/net.h	\
+    net/netbase.h	\
+    net/peerman.h

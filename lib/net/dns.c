@@ -2,30 +2,32 @@
  * Distributed under the MIT/X11 software license, see the accompanying
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.
  */
-#include "picocoin-config.h"
+#include "picocoin-config.h"           // for VERSION, _LARGE_FILES, etc
 
-#include <sys/types.h>
+#include "ccoin/net/dns.h"
+#include <ccoin/core.h>                 // for bp_address, etc
+#include <ccoin/util.h>                 // for ARRAY_SIZE
+
+#include <stdint.h>                     // for uint32_t
+#include <stdlib.h>                     // for NULL, calloc, free
+#include <string.h>                     // for memset, memcpy
+#include <time.h>                       // for time
 #ifdef WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #else
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
+#include <sys/socket.h>                 // for AF_INET, AF_INET6, etc
+#include <netdb.h>                      // for addrinfo, freeaddrinfo, etc
+#include <netinet/in.h>                 // for sockaddr_in, sockaddr_in6
 #endif
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <ccoin/util.h>
-#include <ccoin/core.h>
-#include <ccoin/clist.h>
 
 static const char *dns_seeds[] = {
-	"seed.bitcoin.sipa.be",
-	"dnsseed.bluematt.me",
-	"dnsseed.bitcoin.dashjr.org",
-	"seed.bitcoinstats.com",
-	"bitseed.xf2.org",
+	"seed.bitcoin.sipa.be",                 // Pieter Wuille
+	"dnsseed.bluematt.me",                  // Matt Corallo
+	"dnsseed.bitcoin.dashjr.org",           // Luke Dashjr
+	"seed.bitcoinstats.com",                // Christian Decker
+	"bitseed.xf2.org",                      // Jeff Garzik
+	"seed.bitcoin.jonasschnelli.ch",        // Jonas Schnelli
 };
 
 static clist *add_seed_addr(clist *l, const struct addrinfo *ai,
