@@ -5,14 +5,11 @@
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.
  */
 
-enum {
-	PROTO_VERSION		= 60002,
-};
+#include <ccoin/buint.h>                // for bu256_t
+#include <ccoin/hashtab.h>              // for bp_hashtab_get
 
-#ifdef __APPLE__
-#  define off64_t off_t
-#  define lseek64 lseek
-#endif
+#include <stdbool.h>                    // for bool
+#include <stdint.h>                     // for uint64_t
 
 /* main.c */
 extern struct bp_hashtab *settings;

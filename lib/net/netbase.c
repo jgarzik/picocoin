@@ -2,18 +2,18 @@
  * Distributed under the MIT/X11 software license, see the accompanying
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.
  */
-#include "picocoin-config.h"
+#include "picocoin-config.h"           // for VERSION, _LARGE_FILES, etc
+
+#include "ccoin/net/netbase.h"          // for is_ipv4_mapped
 
 #ifdef WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #else
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
+#include <netdb.h>                      // for getnameinfo, NI_NUMERICHOST
+#include <netinet/in.h>                 // for sockaddr_in, sockaddr_in6
+#include <sys/socket.h>                 // for AF_INET, AF_INET6
 #endif
-#include <string.h>
-#include <ccoin/net.h>
 
 static const unsigned char pchOnionCat[] = {0xFD,0x87,0xD8,0x7E,0xEB,0x43};
 const char ipv4_mapped_pfx[12] = "\0\0\0\0\0\0\0\0\0\0\xff\xff";

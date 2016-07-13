@@ -46,9 +46,6 @@ extern bool bu_read_file(const char *filename, void **data_, size_t *data_len_,
 extern bool bu_write_file(const char *filename, const void *data, size_t data_len);
 extern int file_seq_open(const char *filename);
 
-extern clist *bu_dns_lookup(clist *l, const char *seedname, unsigned int def_port);
-extern clist *bu_dns_seed_addrs(void);
-
 extern unsigned long djb2_hash(unsigned long hash, const void *_buf, size_t buflen);
 
 extern unsigned long czstr_hash(const void *p);

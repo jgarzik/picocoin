@@ -34,6 +34,7 @@ enum
     SCRIPT_VERIFY_NONE      = 0,
     SCRIPT_VERIFY_P2SH      = (1U << 0),
     SCRIPT_VERIFY_STRICTENC = (1U << 1),
+    SCRIPT_VERIFY_DERSIG    = (1U << 2),
 };
 
 enum txnouttype
@@ -230,7 +231,7 @@ extern bool is_bsp_multisig(parr *ops);
 
 static inline bool is_bsp_pushdata(enum opcodetype op)
 {
-	return (op <= OP_PUSHDATA4);
+	return (0 <= op && op <= OP_PUSHDATA4);
 }
 
 static inline bool is_bsp_p2sh(struct const_buffer *buf)
