@@ -33,3 +33,4 @@ test-driver
 picocoin*.tar.gz
 picocoin-config.h*
 
+.project
