@@ -165,6 +165,7 @@ int main (int argc, char *argv[])
 	    "bf1938abc33cc0b4cde7d94002412b17e35e3c657689e1be7ff588f3fda8d463");
 
 	ERR_remove_state(0);
+	bp_key_static_shutdown();
 
 	return 0;
 }

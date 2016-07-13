@@ -121,6 +121,16 @@ AS_IF([test "$enable_valgrind" = "yes"], [
 ])
 AM_CONDITIONAL(ENABLE_VALGRIND, [test "$enable_valgrind" = "yes"])
 
+dnl secp256k1 tests
+AC_MSG_CHECKING([whether to enable tests for secp256k1 lib])
+AC_ARG_ENABLE([secp256k1-tests],
+	[AS_HELP_STRING([--enable-secp256k1-tests],[Run secp256k1 tests as part fo make check])],
+	[],
+	[enable_secp256k1_tests=no])
+AC_MSG_RESULT([$enable_secp256k1_tests])
+AS_IF([test "$enable_secp256k1_tests" = "no"],
+	[ac_configure_args="$ac_configure_args --enable-tests=no"])
+
 dnl Electric Fence
 AC_MSG_CHECKING([whether to enable electric fence (www.perens.com)])
 AC_ARG_ENABLE([efence],
@@ -145,6 +155,7 @@ AC_SUBST(EVENT_LIBS)
 AC_SUBST(JANSSON_LIBS)
 AC_SUBST(ARGP_LIBS)
 
+AC_CONFIG_SUBDIRS([external/secp256k1])
 AC_CONFIG_FILES([
 	Makefile
 	m4/Makefile
@@ -154,5 +165,6 @@ AC_CONFIG_FILES([
 	lib/Makefile
 	src/Makefile
 	test/Makefile
+	external/Makefile
 	])
 AC_OUTPUT

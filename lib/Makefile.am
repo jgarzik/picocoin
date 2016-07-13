@@ -1,9 +1,12 @@
-
-AM_CPPFLAGS	= -I$(top_srcdir)/include
+AM_CPPFLAGS	=   -I$(top_srcdir)/include \
+                -I$(top_srcdir)/external/secp256k1/include \
+                -I$(top_srcdir)/external/secp256k1/contrib
 
 lib_LTLIBRARIES= libccoin.la
 
-libccoin_la_LIBADD= -lm
+libccoin_la_LIBADD= -lm \
+                    $(top_builddir)/external/secp256k1/libsecp256k1.la
+
 libccoin_la_SOURCES=	\
 	address.c	\
 	addr_match.c	\

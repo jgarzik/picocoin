@@ -206,6 +206,7 @@ int main (int argc, char *argv[])
 {
 	runtest(true, "tx_valid.json");
 	runtest(false, "tx_invalid.json");
+
+	bp_key_static_shutdown();
 	return 0;
 }
-

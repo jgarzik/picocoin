@@ -100,4 +100,3 @@ int main (int argc, char *argv[])
 	runtest("script_tests.json");
 	return 0;
 }
-

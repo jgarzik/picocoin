@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <openssl/err.h>
 #include <ccoin/buffer.h>
 #include <ccoin/coredefs.h>
 #include <ccoin/cstr.h>
@@ -121,5 +122,7 @@ int main(int argc, char *argv[])
 	for (i = 0; i < CHAIN_LAST; i++)
 		check_with_chain(&chain_metadata[i]);
 
+	ERR_remove_state(0);
+	bp_key_static_shutdown();
 	return 0;
 }

@@ -256,5 +256,6 @@ int main (int argc, char *argv[])
 		return 77;
 	}
 
+	bp_key_static_shutdown();
 	return 0;
 }

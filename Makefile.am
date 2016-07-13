@@ -5,7 +5,7 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS		= m4 doc include lib src test
+SUBDIRS		= m4 external doc include lib src test
 
 EXTRA_DIST	= autogen.sh TODO
 
