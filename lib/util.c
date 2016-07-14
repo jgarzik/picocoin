@@ -13,11 +13,11 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <time.h>
-#include <openssl/ripemd.h>
 #include <ccoin/coredefs.h>
 #include <ccoin/util.h>
 #include <ccoin/compat.h>		/* for mkstemp */
 #include <ccoin/crypto/sha2.h>
+#include <ccoin/crypto/ripemd160.h>
 
 void bu_reverse_copy(unsigned char *dst, const unsigned char *src, size_t len)
 {
@@ -63,7 +63,7 @@ void bu_Hash160(unsigned char *md160, const void *data, size_t data_len)
 	unsigned char md1[SHA256_DIGEST_LENGTH];
 
 	sha256_Raw(data, data_len, md1);
-	RIPEMD160(md1, SHA256_DIGEST_LENGTH, md160);
+	ripemd160(md1, SHA256_DIGEST_LENGTH, md160);
 }
 
 bool bu_read_file(const char *filename, void **data_, size_t *data_len_,

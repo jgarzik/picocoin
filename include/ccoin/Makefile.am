@@ -3,6 +3,7 @@ ccoinincludedir=$(includedir)/ccoin
 
 ccoininclude_HEADERS = \
 	crypto/hmac.h	\
+	crypto/ripemd160.h	\
 	crypto/sha1.h	\
 	crypto/sha2.h	\
 	address.h	\

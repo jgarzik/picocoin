@@ -5,7 +5,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
-#include <openssl/ripemd.h>
 #include <ccoin/script.h>
 #include <ccoin/util.h>
 #include <ccoin/key.h>
@@ -13,6 +12,7 @@
 #include <ccoin/compat.h>		/* for parr_new */
 #include <ccoin/crypto/sha1.h>
 #include <ccoin/crypto/sha2.h>
+#include <ccoin/crypto/ripemd160.h>
 
 static const size_t nDefaultMaxNumSize = 4;
 
@@ -1197,7 +1197,7 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 			switch (opcode) {
 			case OP_RIPEMD160:
 				hashlen = 20;
-				RIPEMD160(vch->p, vch->len, md);
+				ripemd160(vch->p, vch->len, md);
 				break;
 			case OP_SHA1:
 				hashlen = 20;
