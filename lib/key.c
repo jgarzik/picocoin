@@ -177,6 +177,22 @@ bool bp_key_secret_get(void *p, size_t len, const struct bp_key *key)
 	return true;
 }
 
+bool bp_pubkey_checklowS(const void *sig_, size_t sig_len)
+{
+    secp256k1_ecdsa_signature sig;
+
+	secp256k1_context *ctx = get_secp256k1_context();
+    if (!ctx) {
+		return false;
+    }
+
+    if (!ecdsa_signature_parse_der_lax(ctx, &sig, sig_, sig_len)) {
+		return false;
+    }
+
+    return (!secp256k1_ecdsa_signature_normalize(ctx, NULL, &sig));
+}
+
 bool bp_sign(const struct bp_key *key, const void *data, size_t data_len,
 	     void **sig_, size_t *sig_len_)
 {

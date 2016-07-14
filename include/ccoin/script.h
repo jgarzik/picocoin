@@ -19,6 +19,22 @@
 extern "C" {
 #endif
 
+// Maximum number of bytes pushable to the stack
+static const unsigned int MAX_SCRIPT_ELEMENT_SIZE = 520;
+
+// Maximum number of non-push operations per script
+static const int MAX_OPS_PER_SCRIPT = 201;
+
+// Maximum number of public keys per multisig
+static const int MAX_PUBKEYS_PER_MULTISIG = 20;
+
+// Maximum script length in bytes
+static const int MAX_SCRIPT_SIZE = 10000;
+
+// Threshold for nLockTime: below this value it is interpreted as block number,
+// otherwise as UNIX timestamp.
+static const unsigned int LOCKTIME_THRESHOLD = 500000000; // Tue Nov  5 00:53:20 1985 UTC
+
 /** Signature hash types/flags */
 enum
 {
@@ -35,6 +51,15 @@ enum
     SCRIPT_VERIFY_P2SH      = (1U << 0),
     SCRIPT_VERIFY_STRICTENC = (1U << 1),
     SCRIPT_VERIFY_DERSIG    = (1U << 2),
+    SCRIPT_VERIFY_LOW_S     = (1U << 3),
+    // TODO : SCRIPT_VERIFY_NULLDUMMY
+//    SCRIPT_VERIFY_NULLDUMMY = (1U << 4),
+    SCRIPT_VERIFY_SIGPUSHONLY = (1U << 5),
+    SCRIPT_VERIFY_MINIMALDATA = (1U << 6),
+    SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS = (1U << 7),
+    SCRIPT_VERIFY_CLEANSTACK = (1U << 8),
+    SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY = (1U << 9),
+    SCRIPT_VERIFY_CHECKSEQUENCEVERIFY = (1U << 10),
 };
 
 enum txnouttype
@@ -172,8 +197,10 @@ enum opcodetype
 
 	// expansion
 	OP_NOP1 = 0xb0,
-	OP_NOP2 = 0xb1,
-	OP_NOP3 = 0xb2,
+	OP_CHECKLOCKTIMEVERIFY = 0xb1,
+	OP_NOP2 = OP_CHECKLOCKTIMEVERIFY,
+	OP_CHECKSEQUENCEVERIFY = 0xb2,
+	OP_NOP3 = OP_CHECKSEQUENCEVERIFY,
 	OP_NOP4 = 0xb3,
 	OP_NOP5 = 0xb4,
 	OP_NOP6 = 0xb5,

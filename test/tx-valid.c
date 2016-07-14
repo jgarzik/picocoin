@@ -40,7 +40,7 @@ static void dump_comments(void)
 }
 
 static void test_tx_valid(bool is_valid, struct bp_hashtab *input_map,
-			  cstring *tx_ser, bool enforce_p2sh)
+			  cstring *tx_ser, const unsigned int test_flags)
 {
 	struct bp_tx tx;
 
@@ -95,8 +95,7 @@ static void test_tx_valid(bool is_valid, struct bp_hashtab *input_map,
 
 		bool rc = bp_script_verify(txin->scriptSig, scriptPubKey,
 					&tx, i,
-					enforce_p2sh ? SCRIPT_VERIFY_P2SH :
-					SCRIPT_VERIFY_NONE, 0);
+					test_flags, 0);
 		if (rc != is_valid) {
 			char tx_hexstr[BU256_STRSZ];
 			bu256_hex(tx_hexstr, &tx.sha256);
@@ -119,6 +118,8 @@ static void runtest(bool is_valid, const char *basefn)
 	char *fn = test_filename(basefn);
 	json_t *tests = read_json(fn);
 	assert(json_is_array(tests));
+	static unsigned int verify_flags;
+
 
 	struct bp_hashtab *input_map = bp_hashtab_new_ext(
 		input_hash, input_equal,
@@ -141,10 +142,11 @@ static void runtest(bool is_valid, const char *basefn)
 		assert(json_is_array(test));
 		assert(json_array_size(test) == 3);
 		assert(json_is_string(json_array_get(test, 1)));
-		assert(json_is_boolean(json_array_get(test, 2)));
+		assert(json_is_string(json_array_get(test, 2)));
 
 		json_t *inputs = json_array_get(test, 0);
 		assert(json_is_array(inputs));
+		static unsigned int verify_flags;
 
 		bp_hashtab_clear(input_map);
 
@@ -179,12 +181,24 @@ static void runtest(bool is_valid, const char *basefn)
 			json_string_value(json_array_get(test, 1));
 		assert(tx_hexser != NULL);
 
-		bool enforce_p2sh = json_is_true(json_array_get(test, 2));
+		verify_flags = SCRIPT_VERIFY_NONE;
+
+		const char *json_flags = json_string_value(json_array_get(test, 2));
+
+		if (strlen(json_flags) > 0) {
+			const char* json_flag  = strtok((char *)json_flags, ",");
+
+			do {
+				if (strcmp(json_flag, "P2SH") == 0)
+					verify_flags |= SCRIPT_VERIFY_P2SH;
+				json_flag = strtok(NULL, ",");
+			} while (json_flag);
+		}
 
 		cstring *tx_ser = hex2str(tx_hexser);
 		assert(tx_ser != NULL);
 
-		test_tx_valid(is_valid, input_map, tx_ser, enforce_p2sh);
+		test_tx_valid(is_valid, input_map, tx_ser, verify_flags);
 
 		cstr_free(tx_ser, true);
 
