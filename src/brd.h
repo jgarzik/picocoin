@@ -8,7 +8,6 @@
 #include <ccoin/buint.h>                // for bu256_t
 #include <ccoin/hashtab.h>              // for bp_hashtab_get
 
-#include <stdbool.h>                    // for bool
 #include <stdint.h>                     // for uint64_t
 
 /* main.c */
@@ -16,7 +15,6 @@ extern struct bp_hashtab *settings;
 extern const struct chain_info *chain;
 extern bu256_t chain_genesis;
 extern uint64_t instance_nonce;
-extern bool debugging;
 
 static inline char *setting(const char *key)
 {

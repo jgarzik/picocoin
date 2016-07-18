@@ -36,6 +36,8 @@ enum netcmds {
 	NC_STOP,
 };
 
+struct net_settings *net_settings;
+
 struct net_child_info {
 	int			read_fd;
 	int			write_fd;
@@ -52,8 +54,6 @@ struct net_child_info {
 	uint64_t		*instance_nonce;
 
 	bool			running;
-	bool			debugging;
-	FILE			*plog;
 
 	bool (*inv_block_process)(bu256_t *hash);
 	bool (*block_process)(struct bp_block *block,
@@ -97,13 +97,11 @@ struct net_engine {
 	int	par_read;
 	int	par_write;
 	pid_t	child;
-	bool	debugging;
-	FILE	*plog;
 	void (*network_child_process)(int read_fd, int write_fd);
 
 };
 
-struct net_engine *neteng_new_start(void (*network_child)(int read_fd, int write_fd), bool debugging, FILE *plog);
+struct net_engine *neteng_new_start(void (*network_child)(int read_fd, int write_fd));
 
 static void nc_conn_kill(struct nc_conn *conn);
 static bool nc_conn_read_enable(struct nc_conn *conn);

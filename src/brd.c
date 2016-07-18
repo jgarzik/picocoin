@@ -12,6 +12,7 @@
 #include <ccoin/coredefs.h>             // for chain_info, chain_find, etc
 #include <ccoin/cstr.h>                 // for cstring, cstr_free
 #include <ccoin/hexcode.h>              // for decode_hex
+#include <ccoin/log.h>                  // for log_info, logging, etc
 #include <ccoin/mbr.h>                  // for fread_message
 #include <ccoin/message.h>              // for p2p_message, etc
 #include <ccoin/net/net.h>              // for net_child_info, nc_conns_gc, etc
@@ -21,6 +22,7 @@
 #include <ccoin/util.h>                 // for ARRAY_SIZE, czstr_equal, etc
 
 #include <assert.h>                     // for assert
+#include <stdbool.h>                    // for bool
 #include <ctype.h>                      // for isspace
 #include <errno.h>                      // for errno
 #include <event2/event.h>               // for event_base_dispatch, etc
@@ -49,8 +51,8 @@ struct bp_hashtab *settings;
 const struct chain_info *chain = NULL;
 bu256_t chain_genesis;
 uint64_t instance_nonce;
+struct logging *log_state;
 bool debugging = false;
-FILE *plog = NULL;
 
 static struct blkdb db;
 static struct bp_hashtab *orphans;
@@ -167,13 +169,13 @@ static void chain_set(void)
 	char *name = setting("chain");
 	const struct chain_info *new_chain = chain_find(name);
 	if (!new_chain) {
-		fprintf(stderr, "chain-set: unknown chain '%s'\n", name);
+		log_error("chain-set: unknown chain '%s'", name);
 		exit(1);
 	}
 
 	bu256_t new_genesis;
 	if (!hex_bu256(&new_genesis, new_chain->genesis_hash)) {
-		fprintf(stderr, "chain-set: invalid genesis hash %s\n",
+		log_error("chain-set: invalid genesis hash %s",
 			new_chain->genesis_hash);
 		exit(1);
 	}
@@ -184,24 +186,32 @@ static void chain_set(void)
 
 static void init_log(void)
 {
+	log_state = calloc(0, sizeof(struct logging));
+
 	char *log_fn = setting("log");
 	if (!log_fn || !strcmp(log_fn, "-"))
-		plog = stdout;
+		log_state->stream = stdout;
 	else {
-		plog = fopen(log_fn, "a");
-		if (!plog) {
+		log_state->stream = fopen(log_fn, "a");
+		if (!log_state->stream) {
 			perror(log_fn);
 			exit(1);
 		}
 	}
 
-	setvbuf(plog, NULL, _IONBF, BUFSIZ);
+	setvbuf(log_state->stream, NULL, _IONBF, BUFSIZ);
+
+	if ( log_state->stream != stdout && log_state->stream != stderr )
+		log_state->logtofile = true;
+
+	log_state->debug = debugging;
+
 }
 
 static void init_blkdb(void)
 {
 	if (!blkdb_init(&db, chain->netmagic, &chain_genesis)) {
-		fprintf(plog, "%s: blkdb init failed\n", prog_name);
+		log_info("%s: blkdb init failed", prog_name);
 		exit(1);
 	}
 
@@ -211,19 +221,18 @@ static void init_blkdb(void)
 
 	if ((access(blkdb_fn, F_OK) == 0) &&
 	    !blkdb_read(&db, blkdb_fn)) {
-		fprintf(plog, "%s: blkdb read failed\n", prog_name);
+		log_info("%s: blkdb read failed", prog_name);
 		exit(1);
 	}
 
 	db.fd = open(blkdb_fn,
 		     O_WRONLY | O_APPEND | O_CREAT | O_LARGEFILE, 0666);
 	if (db.fd < 0) {
-		fprintf(plog, "%s: blkdb file open failed: %s\n", prog_name, strerror(errno));
+		log_info("%s: blkdb file open failed: %s", prog_name, strerror(errno));
 		exit(1);
 	}
 
-    if (debugging)
-		fprintf(plog, "%s: blkdb opened\n", prog_name);
+    log_debug("%s: blkdb opened", prog_name);
 }
 
 static const char *genesis_bitcoin =
@@ -243,7 +252,7 @@ static void init_block0(void)
 		genesis_hex = genesis_testnet;
 		break;
 	default:
-		fprintf(plog, "unsupported chain.  add genesis block here!\n");
+		log_info("%s: unsupported chain. add genesis block here!", prog_name);
 		exit(1);
 		break;
 	}
@@ -252,7 +261,7 @@ static void init_block0(void)
 	size_t genesis_rawlen = strlen(genesis_hex) / 2;
 	char genesis_raw[genesis_rawlen];
 	if (!decode_hex(genesis_raw, sizeof(genesis_raw), genesis_hex, &olen)) {
-		fprintf(plog, "chain hex decode fail\n");
+		log_info("%s: chain hex decode fail", prog_name);
 		exit(1);
 	}
 
@@ -260,18 +269,17 @@ static void init_block0(void)
 				    genesis_raw, genesis_rawlen);
 	ssize_t bwritten = write(blocks_fd, msg0->str, msg0->len);
 	if (bwritten != msg0->len) {
-		fprintf(plog, "blocks write0 failed: %s\n", strerror(errno));
+		log_info("%s: blocks write0 failed: %s", prog_name, strerror(errno));
 		exit(1);
 	}
 	cstr_free(msg0, true);
 
 	off64_t fpos64 = lseek64(blocks_fd, 0, SEEK_SET);
 	if (fpos64 == (off64_t)-1) {
-		fprintf(plog, "blocks lseek0 failed: %s\n", strerror(errno));
+		log_info("%s: blocks lseek0 failed: %s", prog_name, strerror(errno));
 		exit(1);
 	}
-
-	fprintf(plog, "blocks: genesis block written\n");
+	log_info("blocks: genesis block written");
 }
 
 static void init_blocks(void)
@@ -282,13 +290,13 @@ static void init_blocks(void)
 
 	blocks_fd = open(blocks_fn, O_RDWR | O_CREAT | O_LARGEFILE, 0666);
 	if (blocks_fd < 0) {
-		fprintf(plog, "blocks file open failed: %s\n", strerror(errno));
+		log_info("%s: blocks file open failed: %s", prog_name, strerror(errno));
 		exit(1);
 	}
 
 	off64_t flen = lseek64(blocks_fd, 0, SEEK_END);
 	if (flen == (off64_t)-1) {
-		fprintf(plog, "blocks file lseek64 failed: %s\n", strerror(errno));
+		log_info("%s: blocks file lseek64 failed: %s", prog_name, strerror(errno));
 		exit(1);
 	}
 
@@ -376,7 +384,7 @@ static bool spend_block(struct bp_utxo_set *uset, const struct bp_block *block,
 		if (!spend_tx(uset, tx, i, height)) {
 			char hexstr[BU256_STRSZ];
 			bu256_hex(hexstr, &tx->sha256);
-			fprintf(plog, "%s: spent_block tx fail %s\n", prog_name, hexstr);
+			log_info("%s: spent_block tx fail %s", prog_name, hexstr);
 			return false;
 		}
 	}
@@ -395,7 +403,7 @@ static bool block_process(const struct bp_block *block, int64_t fpos)
 	struct blkdb_reorg reorg;
 
 	if (!blkdb_add(&db, bi, &reorg)) {
-		fprintf(plog, "%s: blkdb add fail\n", prog_name);
+		log_info("%s: blkdb add fail", prog_name);
 		goto err_out;
 	}
 
@@ -408,10 +416,11 @@ static bool block_process(const struct bp_block *block, int64_t fpos)
 		if (!spend_block(&uset, block, bi->height)) {
 			char hexstr[BU256_STRSZ];
 			bu256_hex(hexstr, &bi->hdr.sha256);
-			fprintf(plog,
-				"%s: block spend fail %u %s\n",
-				prog_name, bi->height, hexstr);
+			log_info("%s: block spend fail %u %s",
+				prog_name,
+				bi->height, hexstr);
 			/* FIXME: bad record is now in blkdb */
+
 			goto err_out;
 		}
 	}
@@ -437,13 +446,13 @@ static bool read_block_msg(struct p2p_message *msg, int64_t fpos)
 
 	struct const_buffer buf = { msg->data, msg->hdr.data_len };
 	if (!deser_bp_block(&block, &buf)) {
-		fprintf(plog, "%s: block deser fail\n", prog_name);
+		log_info("%s: block deser fail", prog_name);
 		goto out;
 	}
 	bp_block_calc_sha256(&block);
 
 	if (!bp_block_valid(&block)) {
-		fprintf(plog, "%s: block not valid\n", prog_name);
+		log_info("%s: block not valid", prog_name);
 		goto out;
 	}
 
@@ -463,7 +472,7 @@ static void read_blocks(void)
 	int64_t fpos = 0;
 	while (fread_message(fd, &msg, &read_ok)) {
 		if (memcmp(msg.hdr.netmagic, chain->netmagic, 4)) {
-			fprintf(plog, "blocks file: invalid network magic\n");
+			log_info("blocks file: invalid network magic");
 			exit(1);
 		}
 
@@ -475,7 +484,7 @@ static void read_blocks(void)
 	}
 
 	if (!read_ok) {
-		fprintf(plog, "blocks file: read failed\n");
+		log_info("blocks file: read failed");
 		exit(1);
 	}
 
@@ -495,7 +504,7 @@ static void readprep_blocks_file(void)
 			 * present in blkdb */
 
 			if (lseek(blocks_fd, 0, SEEK_END) == (off_t)-1) {
-				fprintf(plog, "blocks file: seek failed: %s\n",
+				log_info("blocks file: seek failed: %s",
 					strerror(errno));
 				exit(1);
 			}
@@ -521,14 +530,14 @@ static bool add_orphan(const bu256_t *hash_in, struct const_buffer *buf_in)
 
 	bu256_t *hash = bu256_new(hash_in);
 	if (!hash) {
-		fprintf(plog, "OOM\n");
+		log_info("%s: OOM", prog_name);
 		return false;
 	}
 
 	struct buffer *buf = buffer_copy(buf_in->p, buf_in->len);
 	if (!buf) {
 		bu256_free(hash);
-		fprintf(plog, "OOM\n");
+		log_info("%s: OOM", prog_name);
 		return false;
 	}
 
@@ -543,15 +552,14 @@ static void init_peers(struct net_child_info *nci)
 	 * read network peers
 	 */
 	struct peer_manager *peers;
-	peerman_debug(debugging);
 
 	peers = peerman_read(setting("peers"));
 	if (!peers) {
-		fprintf(plog, "%s: initializing empty peer list\n", prog_name);
+		log_info("%s: initializing empty peer list", prog_name);
 
 		peers = peerman_seed(setting("no_dns") == NULL ? true : false);
 		if (!peerman_write(peers, setting("peers"), chain)) {
-			fprintf(plog, "%s: failed to write peer list\n", prog_name);
+			log_info("%s: failed to write peer list", prog_name);
 			exit(1);
 		}
 	}
@@ -562,11 +570,10 @@ static void init_peers(struct net_child_info *nci)
 
 	peerman_sort(peers);
 
-	if (debugging)
-		fprintf(plog, "%s: have %u/%zu peers\n",
-			prog_name,
-			bp_hashtab_size(peers->map_addr),
-			clist_length(peers->addrlist));
+	log_debug("%s: have %u/%zu peers",
+		prog_name,
+		bp_hashtab_size(peers->map_addr),
+		clist_length(peers->addrlist));
 
 	nci->peers = peers;
 }
@@ -596,23 +603,21 @@ static bool add_block(struct bp_block *block, struct p2p_message_hdr *hdr, struc
     /* store current file position */
     off64_t fpos64 = lseek64(blocks_fd, 0, SEEK_CUR);
     if (fpos64 == (off64_t)-1) {
-        fprintf(plog, "blocks: lseek64 failed %s\n",
-            strerror(errno));
-        return false;
+		log_info("blocks: lseek64 failed %s", strerror(errno));
+		return false;
     }
 
     /* write new block to disk */
     errno = 0;
     ssize_t bwritten = writev(blocks_fd, iov, ARRAY_SIZE(iov));
     if (bwritten != total_write) {
-        fprintf(plog, "blocks: write failed %s\n",
-            strerror(errno));
+		log_info("blocks: write failed %s", strerror(errno));
         return false;
     }
 
     /* process block */
     if (!block_process(block, fpos64)) {
-        fprintf(plog, "blocks: process-block failed\n");
+        log_info("blocks: process-block failed");
         return false;
     }
 
@@ -635,13 +640,10 @@ static void init_nci(struct net_child_info *nci)
     nci->chain = chain;
     nci->instance_nonce = &instance_nonce;
 	nci->running = true;
- 	nci->debugging = debugging;
-    nci->plog = plog;
 }
 
 static void init_daemon(struct net_child_info *nci)
 {
-	init_log();
 	init_blkdb();
 	bp_utxo_set_init(&uset);
 	init_blocks();
@@ -671,16 +673,16 @@ static void shutdown_nci(struct net_child_info *nci)
 static void shutdown_daemon(struct net_child_info *nci)
 {
 	bool rc = peerman_write(nci->peers, setting("peers"), chain);
-	fprintf(plog, "%s: %s %u/%zu peers\n",
-		prog_name,
-        rc ? "wrote" : "failed to write",
+	log_info("blocks: %s %u/%zu peers",
+		rc ? "wrote" : "failed to write",
 		bp_hashtab_size(nci->peers->map_addr),
 		clist_length(nci->peers->addrlist));
 
-	if (plog != stdout && plog != stderr) {
-		fclose(plog);
-		plog = NULL;
+	if (log_state->logtofile) {
+		fclose(log_state->stream);
+		log_state->stream = NULL;
 	}
+	free(log_state);
 
 	if (setting("free")) {
 		shutdown_nci(nci);
@@ -704,7 +706,6 @@ int main (int argc, char *argv[])
 
 	if (!preload_settings())
 		return 1;
-	chain_set();
 
 	RAND_bytes((unsigned char *)&instance_nonce, sizeof(instance_nonce));
 
@@ -714,6 +715,9 @@ int main (int argc, char *argv[])
 		if (!do_setting(argstr))
 			return 1;
 	}
+
+	init_log();
+	chain_set();
 
 	/*
 	 * properly capture TERM and other signals
@@ -726,7 +730,7 @@ int main (int argc, char *argv[])
 	init_daemon(&global_nci);
 	run_daemon(&global_nci);
 
-	fprintf(plog, "daemon exiting\n");
+	log_info("%s: daemon exiting", prog_name);
 
 	shutdown_daemon(&global_nci);
 
