@@ -39,7 +39,7 @@ addons:
       - libltdl-dev
 
 before_install:
-  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew update; fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew update && brew upgrade; fi
 
 install:
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install jansson; fi
