@@ -16,6 +16,7 @@
 #include <ccoin/serialize.h>            // for deser_s64, deser_u32, etc
 #include <ccoin/util.h>                 // for clist_shuffle, djb2_hash, etc
 
+#include <errno.h>                      // for errno
 #include <stdio.h>                      // for NULL, fprintf, stderr, etc
 #include <stdlib.h>                     // for free, calloc, malloc, atoi, etc
 #include <unistd.h>                     // for close, write, unlink, etc
@@ -167,7 +168,9 @@ struct peer_manager *peerman_read(void *peers_file)
 
 	int fd = file_seq_open(filename);
 	if (fd < 0) {
-		perror(filename);
+		log_error("peerman: %s: %s",
+			filename,
+			strerror(errno));
 		goto err_out;
 	}
 
@@ -291,8 +294,9 @@ bool peerman_write(struct peer_manager *peers, void *peer_file, const struct cha
 	fd = -1;
 
 	if (rename(tmpfn, filename)) {
-		strcat(tmpfn, " rename");
-		perror(tmpfn);
+		log_error("peerman: %s rename: %s",
+			tmpfn,
+			strerror(errno));
 		goto err_out;
 	}
 

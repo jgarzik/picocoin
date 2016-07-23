@@ -585,7 +585,7 @@ static bool nc_conn_start(struct nc_conn *conn)
 	conn->fd = socket(conn->ipv4 ? AF_INET : AF_INET6,
 			  SOCK_STREAM, IPPROTO_TCP);
 	if (conn->fd < 0) {
-		log_error("net: socket %s %s",
+		log_error("net: socket %s: %s",
 			conn->addr_str,
 			strerror(errno));
 		return false;
@@ -595,7 +595,7 @@ static bool nc_conn_start(struct nc_conn *conn)
 	int flags = fcntl(conn->fd, F_GETFL, 0);
 	if ((flags < 0) ||
 	    (fcntl(conn->fd, F_SETFL, flags | O_NONBLOCK) < 0)) {
-		log_error("net: socket fcntl %s %s",
+		log_error("net: socket fcntl %s: %s",
 			conn->addr_str,
 			strerror(errno));
 		return false;
@@ -630,7 +630,7 @@ static bool nc_conn_start(struct nc_conn *conn)
 	/* initiate TCP connection */
 	if (connect(conn->fd, saddr, saddr_len) < 0) {
 		if (errno != EINPROGRESS) {
-			log_error("net: socket connect %s %s",
+			log_error("net: socket connect %s: %s",
 				conn->addr_str,
 				strerror(errno));
 			return false;
@@ -972,7 +972,8 @@ static void pipwr(int fd, const void *buf, size_t len)
 		ssize_t wrc;
 		wrc = write(fd, buf, len);
 		if (wrc < 0) {
-			perror("pipe write");
+			log_error("net: pipe write: %s",
+			strerror(errno));
 			return;
 		}
 
@@ -1006,7 +1007,8 @@ static enum netcmds readcmd(int fd, int timeout_secs)
 	int prc = poll(&pfd, 1, timeout_secs ? timeout_secs * 1000 : -1);
 
 	if (prc < 0) {
-		perror("pipe poll");
+		log_error("net: pipe poll: %s",
+			strerror(errno));
 		return NC_ERR;
 	}
 	if (prc == 0)
@@ -1015,7 +1017,8 @@ static enum netcmds readcmd(int fd, int timeout_secs)
 	uint8_t v;
 	ssize_t rrc = read(fd, &v, 1);
 	if (rrc < 0) {
-		perror("pipe read");
+		log_error("net: pipe read: %s",
+			strerror(errno));
 		return NC_ERR;
 	}
 	if (rrc != 1)
