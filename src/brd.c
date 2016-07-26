@@ -33,6 +33,7 @@
 #include <stdio.h>                      // for fprintf, NULL, fclose, etc
 #include <stdlib.h>                     // for exit, free, calloc
 #include <string.h>                     // for strerror, strcmp, strlen, etc
+#include <sys/uio.h>                    // for iovec, writev
 #include <unistd.h>                     // for lseek64, access, lseek, etc
 
 #ifdef __APPLE__
