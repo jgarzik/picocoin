@@ -6,7 +6,7 @@
 
 #include <string.h>
 #include <assert.h>
-#include <openssl/sha.h>
+#include <ccoin/crypto/sha2.h>
 #include <ccoin/bloom.h>
 #include "libtest.h"
 
@@ -18,8 +18,8 @@ static void runtest (void)
 	unsigned char md1[SHA256_DIGEST_LENGTH];
 	unsigned char md2[SHA256_DIGEST_LENGTH];
 
-	SHA256((unsigned char *)data1, strlen(data1), md1);
-	SHA256((unsigned char *)data2, strlen(data2), md2);
+	sha256_Raw((unsigned char *)data1, strlen(data1), md1);
+	sha256_Raw((unsigned char *)data2, strlen(data2), md2);
 
 	struct bloom bloom;
 

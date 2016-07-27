@@ -1,6 +1,7 @@
 
 libtest.a
 
+aes
 base58
 block
 blockfile
@@ -10,6 +11,7 @@ chain-verf
 clist
 cstr
 fileio
+hash
 hashtab
 hdkeys
 hex

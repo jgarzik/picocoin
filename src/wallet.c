@@ -7,11 +7,11 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
-#include <openssl/ripemd.h>
 #include <jansson.h>
 #include <ccoin/coredefs.h>
 #include "picocoin.h"
 #include "wallet.h"
+#include <ccoin/crypto/ripemd160.h>
 #include <ccoin/message.h>
 #include <ccoin/address.h>
 #include <ccoin/serialize.h>
