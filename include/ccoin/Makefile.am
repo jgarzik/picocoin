@@ -41,3 +41,10 @@ ccoinnetinclude_HEADERS = \
     net/net.h	\
     net/netbase.h	\
     net/peerman.h
+
+ccoinaesincludedir = $(includedir)/ccoin/crypto
+
+ccoinaesinclude_HEADERS =	\
+    crypto/aes_util.h   \
+    crypto/ctaes.h
+

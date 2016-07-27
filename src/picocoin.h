@@ -6,12 +6,9 @@
  */
 
 #include <ccoin/buint.h>                // for bu256_t
-#include <ccoin/cstr.h>                 // for cstring
 #include <ccoin/hashtab.h>              // for bp_hashtab_get
 
-#include <stddef.h>                     // for size_t
 #include <stdint.h>                     // for uint64_t
-
 
 struct wallet;
 
@@ -21,12 +18,6 @@ extern const struct chain_info *chain;
 extern bu256_t chain_genesis;
 extern uint64_t instance_nonce;
 extern struct wallet *cur_wallet;
-
-/* aes.c */
-extern cstring *read_aes_file(const char *filename, void *key, size_t key_len,
-			      size_t max_file_len);
-extern bool write_aes_file(const char *filename, void *key, size_t key_len,
-		    const void *plaintext, size_t pt_len);
 
 static inline char *setting(const char *key)
 {

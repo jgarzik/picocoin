@@ -4,23 +4,21 @@
  */
 #include "picocoin-config.h"
 
-#include <stdio.h>
-#include <unistd.h>
-#include <string.h>
-#include <jansson.h>
-#include <ccoin/coredefs.h>
-#include "picocoin.h"
 #include "wallet.h"
-#include <ccoin/crypto/ripemd160.h>
-#include <ccoin/message.h>
-#include <ccoin/address.h>
-#include <ccoin/serialize.h>
-#include <ccoin/key.h>
-#include <ccoin/util.h>
-#include <ccoin/mbr.h>
-#include <ccoin/hexcode.h>
-#include <ccoin/compat.h>		/* for parr_new */
-#include <ccoin/wallet.h>
+#include "picocoin.h"                   // for cur_wallet, chain, setting
+#include <ccoin/address.h>              // for bp_pubkey_get_address
+#include <ccoin/buffer.h>               // for const_buffer
+#include <ccoin/coredefs.h>             // for chain_info
+#include <ccoin/crypto/aes_util.h>      // for read_aes_file, etc
+#include <ccoin/hexcode.h>              // for encode_hex
+#include <ccoin/key.h>                  // for bp_privkey_get, etc
+#include <ccoin/wallet.h>               // for wallet, wallet_free, etc
+#include <ccoin/compat.h>               // for parr_new
+
+#include <jansson.h>                    // for json_object_set_new, etc
+#include <stdio.h>                      // for fprintf, printf, stderr, etc
+#include <string.h>                     // for strlen, memset
+#include <unistd.h>                     // for access, F_OK
 
 static char *wallet_filename(void)
 {

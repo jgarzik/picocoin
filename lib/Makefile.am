@@ -50,10 +50,14 @@ libccoin_la_SOURCES=	\
 	utxo.c		\
 	wallet.c
 
-noinst_LTLIBRARIES= libccoinnet.la
+noinst_LTLIBRARIES= libccoinnet.la libccoinaes.la
 
 libccoinnet_la_SOURCES=	\
 	net/dns.c	\
 	net/net.c	\
 	net/netbase.c	\
 	net/peerman.c
+
+libccoinaes_la_SOURCES=	\
+    crypto/aes_util.c   \
+    crypto/ctaes.c

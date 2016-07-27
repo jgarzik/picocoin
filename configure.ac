@@ -103,7 +103,7 @@ AS_IF([test "$enable_coverage" = "yes"], [
 	AC_PATH_PROG(LCOV, lcov, no)
 	AS_IF([test "$LCOV" = "no"], [
 		AC_MSG_ERROR(lcov tool is not installed)])
-	CFLAGS="$CFLAGS -O0 -fprofile-arcs -ftest-coverage"
+	CFLAGS="-O0 -fprofile-arcs -ftest-coverage"
 ])
 
 dnl Valgrind

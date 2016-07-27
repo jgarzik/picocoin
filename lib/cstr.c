@@ -4,8 +4,10 @@
  */
 #include "picocoin-config.h"
 
-#include <string.h>
-#include <ccoin/cstr.h>
+#include <ccoin/cstr.h>                 // for cstring
+
+#include <stdlib.h>                     // for free, calloc, realloc
+#include <string.h>                     // for memcpy, memmove, NULL, etc
 
 static bool cstr_alloc_min_sz(cstring *s, size_t sz)
 {
