@@ -10,6 +10,7 @@
 #include <ccoin/compat.h>               // for strndup
 #include <ccoin/core.h>                 // for bp_address
 #include <ccoin/coredefs.h>             // for chain_find, chain_info
+#include <ccoin/log.h>                  // for log_info, log_debug, etc
 #include <ccoin/net/dns.h>              // for bu_dns_seed_addrs
 #include <ccoin/net/net.h>              // for net_child_info, nc_conns_gc, etc
 #include <ccoin/net/netbase.h>          // for bn_address_str, etc
@@ -18,6 +19,7 @@
 #include "wallet.h"                     // for cur_wallet_addresses, etc
 
 #include <assert.h>                     // for assert
+#include <stdbool.h>                    // for bool
 #include <ctype.h>                      // for isspace
 #include <errno.h>                      // for errno
 #include <event2/event.h>               // for event_free, event_base_new, etc
@@ -32,9 +34,8 @@ struct bp_hashtab *settings;
 const struct chain_info *chain = NULL;
 bu256_t chain_genesis;
 uint64_t instance_nonce;
+struct logging *log_state;
 bool debugging = false;
-FILE *plog = NULL;
-
 
 static struct blkdb db;
 static unsigned int net_conn_timeout = 60;
@@ -207,19 +208,31 @@ static void chain_set(void)
 	char *name = setting("chain");
 	const struct chain_info *new_chain = chain_find(name);
 	if (!new_chain) {
-		fprintf(plog, "chain-set: unknown chain '%s'\n", name);
+		log_info("chain-set: unknown chain '%s'", name);
 		exit(1);
 	}
 
 	bu256_t new_genesis;
 	if (!hex_bu256(&new_genesis, new_chain->genesis_hash)) {
-		fprintf(plog, "chain-set: invalid genesis hash %s\n",
+		log_info("chain-set: invalid genesis hash %s",
 			new_chain->genesis_hash);
 		exit(1);
 	}
 
 	chain = new_chain;
 	bu256_copy(&chain_genesis, &new_genesis);
+}
+
+static void init_log(void)
+{
+	log_state = malloc(sizeof(struct logging));
+
+	log_state->stream = stdout;
+
+	setvbuf(log_state->stream, NULL, _IONBF, BUFSIZ);
+
+	log_state->logtofile = false;
+	log_state->debug = debugging;
 }
 
 static void print_help()
@@ -229,6 +242,7 @@ static void print_help()
 		"wallet","Pathname to the wallet file.",
 		"chain","One of 'bitcoin' or 'testnet3', use with chain-set command.",
 		"debug","Enable debugging output",
+		"sleep","Sleep for n seconds before stopping netsync",
 	};
 
 	const char *commands[] = {
@@ -276,15 +290,14 @@ static void init_peers(struct net_child_info *nci)
 	 * read network peers
 	 */
 	struct peer_manager *peers;
-    peerman_debug(debugging);
 
 	peers = peerman_read(setting("peers"));
 	if (!peers) {
-		fprintf(plog, "%s: initializing empty peer list\n", prog_name);
+		log_info("%s: initializing empty peer list", prog_name);
 
 		peers = peerman_seed(setting("no_dns") == NULL ? true : false);
 		if (!peerman_write(peers, setting("peers"), chain)) {
-			fprintf(plog, "%s: failed to write peer list\n", prog_name);
+			log_info("%s: failed to write peer list", prog_name);
 			exit(1);
 		}
 	}
@@ -295,11 +308,10 @@ static void init_peers(struct net_child_info *nci)
 
 	peerman_sort(peers);
 
-	if (debugging)
-		fprintf(plog, "%s: have %u/%zu peers\n",
-            prog_name,
-			bp_hashtab_size(peers->map_addr),
-			clist_length(peers->addrlist));
+	log_debug("%s: have %u/%zu peers",
+		prog_name,
+		bp_hashtab_size(peers->map_addr),
+		clist_length(peers->addrlist));
 
 	nci->peers = peers;
 }
@@ -307,7 +319,7 @@ static void init_peers(struct net_child_info *nci)
 static void init_blkdb(void)
 {
 	if (!blkdb_init(&db, chain->netmagic, &chain_genesis)) {
-		fprintf(plog, "%s: blkdb init failed\n", prog_name);
+		log_info("%s: blkdb init failed", prog_name);
 		exit(1);
 	}
 
@@ -317,19 +329,18 @@ static void init_blkdb(void)
 
 	if ((access(blkdb_fn, F_OK) == 0) &&
 	    !blkdb_read(&db, blkdb_fn)) {
-		fprintf(plog, "%s: blkdb read failed\n", prog_name);
+		log_info("%s: blkdb read failed", prog_name);
 		exit(1);
 	}
 
 	db.fd = open(blkdb_fn,
 		     O_WRONLY | O_APPEND | O_CREAT | O_LARGEFILE, 0666);
 	if (db.fd < 0) {
-		fprintf(plog, "%s: blkdb file open failed: %s\n", prog_name, strerror(errno));
+		log_info("%s: blkdb file open failed: %s", prog_name, strerror(errno));
 		exit(1);
 	}
 
-    if (debugging)
-		fprintf(plog, "%s: blkdb opened\n", prog_name);
+    log_debug("%s: blkdb opened", prog_name);
 }
 
 static void shutdown_nci(struct net_child_info *nci)
@@ -345,7 +356,7 @@ static void shutdown_nci(struct net_child_info *nci)
 
 static void init_nci(struct net_child_info *nci)
 {
-//	memset(nci, 0, sizeof(*nci));
+	memset(nci, 0, sizeof(*nci));
 	nci->read_fd = -1;
 	nci->write_fd = -1;
 	nci->db = &db;
@@ -355,10 +366,8 @@ static void init_nci(struct net_child_info *nci)
 	nci->chain = chain;
 	nci->instance_nonce = &instance_nonce;
 	nci->running = false;
-	nci->debugging = debugging;
-	nci->plog = plog;
+	nci->last_getblocks = 2147483647;
 }
-
 
 static void network_child(int read_fd, int write_fd)
 {
@@ -375,7 +384,7 @@ static void network_child(int read_fd, int write_fd)
     struct event *pipe_evt;
 
     pipe_evt = event_new(nci.eb, nci.read_fd, EV_READ | EV_PERSIST,
-    nc_pipe_evt, &nci);
+				nc_pipe_evt, &nci);
 	event_add(pipe_evt, NULL);
 
     /* wait for NC_START command */
@@ -412,10 +421,9 @@ void network_sync(void)
 	if (v > 0)
 		net_conn_timeout = (unsigned int) v;
 
-	struct net_engine *neteng = neteng_new_start(network_child, debugging, plog);
+	struct net_engine *neteng = neteng_new_start(network_child);
 
-	if (debugging)
-		fprintf(plog, "net: engine started. sleeping %d %s (cxn tmout %u sec)\n",
+	log_debug("net: engine started. sleeping %d %s (cxn tmout %u sec)",
 			(nsec > 60) ? nsec/60 : nsec,
 			(nsec > 60) ? "minutes" : "seconds",
 			net_conn_timeout);
@@ -465,19 +473,27 @@ static bool do_command(const char *s)
 
 int main (int argc, char *argv[])
 {
-	prog_name = argv[0];
-	plog = stderr;
+//	prog_name = argv[0];
+
 	settings = bp_hashtab_new_ext(czstr_hash, czstr_equal,
 				      free, free);
 
 	if (!preload_settings())
 		return 1;
-	chain_set();
 
 	RAND_bytes((unsigned char *)&instance_nonce, sizeof(instance_nonce));
 
-	bool done_command = false;
 	unsigned int arg;
+	for (arg = 1; arg < argc; arg++) {
+		const char *argstr = argv[arg];
+		if (!do_setting(argstr))
+			return 1;
+	}
+
+	init_log();
+	chain_set();
+
+	bool done_command = false;
 	for (arg = 1; arg < argc; arg++) {
 		const char *argstr = argv[arg];
 		if (is_command(argstr)) {
@@ -492,5 +508,8 @@ int main (int argc, char *argv[])
 
 	if (!done_command)
 		do_command("help");
+
+	free(log_state);
+
 	return 0;
 }

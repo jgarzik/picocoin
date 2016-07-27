@@ -12,6 +12,7 @@
 #include <ccoin/coredefs.h>             // for ::CADDR_TIME_VERSION, etc
 #include <ccoin/cstr.h>                 // for cstring, cstr_free
 #include <ccoin/hashtab.h>              // for bp_hashtab_size
+#include <ccoin/log.h>                  // for log_info, log_debug, etc
 #include <ccoin/parr.h>                 // for parr, parr_idx, parr_add, etc
 #include <ccoin/util.h>                 // for MIN
 
@@ -35,8 +36,6 @@
 #include <sys/socket.h>                 // for AF_INET, AF_INET6, connect, etc
 #include <sys/uio.h>                    // for iovec, writev
 #endif
-
-struct net_settings *net_settings;
 
 void net_set(struct net_settings *_net_settings)
 {
@@ -205,11 +204,11 @@ static bool nc_msg_version(struct nc_conn *conn)
 	if (!deser_msg_version(&mv, &buf))
 		goto out;
 
-	if (conn->nci->debugging) {
+	if (log_state->debug) {
 		char fromstr[64], tostr[64];
 		bn_address_str(fromstr, sizeof(fromstr), mv.addrFrom.ip);
 		bn_address_str(tostr, sizeof(tostr), mv.addrTo.ip);
-		fprintf(conn->nci->plog, "net: %s version(%u, 0x%llx, %lld, To:%s, From:%s, %s, %u)\n",
+		log_debug("net: %s version(%u, 0x%llx, %lld, To:%s, From:%s, %s, %u)",
 			conn->addr_str,
 			mv.nVersion,
 			(unsigned long long) mv.nServices,
@@ -251,14 +250,14 @@ static bool nc_msg_addr(struct nc_conn *conn)
 
 	unsigned int i;
 	time_t cutoff = time(NULL) - (7 * 24 * 60 * 60);
-	if (conn->nci->debugging) {
+	if (log_state->debug) {
 		unsigned int old = 0;
 		for (i = 0; i < ma.addrs->len; i++) {
 			struct bp_address *addr = parr_idx(ma.addrs, i);
 			if (addr->nTime < cutoff)
 				old++;
 		}
-		fprintf(conn->nci->plog, "net: %s addr(%zu addresses, %u old)\n",
+		log_debug("net: %s addr(%zu addresses, %u old)",
 			conn->addr_str, ma.addrs->len, old);
 	}
 
@@ -287,9 +286,7 @@ static bool nc_msg_verack(struct nc_conn *conn)
 		return false;
 	conn->seen_verack = true;
 
-	if (conn->nci->debugging)
-		fprintf(conn->nci->plog, "net: %s verack\n",
-			conn->addr_str);
+	log_debug("net: %s verack", conn->addr_str);
 
 	/*
 	 * When a connection attempt is made, the peer is deleted
@@ -340,7 +337,7 @@ static bool nc_msg_inv(struct nc_conn *conn)
 	if (!deser_msg_vinv(&mv, &buf))
 		goto out;
 
-	if (conn->nci->debugging && mv.invs && mv.invs->len == 1) {
+	if (log_state->debug && mv.invs && mv.invs->len == 1) {
 		struct bp_inv *inv = parr_idx(mv.invs, 0);
 		char hexstr[BU256_STRSZ];
 		bu256_hex(hexstr, &inv->hash);
@@ -352,11 +349,11 @@ static bool nc_msg_inv(struct nc_conn *conn)
 		default: sprintf(typestr, "unknown 0x%x", inv->type); break;
 		}
 
-		fprintf(conn->nci->plog, "net: %s inv %s %s\n",
+		log_debug("net: %s inv %s %s",
 			conn->addr_str, typestr, hexstr);
 	}
-	else if (conn->nci->debugging && mv.invs) {
-		fprintf(conn->nci->plog, "net: %s inv (%zu sz)\n",
+	else if (mv.invs) {
+		log_debug("net: %s inv (%zu sz)",
 			conn->addr_str, mv.invs->len);
 	}
 
@@ -411,16 +408,12 @@ static bool nc_msg_block(struct nc_conn *conn)
 	char hexstr[BU256_STRSZ];
 	bu256_hex(hexstr, &block.sha256);
 
-	if (conn->nci->debugging) {
-		fprintf(conn->nci->plog, "net: %s block %s\n",
-			conn->addr_str,
-			hexstr);
-	}
+	log_debug("net: %s block %s",
+			conn->addr_str, hexstr);
 
 	if (!bp_block_valid(&block)) {
-		fprintf(conn->nci->plog, "net: %s invalid block %s\n",
-			conn->addr_str,
-			hexstr);
+		log_info("net: %s invalid block %s",
+			conn->addr_str, hexstr);
 		goto out;
 	}
 
@@ -440,7 +433,7 @@ static bool nc_conn_message(struct nc_conn *conn)
 
 	/* verify correct network */
 	if (memcmp(conn->msg.hdr.netmagic, conn->nci->chain->netmagic, 4)) {
-		fprintf(conn->nci->plog, "net: %s invalid network\n",
+		log_info("net: %s invalid network",
 			conn->addr_str);
 		return false;
 	}
@@ -451,7 +444,7 @@ static bool nc_conn_message(struct nc_conn *conn)
 
 	/* "version" must be first message */
 	if (!conn->seen_version) {
-		fprintf(conn->nci->plog, "net: %s 'version' not first\n",
+		log_info("net: %s 'version' not first",
 			conn->addr_str);
 		return false;
 	}
@@ -462,7 +455,7 @@ static bool nc_conn_message(struct nc_conn *conn)
 
 	/* "verack" must be second message */
 	if (!conn->seen_verack) {
-		fprintf(conn->nci->plog, "net: %s 'verack' not second\n",
+		log_info("net: %s 'verack' not second",
 			conn->addr_str);
 		return false;
 	}
@@ -479,10 +472,9 @@ static bool nc_conn_message(struct nc_conn *conn)
 	else if (!strncmp(command, "block", 12))
 		return nc_msg_block(conn);
 
-	if (conn->nci->debugging)
-		fprintf(conn->nci->plog, "net: %s unknown message %s\n",
-			conn->addr_str,
-			command);
+	log_debug("net: %s unknown message %s",
+		conn->addr_str,
+		command);
 
 	/* ignore unknown messages */
 	return true;
@@ -588,15 +580,14 @@ static void nc_conn_free(struct nc_conn *conn)
 
 static bool nc_conn_start(struct nc_conn *conn)
 {
-	char errpfx[64];
-
 	/* create socket */
 	conn->ipv4 = is_ipv4_mapped(conn->peer.addr.ip);
 	conn->fd = socket(conn->ipv4 ? AF_INET : AF_INET6,
 			  SOCK_STREAM, IPPROTO_TCP);
 	if (conn->fd < 0) {
-		sprintf(errpfx, "socket %s", conn->addr_str);
-		perror(errpfx);
+		log_error("net: socket %s: %s",
+			conn->addr_str,
+			strerror(errno));
 		return false;
 	}
 
@@ -604,8 +595,9 @@ static bool nc_conn_start(struct nc_conn *conn)
 	int flags = fcntl(conn->fd, F_GETFL, 0);
 	if ((flags < 0) ||
 	    (fcntl(conn->fd, F_SETFL, flags | O_NONBLOCK) < 0)) {
-		sprintf(errpfx, "socket fcntl %s", conn->addr_str);
-		perror(errpfx);
+		log_error("net: socket fcntl %s: %s",
+			conn->addr_str,
+			strerror(errno));
 		return false;
 	}
 
@@ -638,8 +630,9 @@ static bool nc_conn_start(struct nc_conn *conn)
 	/* initiate TCP connection */
 	if (connect(conn->fd, saddr, saddr_len) < 0) {
 		if (errno != EINPROGRESS) {
-			sprintf(errpfx, "socket connect %s", conn->addr_str);
-			perror(errpfx);
+			log_error("net: socket connect %s: %s",
+				conn->addr_str,
+				strerror(errno));
 			return false;
 		}
 	}
@@ -672,7 +665,7 @@ static bool nc_conn_got_header(struct nc_conn *conn)
 static bool nc_conn_got_msg(struct nc_conn *conn)
 {
 	if (!message_valid(&conn->msg)) {
-		fprintf(conn->nci->plog, "llnet: %s invalid message\n",
+		log_info("llnet: %s invalid message",
 			conn->addr_str);
 		return false;
 	}
@@ -697,13 +690,12 @@ static void nc_conn_read_evt(int fd, short events, void *priv)
 
 	ssize_t rrc = read(fd, conn->msg_p, conn->expected);
 	if (rrc <= 0) {
-		if (rrc < 0)
-			fprintf(conn->nci->plog, "llnet: %s read: %s\n",
+		if (rrc < 0) {
+			log_info("llnet: %s read: %s",
 				conn->addr_str,
 				strerror(errno));
-		else
-			fprintf(conn->nci->plog, "llnet: %s read EOF\n", conn->addr_str);
-
+		} else
+			log_info("llnet: %s read EOF", conn->addr_str);
 		goto err_out;
 	}
 
@@ -821,7 +813,7 @@ static void nc_conn_evt_connected(int fd, short events, void *priv)
 	struct nc_conn *conn = priv;
 
 	if ((events & EV_WRITE) == 0) {
-		fprintf(conn->nci->plog, "net: %s connection timeout\n", conn->addr_str);
+		log_info("net: %s connection timeout", conn->addr_str);
 		goto err_out;
 	}
 
@@ -831,13 +823,12 @@ static void nc_conn_evt_connected(int fd, short events, void *priv)
 	/* check success of connect(2) */
 	if ((getsockopt(conn->fd, SOL_SOCKET, SO_ERROR, &err, &len) < 0) ||
 	    (err != 0)) {
-		fprintf(conn->nci->plog, "net: connect %s failed: %s\n",
+		log_info("net: connect %s failed: %s",
 			conn->addr_str, strerror(err));
 		goto err_out;
 	}
 
-	if (conn->nci->debugging)
-		fprintf(conn->nci->plog, "net: connected to %s\n", conn->addr_str);
+	log_debug("net: connected to %s", conn->addr_str);
 
 	conn->connected = true;
 
@@ -851,7 +842,7 @@ static void nc_conn_evt_connected(int fd, short events, void *priv)
 	cstr_free(msg_data, true);
 
 	if (!rc) {
-		fprintf(conn->nci->plog, "net: %s !conn_send\n", conn->addr_str);
+		log_info("net: %s !conn_send", conn->addr_str);
 		goto err_out;
 	}
 
@@ -861,7 +852,7 @@ static void nc_conn_evt_connected(int fd, short events, void *priv)
 	conn->reading_hdr = true;
 
 	if (!nc_conn_read_enable(conn)) {
-		fprintf(conn->nci->plog, "net: %s read not enabled\n", conn->addr_str);
+		log_info("net: %s read not enabled", conn->addr_str);
 		goto err_out;
 	}
 
@@ -897,16 +888,14 @@ void nc_conns_gc(struct net_child_info *nci, bool free_all)
 
 	clist_free(dead);
 
-	if (nci->debugging)
-		fprintf(nci->plog, "net: gc'd %u connections\n", n_gc);
+	log_debug("net: gc'd %u connections", n_gc);
 }
 
 static void nc_conns_open(struct net_child_info *nci)
 {
-	if (nci->debugging)
-		fprintf(nci->plog, "net: open connections (have %zu, want %zu more)\n",
-			nci->conns->len,
-			NC_MAX_CONN - nci->conns->len);
+	log_debug("net: open connections (have %zu, want %zu more)",
+		nci->conns->len,
+		NC_MAX_CONN - nci->conns->len);
 
 	while ((bp_hashtab_size(nci->peers->map_addr) > 0) &&
 	       (nci->conns->len < NC_MAX_CONN)) {
@@ -921,27 +910,26 @@ static void nc_conns_open(struct net_child_info *nci)
 		peer_free(peer);
 		free(peer);
 
-		if (conn->nci->debugging)
-			fprintf(conn->nci->plog, "net: connecting to %s\n",
-				conn->addr_str);
+		log_debug("net: connecting to %s",
+			conn->addr_str);
 
 		/* are we already connected to this IP? */
 		if (nc_conn_ip_active(nci, conn->peer.addr.ip)) {
-			fprintf(conn->nci->plog, "net: already connected to %s\n",
+			log_info("net: already connected to %s",
 				conn->addr_str);
 			goto err_loop;
 		}
 
 		/* are we already connected to this network group? */
 		if (nc_conn_group_active(nci, &conn->peer)) {
-			fprintf(conn->nci->plog, "net: already grouped to %s\n",
+			log_info("net: already grouped to %s",
 				conn->addr_str);
 			goto err_loop;
 		}
 
 		/* initiate non-blocking connect(2) */
 		if (!nc_conn_start(conn)) {
-			fprintf(conn->nci->plog, "net: failed to start connection to %s\n",
+			log_info("net: failed to start connection to %s",
 				conn->addr_str);
 			goto err_loop;
 		}
@@ -950,14 +938,14 @@ static void nc_conns_open(struct net_child_info *nci)
 		conn->ev = event_new(nci->eb, conn->fd, EV_WRITE,
 				     nc_conn_evt_connected, conn);
 		if (!conn->ev) {
-			fprintf(conn->nci->plog, "net: event_new failed on %s\n",
+			log_info("net: event_new failed on %s",
 				conn->addr_str);
 			goto err_loop;
 		}
 
 		struct timeval timeout = { conn->nci->net_conn_timeout, };
 		if (event_add(conn->ev, &timeout) != 0) {
-			fprintf(conn->nci->plog, "net: event_add failed on %s\n",
+			log_info("net: event_add failed on %s",
 				conn->addr_str);
 			goto err_loop;
 		}
@@ -984,7 +972,8 @@ static void pipwr(int fd, const void *buf, size_t len)
 		ssize_t wrc;
 		wrc = write(fd, buf, len);
 		if (wrc < 0) {
-			perror("pipe write");
+			log_error("net: pipe write: %s",
+			strerror(errno));
 			return;
 		}
 
@@ -1018,7 +1007,8 @@ static enum netcmds readcmd(int fd, int timeout_secs)
 	int prc = poll(&pfd, 1, timeout_secs ? timeout_secs * 1000 : -1);
 
 	if (prc < 0) {
-		perror("pipe poll");
+		log_error("net: pipe poll: %s",
+			strerror(errno));
 		return NC_ERR;
 	}
 	if (prc == 0)
@@ -1027,7 +1017,8 @@ static enum netcmds readcmd(int fd, int timeout_secs)
 	uint8_t v;
 	ssize_t rrc = read(fd, &v, 1);
 	if (rrc < 0) {
-		perror("pipe read");
+		log_error("net: pipe read: %s",
+			strerror(errno));
 		return NC_ERR;
 	}
 	if (rrc != 1)
@@ -1082,10 +1073,10 @@ static void neteng_child_kill(pid_t child)
 }
 
 static bool neteng_cmd_exec(pid_t child, int read_fd, int write_fd,
-			    enum netcmds nc, bool debugging)
+			    enum netcmds nc)
 {
 	sendcmd(write_fd, nc);
-	enum netcmds ncr = readcmd(read_fd, debugging ? 1000 : 60);
+	enum netcmds ncr = readcmd(read_fd, log_state->debug ? 1000 : 60);
 	if (ncr != NC_OK)
 		return false;
 
@@ -1120,15 +1111,13 @@ bool neteng_start(struct net_engine *neteng)
 	neteng->par_read = neteng->rx_pipefd[0];
 	neteng->par_write = neteng->tx_pipefd[1];
 
-	if (neteng->debugging)
-		fprintf(neteng->plog, "net: parent exec NC_START\n");
+	log_debug("net: parent exec NC_START");
 
 	if (!neteng_cmd_exec(neteng->child, neteng->par_read,
-			     neteng->par_write, NC_START, neteng->debugging))
+			     neteng->par_write, NC_START))
 		goto err_out_child;
 
-	if (neteng->debugging)
-		fprintf(neteng->plog, "net: parent after NC_START\n");
+	log_debug("net: parent after NC_START");
 
 	neteng->running = true;
 	return true;
@@ -1153,11 +1142,10 @@ void neteng_stop(struct net_engine *neteng)
 	if (!neteng->running)
 		return;
 
-	if (neteng->debugging)
-		fprintf(neteng->plog, "net: stopping engine\n");
+	log_debug("net: stopping engine");
 
 	if (!neteng_cmd_exec(neteng->child, neteng->par_read,
-			neteng->par_write, NC_STOP, neteng->debugging))
+			neteng->par_write, NC_STOP))
 		kill(neteng->child, SIGTERM);
 
 	sleep(1);
@@ -1183,22 +1171,20 @@ void neteng_free(struct net_engine *neteng)
 	free(neteng);
 }
 
-struct net_engine *neteng_new_start(void (*network_child)(int read_fd, int write_fd), bool debugging, FILE *plog)
+struct net_engine *neteng_new_start(void (*network_child)(int read_fd, int write_fd))
 {
 	struct net_engine *neteng;
 
 	neteng = neteng_new();
 	if (!neteng) {
-		fprintf(plog, "net: neteng new fail\n");
+		log_info("net: neteng new fail");
 		exit(1);
 	}
 
 	neteng->network_child_process = network_child;
-    neteng->debugging = debugging;
-    neteng->plog = plog;
 
 	if (!neteng_start(neteng)) {
-		fprintf(plog, "net: failed to start engine\n");
+		log_info("net: failed to start engine");
 		exit(1);
 	}
 

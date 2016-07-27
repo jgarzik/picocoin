@@ -30,6 +30,7 @@ libccoin_la_SOURCES=	\
 	key.c		\
 	keyset.c	\
 	keystore.c	\
+	log.c		\
 	mbr.c		\
 	memmem.c	\
 	message.c	\

@@ -10,16 +10,16 @@
 #include <ccoin/hashtab.h>              // for bp_hashtab_del, etc
 #include <ccoin/message.h>              // for p2p_message, etc
 #include <ccoin/mbr.h>                  // for fread_message
+#include <ccoin/log.h>                  // for log_debug, log_error
 #include <ccoin/net/dns.h>              // for bu_dns_lookup, etc
 #include <ccoin/net/netbase.h>          // for bn_group
 #include <ccoin/serialize.h>            // for deser_s64, deser_u32, etc
 #include <ccoin/util.h>                 // for clist_shuffle, djb2_hash, etc
 
+#include <errno.h>                      // for errno
 #include <stdio.h>                      // for NULL, fprintf, stderr, etc
 #include <stdlib.h>                     // for free, calloc, malloc, atoi, etc
 #include <unistd.h>                     // for close, write, unlink, etc
-
-static bool debugging = false;
 
 static unsigned long addr_hash(const void *key)
 {
@@ -96,11 +96,6 @@ static void peer_ent_free(void *data)
 	free(peer);
 }
 
-void peerman_debug(bool _debugging)
-{
-        debugging = _debugging;
-}
-
 void peerman_free(struct peer_manager *peers)
 {
 	if (!peers)
@@ -173,7 +168,9 @@ struct peer_manager *peerman_read(void *peers_file)
 
 	int fd = file_seq_open(filename);
 	if (fd < 0) {
-		perror(filename);
+		log_error("peerman: %s: %s",
+			filename,
+			strerror(errno));
 		goto err_out;
 	}
 
@@ -182,13 +179,13 @@ struct peer_manager *peerman_read(void *peers_file)
 
 	while (fread_message(fd, &msg, &read_ok)) {
 		if (!peerman_read_rec(peers, &msg)) {
-			fprintf(stderr, "peerman: read record failed\n");
+			log_error("peerman: read record failed");
 			goto err_out;
 		}
 	}
 
 	if (!read_ok) {
-		fprintf(stderr, "peerman: read I/O failed\n");
+		log_error("peerman: read I/O failed");
 		goto err_out;
 	}
 
@@ -215,9 +212,8 @@ struct peer_manager *peerman_seed(bool use_dns)
 	if (use_dns)
 		seedlist = bu_dns_seed_addrs();
 
-	if (debugging)
-		fprintf(stderr, "peerman: DNS returned %zu addresses\n",
-			clist_length(seedlist));
+	log_debug("peerman: DNS returned %zu addresses",
+		clist_length(seedlist));
 
 	clist_shuffle(seedlist);
 
@@ -247,9 +243,8 @@ static bool ser_peerman(struct peer_manager *peers, int fd,  const struct chain_
 	if (wrc != rec_len)
 		return false;
 
-	if (debugging)
-		fprintf(stderr, "peerman: %zu peers to write\n",
-			clist_length(peers->addrlist));
+	log_debug("peerman: %zu peers to write",
+		clist_length(peers->addrlist));
 
 	/* write peer list */
 	clist *tmp = peers->addrlist;
@@ -299,8 +294,9 @@ bool peerman_write(struct peer_manager *peers, void *peer_file, const struct cha
 	fd = -1;
 
 	if (rename(tmpfn, filename)) {
-		strcat(tmpfn, " rename");
-		perror(tmpfn);
+		log_error("peerman: %s rename: %s",
+			tmpfn,
+			strerror(errno));
 		goto err_out;
 	}
 
@@ -397,9 +393,8 @@ void peerman_addstr(struct peer_manager *peers,
 
 	clist *tmp, *seedlist = bu_dns_lookup(NULL, hoststr, port);
 
-	if (debugging)
-		fprintf(stderr, "peerman: DNS lookup '%s' returned %zu addresses\n",
-			addr_str, clist_length(seedlist));
+	log_debug("peerman: DNS lookup '%s' returned %zu addresses\n",
+		addr_str, clist_length(seedlist));
 
 	/* import seed data into peerman */
 	tmp = seedlist;

@@ -9,7 +9,6 @@
 #include <ccoin/cstr.h>                 // for cstring
 #include <ccoin/hashtab.h>              // for bp_hashtab_get
 
-#include <stdbool.h>                    // for bool
 #include <stddef.h>                     // for size_t
 #include <stdint.h>                     // for uint64_t
 
@@ -21,7 +20,6 @@ extern struct bp_hashtab *settings;
 extern const struct chain_info *chain;
 extern bu256_t chain_genesis;
 extern uint64_t instance_nonce;
-extern bool debugging;
 extern struct wallet *cur_wallet;
 
 /* aes.c */

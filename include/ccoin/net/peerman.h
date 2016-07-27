@@ -53,7 +53,6 @@ struct peer_manager {
 	clist		*addrlist;	/* of struct bp_address */
 };
 
-extern void peerman_debug(bool debugging);
 extern void peerman_free(struct peer_manager *peers);
 extern struct peer_manager *peerman_read(void *peer_file);
 extern struct peer_manager *peerman_seed(bool use_dns);
