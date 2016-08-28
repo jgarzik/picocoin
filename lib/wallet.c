@@ -14,6 +14,7 @@
 #include <ccoin/wallet.h>
 #include <ccoin/hdkeys.h>
 #include <ccoin/serialize.h>
+#include <ccoin/util.h>
 
 #include <assert.h>
 #include <stdio.h>
@@ -69,36 +70,32 @@ void wallet_free(struct wallet *wlt)
 
 cstring *wallet_new_address(struct wallet *wlt)
 {
+	struct hd_path_seg hdpath[] = {
+		{ 44, true },
+		{ 0, true },
+		{ 0, true },
+		{ 0, false },
+		{ 0, false },	// TBD
+	};
+
+	hdpath[ARRAY_SIZE(hdpath) - 1].index = wlt->next_key_idx;
+
+	assert(wlt->hdmaster && (wlt->hdmaster->len > 0));
 	struct hd_extended_key *master = parr_idx(wlt->hdmaster, 0);
-
-	struct hd_extended_key m_44H;
-	hd_extended_key_init(&m_44H);
-	hd_extended_key_generate_child(master, 0x80000000 | 44, &m_44H);
-
-	struct hd_extended_key m_44H_0H;
-	hd_extended_key_init(&m_44H_0H);
-	hd_extended_key_generate_child(&m_44H, 0x80000000 | 0, &m_44H_0H);
-
-	struct hd_extended_key m_44H_0H_0H;
-	hd_extended_key_init(&m_44H_0H_0H);
-	hd_extended_key_generate_child(&m_44H_0H, 0x80000000 | 0, &m_44H_0H_0H);
-
-	struct hd_extended_key m_44H_0H_0H_0;
-	hd_extended_key_init(&m_44H_0H_0H_0);
-	hd_extended_key_generate_child(&m_44H_0H_0H, 0, &m_44H_0H_0H_0);
 
 	struct hd_extended_key child;
 	hd_extended_key_init(&child);
-	hd_extended_key_generate_child(&m_44H_0H_0H_0, wlt->next_key_idx, &child);
+
+	if (!hd_derive(&child, master, hdpath, ARRAY_SIZE(hdpath))) {
+		hd_extended_key_free(&child);
+		return NULL;
+	}
+
 	wlt->next_key_idx++;
 
-	cstring *rs = bp_pubkey_get_address(&child.key, wlt->chain->addr_pubkey);
+	cstring *rs = bp_pubkey_get_address(&child.key,wlt->chain->addr_pubkey);
 
 	hd_extended_key_free(&child);
-	hd_extended_key_free(&m_44H_0H_0H_0);
-	hd_extended_key_free(&m_44H_0H_0H);
-	hd_extended_key_free(&m_44H_0H);
-	hd_extended_key_free(&m_44H);
 
 	return rs;
 }

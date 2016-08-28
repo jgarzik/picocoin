@@ -8,6 +8,7 @@
 #include <ccoin/cstr.h>
 #include <ccoin/key.h>
 #include <ccoin/wallet.h>
+#include <ccoin/hdkeys.h>
 
 static bool key_eq(const struct bp_key *key1,
 		   const struct bp_key *key2)
@@ -93,12 +94,25 @@ static void check_serialization(const struct wallet *wlt)
 	wallet_free(&deser);
 }
 
+// Seed (hex): 000102030405060708090a0b0c0d0e0f
+static const uint8_t test_seed[16] = {
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
+};
+
 static void check_with_chain(const struct chain_info *chain)
 {
 	struct wallet wlt;
 	unsigned int i;
 
 	assert(wallet_init(&wlt, chain));
+
+	struct hd_extended_key *hdkey;
+	hdkey = calloc(1, sizeof(*hdkey));
+	assert(hd_extended_key_init(hdkey) == true);
+	assert(hd_extended_key_generate_master(hdkey, test_seed, sizeof(test_seed)) == true);
+
+	parr_add(wlt.hdmaster, hdkey);
 
 	for (i = 0; i < 100; i++) {
 		cstring *addr;
