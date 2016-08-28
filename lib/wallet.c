@@ -64,6 +64,7 @@ bool wallet_init(struct wallet *wlt, const struct chain_info *chain)
 {
 	wlt->version = 1;
 	wlt->chain = chain;
+	wlt->def_acct = NULL;
 	wlt->keys = parr_new(1000, wallet_free_key);
 	wlt->hdmaster = parr_new(10, wallet_free_hdkey);
 	wlt->accounts = parr_new(10, wallet_free_account);
@@ -76,6 +77,7 @@ void wallet_free(struct wallet *wlt)
 	if (!wlt)
 		return;
 
+	cstr_free(wlt->def_acct, true);
 	parr_free(wlt->keys, true);
 	parr_free(wlt->hdmaster, true);
 	parr_free(wlt->accounts, true);
@@ -107,7 +109,7 @@ cstring *wallet_new_address(struct wallet *wlt)
 		{ 0, false },	// key index
 	};
 
-	struct wallet_account *acct = account_byname(wlt, "master");
+	struct wallet_account *acct = account_byname(wlt, wlt->def_acct->str);
 	if (!acct)
 		return NULL;
 
@@ -142,6 +144,12 @@ static cstring *ser_wallet_root(const struct wallet *wlt)
 
 	ser_u32(rs, wlt->version);
 	ser_bytes(rs, &wlt->chain->netmagic[0], 4);
+
+	const uint32_t n_settings = 1;
+	ser_varlen(rs, n_settings);
+
+	ser_str(rs, "def_acct", 64);
+	ser_varstr(rs, wlt->def_acct);
 
 	return rs;
 }
@@ -278,6 +286,28 @@ static bool deser_wallet_root(struct wallet *wlt, struct const_buffer *buf)
 	if (!deser_bytes(&netmagic[0], buf, 4))
 		return false;
 
+	uint32_t n_settings = 0;
+	if (!deser_varlen(&n_settings, buf))
+		return false;
+
+	unsigned int i;
+	for (i = 0; i < n_settings; i++) {
+		cstring *key = NULL;
+		cstring *value = NULL;
+
+		if (!deser_varstr(&key, buf) ||
+		    !deser_varstr(&value, buf))
+			return false;
+
+		if (!strcmp(key->str, "def_acct")) {
+			wlt->def_acct = value;
+			value = NULL;	// steal ref
+		}
+
+		cstr_free(key, true);
+		cstr_free(value, true);
+	}
+
 	wlt->chain = chain_find_by_netmagic(netmagic);
 	if (!wlt->chain)
 		return false;
@@ -413,6 +443,7 @@ bool wallet_create(struct wallet *wlt, const void *seed, size_t seed_len)
 	if (!acct->name)
 		goto err_out_acct;
 
+	wlt->def_acct = cstr_new("master");
 	parr_add(wlt->hdmaster, hdkey);
 	parr_add(wlt->accounts, acct);
 

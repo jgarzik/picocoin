@@ -28,6 +28,8 @@ struct wallet {
 	uint32_t		version;
 	const struct chain_info	*chain;
 
+	cstring			*def_acct;
+
 	parr			*keys;
 	parr			*hdmaster;
 	parr			*accounts;

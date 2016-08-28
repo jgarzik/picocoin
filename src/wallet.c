@@ -378,6 +378,7 @@ void cur_wallet_dump(void)
 	json_t *o = json_object();
 
 	json_object_set_new(o, "version", json_integer(wlt->version));
+	json_object_set_new(o, "def_acct", json_string(wlt->def_acct->str));
 
 	char nmstr[32];
 	sprintf(nmstr, "%02x%02x%02x%02x",
