@@ -105,7 +105,7 @@ static bool match_op_pos(parr *script, enum opcodetype opcode,
 {
 	if (pos >= script->len)
 		return false;
-	
+
 	struct bscript_op *op = parr_idx(script, pos);
 	return (op->op == opcode);
 }
