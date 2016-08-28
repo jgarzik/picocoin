@@ -8,6 +8,7 @@
 
 #include <assert.h>
 #include <ccoin/base58.h>
+#include <ccoin/util.h>
 #include <openssl/err.h>
 
 #define MAIN_PUBLIC 0x1EB28804
@@ -494,6 +495,22 @@ static void test_vector_1()
 	assert(compare_serialized_pub(&m_0H_1_2H_2_1000000000,
 				      &tv1_m_0H_1_2H_2_1000000000_xpub));
 	assert(compare_serialized_prv(&m_0H_1_2H_2_1000000000,
+				      &tv1_m_0H_1_2H_2_1000000000_xprv));
+
+	// Chain m/0H/1/2H/2/1000000000, via hd_derive()
+	struct hd_path_seg hdpath[] = {
+		{ 0, true },
+		{ 1, false },
+		{ 2, true },
+		{ 2, false },
+		{ 1000000000, false },
+	};
+	struct hd_extended_key hd_derive_test;
+	assert(hd_extended_key_init(&hd_derive_test));
+	assert(hd_derive(&hd_derive_test, &m, hdpath, ARRAY_SIZE(hdpath)));
+	assert(compare_serialized_pub(&hd_derive_test,
+				      &tv1_m_0H_1_2H_2_1000000000_xpub));
+	assert(compare_serialized_prv(&hd_derive_test,
 				      &tv1_m_0H_1_2H_2_1000000000_xprv));
 
 	hd_extended_key_free(&m_0H_1_2H_2_1000000000);

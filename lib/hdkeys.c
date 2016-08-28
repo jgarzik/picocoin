@@ -185,3 +185,36 @@ free_parent_pub:
 
 	return result;
 }
+
+bool hd_derive(struct hd_extended_key *out_child,
+	       const struct hd_extended_key *parent_,
+	       const struct hd_path_seg *hdpath,
+	       size_t hdpath_len)
+{
+	struct hd_extended_key parent;
+	memcpy(&parent, parent_, sizeof(parent));
+
+	unsigned int i;
+	for (i = 0; i < hdpath_len; i++) {
+		bool is_last = (i == (hdpath_len - 1));
+
+		uint32_t val = hdpath[i].index;
+		if (hdpath[i].hardened)
+			val |= 0x80000000;
+
+		struct hd_extended_key tmp;
+		struct hd_extended_key *target = &tmp;
+		if (is_last)
+			target = out_child;
+
+		if (!hd_extended_key_init(&tmp) ||
+		    !hd_extended_key_generate_child(&parent, val, target))
+			return false;
+
+		if (!is_last)
+			memcpy(&parent, &tmp, sizeof(tmp));
+	}
+
+	return true;
+}
+
