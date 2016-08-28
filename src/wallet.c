@@ -280,6 +280,7 @@ void cur_wallet_info(void)
 
 	printf("  \"version\": %u,\n", wlt->version);
 	printf("  \"n_privkeys\": %zu,\n", wlt->keys ? wlt->keys->len : 0);
+	printf("  \"n_hd_extkeys\": %zu,\n", wlt->hdmaster ? wlt->hdmaster->len : 0);
 	printf("  \"netmagic\": %02x%02x%02x%02x\n",
 	       wlt->chain->netmagic[0],
 	       wlt->chain->netmagic[1],
