@@ -23,6 +23,7 @@ struct wallet {
 	const struct chain_info	*chain;
 
 	parr			*keys;
+	parr			*hdmaster;
 };
 
 struct const_buffer;
@@ -42,6 +43,16 @@ extern bool deser_wallet(struct wallet *wlt, struct const_buffer *buf);
 #define wallet_for_each_key(_wlt, _key)				\
 	unsigned int ___i;					\
 	wallet_for_each_key_numbered(_wlt, _key, ___i)
+
+#define wallet_for_each_mkey_numbered(_wlt, _mkey, _num)			\
+	(_num) = 0;							\
+	for ((_mkey) = parr_idx((_wlt)->hdmaster, (_num));		\
+		(_wlt)->hdmaster && (_num) < (_wlt)->hdmaster->len;		\
+		(_mkey) = parr_idx((_wlt)->hdmaster, ++(_num)))
+
+#define wallet_for_each_mkey(_wlt, _mkey)				\
+	unsigned int ___mi;					\
+	wallet_for_each_mkey_numbered(_wlt, _mkey, ___mi)
 
 #ifdef __cplusplus
 }
