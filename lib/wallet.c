@@ -49,6 +49,7 @@ static void wallet_free_hdkey(void *p)
 bool wallet_init(struct wallet *wlt, const struct chain_info *chain)
 {
 	wlt->version = 1;
+	wlt->next_key_idx = 0;
 	wlt->chain = chain;
 	wlt->keys = parr_new(1000, wallet_free_key);
 	wlt->hdmaster = parr_new(10, wallet_free_hdkey);
@@ -58,16 +59,8 @@ bool wallet_init(struct wallet *wlt, const struct chain_info *chain)
 
 void wallet_free(struct wallet *wlt)
 {
-	struct bp_key *key;
-	struct hd_extended_key *hdkey;
-
 	if (!wlt)
 		return;
-
-	wallet_for_each_key(wlt, key)
-		bp_key_free(key);
-	wallet_for_each_mkey(wlt, hdkey)
-		hd_extended_key_free(hdkey);
 
 	parr_free(wlt->keys, true);
 	parr_free(wlt->hdmaster, true);
@@ -76,25 +69,38 @@ void wallet_free(struct wallet *wlt)
 
 cstring *wallet_new_address(struct wallet *wlt)
 {
-	struct bp_key *key;
+	struct hd_extended_key *master = parr_idx(wlt->hdmaster, 0);
 
-	key = calloc(1, sizeof(*key));
-	if (!bp_key_init(key)) {
-		free(key);
-		fprintf(stderr, "wallet: key init failed\n");
-		return NULL;
-	}
+	struct hd_extended_key m_44H;
+	hd_extended_key_init(&m_44H);
+	hd_extended_key_generate_child(master, 0x80000000 | 44, &m_44H);
 
-	if (!bp_key_generate(key)) {
-		bp_key_free(key);
-		free(key);
-		fprintf(stderr, "wallet: key gen failed\n");
-		return NULL;
-	}
+	struct hd_extended_key m_44H_0H;
+	hd_extended_key_init(&m_44H_0H);
+	hd_extended_key_generate_child(&m_44H, 0x80000000 | 0, &m_44H_0H);
 
-	parr_add(wlt->keys, key);
+	struct hd_extended_key m_44H_0H_0H;
+	hd_extended_key_init(&m_44H_0H_0H);
+	hd_extended_key_generate_child(&m_44H_0H, 0x80000000 | 0, &m_44H_0H_0H);
 
-	return bp_pubkey_get_address(key, wlt->chain->addr_pubkey);
+	struct hd_extended_key m_44H_0H_0H_0;
+	hd_extended_key_init(&m_44H_0H_0H_0);
+	hd_extended_key_generate_child(&m_44H_0H_0H, 0, &m_44H_0H_0H_0);
+
+	struct hd_extended_key child;
+	hd_extended_key_init(&child);
+	hd_extended_key_generate_child(&m_44H_0H_0H_0, wlt->next_key_idx, &child);
+	wlt->next_key_idx++;
+
+	cstring *rs = bp_pubkey_get_address(&child.key, wlt->chain->addr_pubkey);
+
+	hd_extended_key_free(&child);
+	hd_extended_key_free(&m_44H_0H_0H_0);
+	hd_extended_key_free(&m_44H_0H_0H);
+	hd_extended_key_free(&m_44H_0H);
+	hd_extended_key_free(&m_44H);
+
+	return rs;
 }
 
 static cstring *ser_wallet_root(const struct wallet *wlt)
@@ -103,6 +109,7 @@ static cstring *ser_wallet_root(const struct wallet *wlt)
 
 	ser_u32(rs, wlt->version);
 	ser_bytes(rs, &wlt->chain->netmagic[0], 4);
+	ser_u32(rs, wlt->next_key_idx);
 
 	return rs;
 }
@@ -178,6 +185,9 @@ static bool deser_wallet_root(struct wallet *wlt, struct const_buffer *buf)
 		return false;
 
 	if (!deser_bytes(&netmagic[0], buf, 4))
+		return false;
+
+	if (!deser_u32(&wlt->next_key_idx, buf))
 		return false;
 
 	wlt->chain = chain_find_by_netmagic(netmagic);

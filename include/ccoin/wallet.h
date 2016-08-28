@@ -24,6 +24,8 @@ struct wallet {
 
 	parr			*keys;
 	parr			*hdmaster;
+
+	uint32_t		next_key_idx;
 };
 
 struct const_buffer;
