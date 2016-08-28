@@ -139,3 +139,15 @@ void encode_hex(char *hexstr, const void *p_, size_t len)
 	*hexstr = 0;
 }
 
+cstring *str2hex(const void *in_buf, size_t in_len)
+{
+	cstring *rs = cstr_new_sz(in_len * 2);
+	if (!rs)
+		return NULL;
+
+	cstr_resize(rs, in_len * 2);
+	encode_hex(rs->str, in_buf, in_len);
+
+	return rs;
+}
+

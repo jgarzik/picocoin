@@ -14,8 +14,10 @@ extern "C" {
 
 extern bool decode_hex(void *p, size_t max_len, const char *hexstr, size_t *out_len_);
 extern void encode_hex(char *hexstr, const void *p_, size_t len);
-extern cstring *hex2str(const char *hexstr);
 extern bool is_hexstr(const char *hexstr, bool require_prefix);
+
+extern cstring *hex2str(const char *hexstr);
+extern cstring *str2hex(const void *p, size_t len);
 
 #ifdef __cplusplus
 }
