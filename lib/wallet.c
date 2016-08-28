@@ -22,12 +22,36 @@ struct hd_extended_key_serialized {
 	uint8_t data[78 + 1];	// 78 + NUL (the latter not written)
 };
 
+static void wallet_free_key(void *p)
+{
+	struct bp_key *key = p;
+
+	if (!key)
+		return;
+
+	bp_key_free(key);
+	memset(key, 0, sizeof(*key));
+	free(key);
+}
+
+static void wallet_free_hdkey(void *p)
+{
+	struct hd_extended_key *hdkey = p;
+
+	if (!hdkey)
+		return;
+
+	hd_extended_key_free(hdkey);
+	memset(hdkey, 0, sizeof(*hdkey));
+	free(hdkey);
+}
+
 bool wallet_init(struct wallet *wlt, const struct chain_info *chain)
 {
 	wlt->version = 1;
 	wlt->chain = chain;
-	wlt->keys = parr_new(1000, free);
-	wlt->hdmaster = parr_new(10, free);
+	wlt->keys = parr_new(1000, wallet_free_key);
+	wlt->hdmaster = parr_new(10, wallet_free_hdkey);
 
 	return ((wlt->keys != NULL) && (wlt->hdmaster != NULL));
 }
