@@ -47,13 +47,26 @@ static void wallet_free_hdkey(void *p)
 	free(hdkey);
 }
 
+static void wallet_free_account(void *p)
+{
+	struct wallet_account *acct = p;
+
+	if (!acct)
+		return;
+
+	cstr_free(acct->name, true);
+
+	memset(acct, 0, sizeof(*acct));
+	free(acct);
+}
+
 bool wallet_init(struct wallet *wlt, const struct chain_info *chain)
 {
 	wlt->version = 1;
-	wlt->next_key_idx = 0;
 	wlt->chain = chain;
 	wlt->keys = parr_new(1000, wallet_free_key);
 	wlt->hdmaster = parr_new(10, wallet_free_hdkey);
+	wlt->accounts = parr_new(10, wallet_free_account);
 
 	return ((wlt->keys != NULL) && (wlt->hdmaster != NULL));
 }
@@ -65,23 +78,46 @@ void wallet_free(struct wallet *wlt)
 
 	parr_free(wlt->keys, true);
 	parr_free(wlt->hdmaster, true);
+	parr_free(wlt->accounts, true);
 	memset(wlt, 0, sizeof(*wlt));
+}
+
+static struct wallet_account *account_byname(struct wallet *wlt, const char *name)
+{
+	if (!wlt || !wlt->accounts || !wlt->accounts->len)
+		return NULL;
+
+	unsigned int i;
+	for (i = 0; i < wlt->accounts->len; i++) {
+		struct wallet_account *acct = parr_idx(wlt->accounts, i);
+		if (!strcmp(name, acct->name->str))
+			return acct;
+	}
+
+	return NULL;
 }
 
 cstring *wallet_new_address(struct wallet *wlt)
 {
 	struct hd_path_seg hdpath[] = {
-		{ 44, true },
-		{ 0, true },
-		{ 0, true },
-		{ 0, false },
-		{ 0, false },	// TBD
+		{ 44, true },	// BIP 44
+		{ 0, true },	// chain: BTC
+		{ 0, true },	// acct#
+		{ 0, false },	// change?
+		{ 0, false },	// key index
 	};
 
-	hdpath[ARRAY_SIZE(hdpath) - 1].index = wlt->next_key_idx;
+	struct wallet_account *acct = account_byname(wlt, "master");
+	if (!acct)
+		return NULL;
+
+	// patch HD path based on account settings
+	hdpath[2].index = acct->acct_idx;
+	hdpath[4].index = acct->next_key_idx;
 
 	assert(wlt->hdmaster && (wlt->hdmaster->len > 0));
 	struct hd_extended_key *master = parr_idx(wlt->hdmaster, 0);
+	assert(master != NULL);
 
 	struct hd_extended_key child;
 	hd_extended_key_init(&child);
@@ -91,7 +127,7 @@ cstring *wallet_new_address(struct wallet *wlt)
 		return NULL;
 	}
 
-	wlt->next_key_idx++;
+	acct->next_key_idx++;
 
 	cstring *rs = bp_pubkey_get_address(&child.key,wlt->chain->addr_pubkey);
 
@@ -106,7 +142,6 @@ static cstring *ser_wallet_root(const struct wallet *wlt)
 
 	ser_u32(rs, wlt->version);
 	ser_bytes(rs, &wlt->chain->netmagic[0], 4);
-	ser_u32(rs, wlt->next_key_idx);
 
 	return rs;
 }
@@ -116,6 +151,46 @@ static bool write_ek_ser_prv(struct hd_extended_key_serialized *out,
 {
 	cstring s = { (char *)(out->data), 0, sizeof(out->data) };
 	return hd_extended_key_ser_priv(ek, &s);
+}
+
+static void account_free(struct wallet_account *acct)
+{
+	if (!acct)
+		return;
+
+	cstr_free(acct->name, true);
+
+	memset(acct, 0, sizeof(*acct));
+	free(acct);
+}
+
+static bool deser_wallet_account(struct wallet *wlt, struct const_buffer *buf)
+{
+	struct wallet_account *acct;
+
+	acct = calloc(1, sizeof(*acct));
+	if (!acct)
+		return false;
+
+	if (!deser_varstr(&acct->name, buf) ||
+	    !deser_u32(&acct->acct_idx, buf) ||
+	    !deser_u32(&acct->next_key_idx, buf))
+		goto err_out;
+
+	parr_add(wlt->accounts, acct);
+
+	return true;
+
+err_out:
+	account_free(acct);
+	return false;
+}
+
+static void ser_account(cstring *s, const struct wallet_account *acct)
+{
+	ser_varstr(s, acct->name);
+	ser_u32(s, acct->acct_idx);
+	ser_u32(s, acct->next_key_idx);
 }
 
 cstring *ser_wallet(const struct wallet *wlt)
@@ -171,6 +246,25 @@ cstring *ser_wallet(const struct wallet *wlt)
 		cstr_free(recdata, true);
 	}
 
+	/* Ser "account" records */
+	unsigned int i;
+	for (i = 0; i < wlt->accounts->len; i++) {
+		struct wallet_account *acct = parr_idx(wlt->accounts, i);
+
+		cstring *acct_raw = cstr_new_sz(64);
+		ser_account(acct_raw, acct);
+
+		cstring *recdata = message_str(wlt->chain->netmagic,
+					       "account",
+					       acct_raw->str,
+					       acct_raw->len);
+		assert(recdata != NULL);
+
+		cstr_append_buf(rs, recdata->str, recdata->len);
+		cstr_free(recdata, true);
+		cstr_free(acct_raw, true);
+	}
+
 	return rs;
 }
 
@@ -182,9 +276,6 @@ static bool deser_wallet_root(struct wallet *wlt, struct const_buffer *buf)
 		return false;
 
 	if (!deser_bytes(&netmagic[0], buf, 4))
-		return false;
-
-	if (!deser_u32(&wlt->next_key_idx, buf))
 		return false;
 
 	wlt->chain = chain_find_by_netmagic(netmagic);
@@ -240,6 +331,15 @@ err_out:
 	return false;
 }
 
+static bool load_rec_account(struct wallet *wlt, const void *data, size_t data_len)
+{
+	struct const_buffer buf = { data, data_len };
+
+	if (!deser_wallet_account(wlt, &buf)) return false;
+
+	return true;
+}
+
 static bool load_rec_root(struct wallet *wlt, const void *data, size_t data_len)
 {
 	struct const_buffer buf = { data, data_len };
@@ -259,6 +359,9 @@ static bool load_record(struct wallet *wlt, const struct p2p_message *msg)
 {
 	if (!strncmp(msg->hdr.command, "hdmaster", sizeof(msg->hdr.command)))
 		return load_rec_hdmaster(wlt, msg->data, msg->hdr.data_len);
+
+	else if (!strncmp(msg->hdr.command, "account", sizeof(msg->hdr.command)))
+		return load_rec_account(wlt, msg->data, msg->hdr.data_len);
 
 	else if (!strncmp(msg->hdr.command, "privkey", sizeof(msg->hdr.command)))
 		return load_rec_privkey(wlt, msg->data, msg->hdr.data_len);
@@ -292,3 +395,34 @@ bool deser_wallet(struct wallet *wlt, struct const_buffer *buf)
 err_out:
 	return false;
 }
+
+bool wallet_create(struct wallet *wlt, const void *seed, size_t seed_len)
+{
+	struct hd_extended_key *hdkey;
+	hdkey = calloc(1, sizeof(*hdkey));
+	if (!hd_extended_key_init(hdkey) ||
+	    !hd_extended_key_generate_master(hdkey, seed, sizeof(seed)))
+		goto err_out_hdkey;
+
+	struct wallet_account *acct;
+	acct = calloc(1, sizeof(*acct));
+	if (!acct)
+		goto err_out_hdkey;
+
+	acct->name = cstr_new("master");
+	if (!acct->name)
+		goto err_out_acct;
+
+	parr_add(wlt->hdmaster, hdkey);
+	parr_add(wlt->accounts, acct);
+
+	return true;
+
+err_out_acct:
+	account_free(acct);
+err_out_hdkey:
+	hd_extended_key_free(hdkey);
+	free(hdkey);
+	return false;
+}
+

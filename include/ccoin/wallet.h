@@ -18,14 +18,19 @@ extern "C" {
 
 struct chain_info;
 
+struct wallet_account {
+	cstring			*name;
+	uint32_t		acct_idx;
+	uint32_t		next_key_idx;
+};
+
 struct wallet {
 	uint32_t		version;
 	const struct chain_info	*chain;
 
 	parr			*keys;
 	parr			*hdmaster;
-
-	uint32_t		next_key_idx;
+	parr			*accounts;
 };
 
 struct const_buffer;
@@ -35,6 +40,7 @@ extern void wallet_free(struct wallet *wlt);
 extern cstring *wallet_new_address(struct wallet *wlt);
 extern cstring *ser_wallet(const struct wallet *wlt);
 extern bool deser_wallet(struct wallet *wlt, struct const_buffer *buf);
+extern bool wallet_create(struct wallet *wlt, const void *seed, size_t seed_len);
 
 #define wallet_for_each_key_numbered(_wlt, _key, _num)			\
 	(_num) = 0;							\

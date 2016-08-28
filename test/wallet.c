@@ -107,12 +107,7 @@ static void check_with_chain(const struct chain_info *chain)
 
 	assert(wallet_init(&wlt, chain));
 
-	struct hd_extended_key *hdkey;
-	hdkey = calloc(1, sizeof(*hdkey));
-	assert(hd_extended_key_init(hdkey) == true);
-	assert(hd_extended_key_generate_master(hdkey, test_seed, sizeof(test_seed)) == true);
-
-	parr_add(wlt.hdmaster, hdkey);
+	assert(wallet_create(&wlt, test_seed, sizeof(test_seed)));
 
 	for (i = 0; i < 100; i++) {
 		cstring *addr;
@@ -126,7 +121,6 @@ static void check_with_chain(const struct chain_info *chain)
 	check_serialization(&wlt);
 
 	wallet_free(&wlt);
-
 }
 
 int main(int argc, char *argv[])

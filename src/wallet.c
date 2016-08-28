@@ -224,18 +224,11 @@ void cur_wallet_create(void)
 
 	cur_wallet_update(wlt);
 
-	struct hd_extended_key *hdkey;
-	hdkey = calloc(1, sizeof(*hdkey));
-	if (!hd_extended_key_init(hdkey) ||
-	    !hd_extended_key_generate_master(hdkey, seed, sizeof(seed))) {
-		fprintf(stderr, "wallet: failed to generate master hdkey\n");
-		hd_extended_key_free(hdkey);
-		free(hdkey);
+	if (!wallet_create(wlt, seed, sizeof(seed))) {
+		fprintf(stderr, "wallet: failed to create new wallet\n");
 		free(wlt);
 		return;
 	}
-
-	parr_add(wlt->hdmaster, hdkey);
 
 	if (!store_wallet(wlt)) {
 		fprintf(stderr, "wallet: failed to store %s\n", filename);
@@ -359,6 +352,24 @@ static void wallet_dump_hdkeys(json_t *hdkeys_a, struct wallet *wlt)
 	}
 }
 
+static void wallet_dump_accounts(json_t *accounts, struct wallet *wlt)
+{
+	struct wallet_account *acct;
+	unsigned int i;
+
+	for (i = 0; i < wlt->accounts->len; i++) {
+		acct = parr_idx(wlt->accounts, i);
+
+		json_t *o = json_object();
+
+		json_object_set_new(o, "name", json_string(acct->name->str));
+		json_object_set_new(o, "acct_idx", json_integer(acct->acct_idx));
+		json_object_set_new(o, "next_key_idx", json_integer(acct->next_key_idx));
+
+		json_array_append_new(accounts, o);
+	}
+}
+
 void cur_wallet_dump(void)
 {
 	if (!cur_wallet_load())
@@ -367,7 +378,6 @@ void cur_wallet_dump(void)
 	json_t *o = json_object();
 
 	json_object_set_new(o, "version", json_integer(wlt->version));
-	json_object_set_new(o, "next_key_idx", json_integer(wlt->next_key_idx));
 
 	char nmstr[32];
 	sprintf(nmstr, "%02x%02x%02x%02x",
@@ -389,6 +399,12 @@ void cur_wallet_dump(void)
 	wallet_dump_hdkeys(hdkeys_a, wlt);
 
 	json_object_set_new(o, "hdmaster", hdkeys_a);
+
+	json_t *accounts = json_array();
+
+	wallet_dump_accounts(accounts, wlt);
+
+	json_object_set_new(o, "accounts", accounts);
 
 	json_dumpf(o, stdout, JSON_INDENT(2) | JSON_SORT_KEYS);
 	json_decref(o);
