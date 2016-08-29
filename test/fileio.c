@@ -58,6 +58,12 @@ static void test_write(const char *filename)
 	free(data2);
 }
 
+static void test_misc(void)
+{
+	int rcv = file_seq_open("does-not-exist");
+	assert(rcv < 0);
+}
+
 int main (int argc, char *argv[])
 {
 	char *filename = test_filename("random.data");
@@ -65,6 +71,7 @@ int main (int argc, char *argv[])
 
 	test_read(filename);
 	test_write(w_filename);
+	test_misc();
 
 	free(filename);
 
