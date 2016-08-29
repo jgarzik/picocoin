@@ -47,6 +47,33 @@ static void test_basics(void)
 
 	assert(bp_hashtab_size(ht) == 1);
 
+	// overwrite existing entry
+	bp_hashtab_put(ht, strdup("name"), strdup("bob"));
+
+	rc = bp_hashtab_get_ext(ht, "name", &ret_key, &ret_value);
+	assert(rc == true);
+	assert(ret_key != NULL);
+	assert(ret_value != NULL);
+	assert(strcmp(ret_key, "name") == 0);
+	assert(strcmp(ret_value, "bob") == 0);
+	assert(bp_hashtab_size(ht) == 1);
+
+	// test deletion
+	rc = bp_hashtab_del(ht, "does-not-exist");
+	assert(rc == false);
+
+	assert(bp_hashtab_size(ht) == 1);
+
+	rc = bp_hashtab_del(ht, "name");
+	assert(rc == true);
+
+	assert(bp_hashtab_size(ht) == 0);
+
+	rc = bp_hashtab_del(ht, "name");
+	assert(rc == false);
+
+	assert(bp_hashtab_size(ht) == 0);
+
 	rc = bp_hashtab_clear(ht);
 	assert(rc == true);
 

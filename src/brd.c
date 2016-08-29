@@ -587,8 +587,6 @@ static bool inv_block_process(bu256_t *hash)
 
 static bool add_block(struct bp_block *block, struct p2p_message_hdr *hdr, struct const_buffer *buf)
 {
-    bool rc = false;
-
     /* check for duplicate block */
     if (blkdb_lookup(&db, &block->sha256) ||
         have_orphan(&block->sha256))

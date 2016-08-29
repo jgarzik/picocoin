@@ -16,6 +16,11 @@ struct hd_chaincode {
 	uint8_t		data[32];
 };
 
+struct hd_path_seg {
+	uint32_t		index;
+	bool			hardened;
+};
+
 struct hd_extended_key {
 	struct bp_key		key;
 	struct hd_chaincode	chaincode;
@@ -42,6 +47,11 @@ extern bool hd_extended_key_generate_master(struct hd_extended_key *ek,
 extern bool hd_extended_key_generate_child(const struct hd_extended_key *ek,
 					   uint32_t index,
 					   struct hd_extended_key *out_priv);
+
+extern bool hd_derive(struct hd_extended_key *out_child,
+		       const struct hd_extended_key *parent_,
+		       const struct hd_path_seg *hdpath,
+		       size_t hdpath_len);
 
 #ifdef __cplusplus
 }

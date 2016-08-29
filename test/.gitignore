@@ -11,12 +11,15 @@ chain-verf
 clist
 cstr
 ctaes
+coredefs
 fileio
 hash
 hashtab
 hdkeys
 hex
 keyset
+keystore
+mbr
 message
 parr
 script

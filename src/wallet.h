@@ -7,6 +7,8 @@
 
 extern void cur_wallet_new_address(void);
 extern void cur_wallet_create(void);
+extern void cur_wallet_createAccount(const char *acct_name);
+extern void cur_wallet_defaultAccount(const char *acct_name);
 extern void cur_wallet_info(void);
 extern void cur_wallet_dump(void);
 extern void cur_wallet_addresses(void);

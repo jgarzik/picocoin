@@ -8,6 +8,7 @@
 #include <ccoin/cstr.h>
 #include <ccoin/key.h>
 #include <ccoin/wallet.h>
+#include <ccoin/hdkeys.h>
 
 static bool key_eq(const struct bp_key *key1,
 		   const struct bp_key *key2)
@@ -93,12 +94,33 @@ static void check_serialization(const struct wallet *wlt)
 	wallet_free(&deser);
 }
 
+// Seed (hex): 000102030405060708090a0b0c0d0e0f
+static const uint8_t test_seed[16] = {
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
+};
+
 static void check_with_chain(const struct chain_info *chain)
 {
 	struct wallet wlt;
 	unsigned int i;
 
 	assert(wallet_init(&wlt, chain));
+
+	assert(wallet_create(&wlt, test_seed, sizeof(test_seed)));
+
+	assert(wallet_createAccount(&wlt, "test1") == true);
+	assert(wlt.accounts && (wlt.accounts->len == 2));
+
+	struct wallet_account *acct;
+	struct wallet_account *acct0 = parr_idx(wlt.accounts, 0);
+	struct wallet_account *acct1 = parr_idx(wlt.accounts, 1);
+	assert(acct1->acct_idx == (acct0->acct_idx + 1));
+
+	acct = account_byname(&wlt, "master");
+	assert(acct == acct0);
+	acct = account_byname(&wlt, "test1");
+	assert(acct == acct1);
 
 	for (i = 0; i < 100; i++) {
 		cstring *addr;
@@ -112,12 +134,17 @@ static void check_with_chain(const struct chain_info *chain)
 	check_serialization(&wlt);
 
 	wallet_free(&wlt);
-
 }
 
 int main(int argc, char *argv[])
 {
 	unsigned int i;
+
+	assert(wallet_valid_name(NULL) == false);
+	assert(wallet_valid_name("") == false);
+	assert(wallet_valid_name("foo") == true);
+	assert(wallet_valid_name("foo1") == true);
+	assert(wallet_valid_name("!@#!foo1") == false);
 
 	for (i = 0; i < CHAIN_LAST; i++)
 		check_with_chain(&chain_metadata[i]);

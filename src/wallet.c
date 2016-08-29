@@ -6,19 +6,43 @@
 
 #include "wallet.h"
 #include "picocoin.h"                   // for cur_wallet, chain, setting
+
 #include <ccoin/address.h>              // for bp_pubkey_get_address
+#include <ccoin/base58.h>               // for base58_encode
 #include <ccoin/buffer.h>               // for const_buffer
 #include <ccoin/coredefs.h>             // for chain_info
 #include <ccoin/crypto/aes_util.h>      // for read_aes_file, etc
+#include <ccoin/cstr.h>                 // for cstring, cstr_free, etc
+#include <ccoin/hdkeys.h>               // for hd_extended_key_ser_priv
 #include <ccoin/hexcode.h>              // for encode_hex
 #include <ccoin/key.h>                  // for bp_privkey_get, etc
+#include <ccoin/parr.h>                 // for parr, parr_idx
 #include <ccoin/wallet.h>               // for wallet, wallet_free, etc
 #include <ccoin/compat.h>               // for parr_new
 
 #include <jansson.h>                    // for json_object_set_new, etc
+#include <openssl/rand.h>               // for RAND_bytes
+
+#include <assert.h>                     // for assert
+#include <stdbool.h>                    // for true, bool, false
+#include <stddef.h>                     // for size_t
+#include <stdint.h>                     // for uint8_t
 #include <stdio.h>                      // for fprintf, printf, stderr, etc
+#include <stdlib.h>                     // for free, calloc, getenv
 #include <string.h>                     // for strlen, memset
 #include <unistd.h>                     // for access, F_OK
+
+
+struct hd_extended_key_serialized {
+	uint8_t data[78 + 1];	// 78 + NUL (the latter not written)
+};
+
+static bool write_ek_ser_prv(struct hd_extended_key_serialized *out,
+			     const struct hd_extended_key *ek)
+{
+	cstring s = { (char *)(out->data), 0, sizeof(out->data) };
+	return hd_extended_key_ser_priv(ek, &s);
+}
 
 static char *wallet_filename(void)
 {
@@ -64,8 +88,10 @@ static struct wallet *load_wallet(void)
 
 	struct const_buffer buf = { data->str, data->len };
 
-	if (!deser_wallet(wlt, &buf))
+	if (!deser_wallet(wlt, &buf)) {
+		fprintf(stderr, "wallet: deserialization failed\n");
 		goto err_out;
+	}
 
 	if (chain != wlt->chain) {
 		fprintf(stderr, "wallet root: foreign chain detected, aborting load.  Try 'chain-set' first.\n");
@@ -169,6 +195,14 @@ void cur_wallet_create(void)
 		return;
 	}
 
+	char seed[256];
+	RAND_bytes((unsigned char *) &seed[0], sizeof(seed));
+
+	char seed_str[(sizeof(seed) * 2) + 1];
+	encode_hex(seed_str, seed, sizeof(seed));
+	printf("Record this HD seed (it will only be shown once):\n"
+	       "%s\n", seed_str);
+
 	struct wallet *wlt = calloc(1, sizeof(*wlt));
 
 	if (!wlt) {
@@ -183,6 +217,12 @@ void cur_wallet_create(void)
 	}
 
 	cur_wallet_update(wlt);
+
+	if (!wallet_create(wlt, seed, sizeof(seed))) {
+		fprintf(stderr, "wallet: failed to create new wallet\n");
+		free(wlt);
+		return;
+	}
 
 	if (!store_wallet(wlt)) {
 		fprintf(stderr, "wallet: failed to store %s\n", filename);
@@ -227,6 +267,7 @@ void cur_wallet_info(void)
 
 	printf("  \"version\": %u,\n", wlt->version);
 	printf("  \"n_privkeys\": %zu,\n", wlt->keys ? wlt->keys->len : 0);
+	printf("  \"n_hd_extkeys\": %zu,\n", wlt->hdmaster ? wlt->hdmaster->len : 0);
 	printf("  \"netmagic\": %02x%02x%02x%02x\n",
 	       wlt->chain->netmagic[0],
 	       wlt->chain->netmagic[1],
@@ -283,6 +324,46 @@ static void wallet_dump_keys(json_t *keys_a, struct wallet *wlt)
 	}
 }
 
+static void wallet_dump_hdkeys(json_t *hdkeys_a, struct wallet *wlt)
+{
+	struct hd_extended_key *hdkey;
+
+	wallet_for_each_mkey(wlt, hdkey) {
+		json_t *o = json_object();
+
+		struct hd_extended_key_serialized hdraw;
+		bool rc = write_ek_ser_prv(&hdraw, hdkey);
+		assert(rc == true);
+
+		cstring *hdstr = base58_encode(hdraw.data, sizeof(hdraw.data)-1);
+		assert(hdstr != NULL);
+
+		json_object_set_new(o, "hdpriv", json_string(hdstr->str));
+
+		cstr_free(hdstr, true);
+
+		json_array_append_new(hdkeys_a, o);
+	}
+}
+
+static void wallet_dump_accounts(json_t *accounts, struct wallet *wlt)
+{
+	struct wallet_account *acct;
+	unsigned int i;
+
+	for (i = 0; i < wlt->accounts->len; i++) {
+		acct = parr_idx(wlt->accounts, i);
+
+		json_t *o = json_object();
+
+		json_object_set_new(o, "name", json_string(acct->name->str));
+		json_object_set_new(o, "acct_idx", json_integer(acct->acct_idx));
+		json_object_set_new(o, "next_key_idx", json_integer(acct->next_key_idx));
+
+		json_array_append_new(accounts, o);
+	}
+}
+
 void cur_wallet_dump(void)
 {
 	if (!cur_wallet_load())
@@ -291,6 +372,7 @@ void cur_wallet_dump(void)
 	json_t *o = json_object();
 
 	json_object_set_new(o, "version", json_integer(wlt->version));
+	json_object_set_new(o, "def_acct", json_string(wlt->def_acct->str));
 
 	char nmstr[32];
 	sprintf(nmstr, "%02x%02x%02x%02x",
@@ -307,9 +389,64 @@ void cur_wallet_dump(void)
 
 	json_object_set_new(o, "keys", keys_a);
 
+	json_t *hdkeys_a = json_array();
+
+	wallet_dump_hdkeys(hdkeys_a, wlt);
+
+	json_object_set_new(o, "hdmaster", hdkeys_a);
+
+	json_t *accounts = json_array();
+
+	wallet_dump_accounts(accounts, wlt);
+
+	json_object_set_new(o, "accounts", accounts);
+
 	json_dumpf(o, stdout, JSON_INDENT(2) | JSON_SORT_KEYS);
 	json_decref(o);
 
 	printf("\n");
+}
+
+void cur_wallet_createAccount(const char *acct_name)
+{
+	if (!cur_wallet_load())
+		return;
+	struct wallet *wlt = cur_wallet;
+
+	if (!wallet_createAccount(wlt, acct_name)) {
+		fprintf(stderr, "wallet: creation of account %s failed\n", acct_name);
+		return;
+	}
+
+	if (!store_wallet(wlt)) {
+		fprintf(stderr, "wallet: failed to store\n");
+		return;
+	}
+}
+
+void cur_wallet_defaultAccount(const char *acct_name)
+{
+	if (!wallet_valid_name(acct_name)) {
+		fprintf(stderr, "Invalid account name %s\n", acct_name);
+		return;
+	}
+
+	if (!cur_wallet_load())
+		return;
+	struct wallet *wlt = cur_wallet;
+
+	struct wallet_account *acct = account_byname(wlt, acct_name);
+	if (!acct) {
+		fprintf(stderr, "wallet: unknown account %s\n", acct_name);
+		return;
+	}
+
+	cstr_free(wlt->def_acct, true);
+	wlt->def_acct = cstr_new(acct_name);
+
+	if (!store_wallet(wlt)) {
+		fprintf(stderr, "wallet: failed to store\n");
+		return;
+	}
 }
 

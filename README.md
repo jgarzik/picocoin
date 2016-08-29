@@ -2,7 +2,13 @@
 
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/jgarzik/picocoin/master/COPYING) [![Build Status](https://travis-ci.org/jgarzik/picocoin.svg?branch=master)](https://travis-ci.org/jgarzik/picocoin) [![Coverage Status](https://coveralls.io/repos/github/jgarzik/picocoin/badge.svg?branch=master)](https://coveralls.io/github/jgarzik/picocoin?branch=master)
 
-Tiny bitcoin library, with lightweight client and utils
+Tiny bitcoin library, with lightweight client and utils.
+
+This contains several pieces of interest:
+* **libccoin** - C library for building bitcoin applications
+* **picocoin** - (WIP) Bitcoin HD wallet
+* **brd** - (WIP) Bitcoin network full node ("block relay daemon")
+* Comprehensive test suite.
 
 libccoin library dependencies:
 	OpenSSL
@@ -24,19 +30,17 @@ block relay daemon (brd) dependencies:
 Command line and configuration file usage
 =========================================
 
-In general, the program stores settings in a key/value map.  These key=value
-parameters may be specified on the command line, or in a configuration file.
+The picocoin wallet is operated via command line, in a similar
+style to "git sub-command".  To obtain a list of commands, run
 
-The command line is processed in-order.  For example
+	$ ./picocoin --help
 
-`$ ./picocoin value=1 list-settings value=2 list-settings`
+The program stores settings in a key/value map.  These key=value
+parameters may be specified on the command line via --set, or in a
+configuration file.  To view these settings, run
 
-will execute the "list-settings" command twice, each with "value" setting
-initialized to a different parameter.
+	$ ./picocoin settings
 
-Similarly, you may read multiple configuration files into the settings map:
-
-`$ ./picocoin config=file1 config=file2 config=file3`
 
 
 Recognized parameters
@@ -84,38 +88,38 @@ dns-seeds
 ---------
 Query and display bitcoin DNS seeds, for P2P node addresses.
 
-help
-----
-Output these commands and recognized settings.
-
-list-settings
--------------
+settings
+--------
 Display settings map.
 
-new-address
------------
+address
+-------
 Generate a new bitcoin address (ECDSA keypair).  Store it in the current
 wallet, 
 
-new-wallet
-----------
+create
+------
 Initialize a new wallet.  Refuses to initialize, if the filename already
 exists.
+
+createAccount
+-------------
+Create new HD account.
 
 netsync
 -------
 Synchronize with network: send any pending payments, and check for
 new incoming payments.
 
-wallet-addr
+addressList
 -----------
-List all bitcoin addresses in wallet.
+List all legacy non-HD bitcoin addresses in wallet.
 
-wallet-dump
------------
+dump
+----
 Dump entire wallet contents, including all private keys.
 
-wallet-info
------------
+info
+----
 Informational summary of wallet data.
 

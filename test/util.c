@@ -70,11 +70,37 @@ static void test_btc_decimals(void)
 				 btcdec_valstr[i].s);
 }
 
+static void test_misc(void)
+{
+	const char *s1 = "foo";
+	const char *s2 = "barre";
+	const char *s3 = "foo";
+	const char *s4 = "foe";
+
+	assert(czstr_equal(s1, s2) == false);
+	assert(czstr_equal(s1, s3) == true);
+	assert(czstr_equal(s1, s4) == false);
+}
+
+static void test_shuffle(void)
+{
+	clist *l = NULL;
+	l = clist_append(l, strdup("one"));
+	l = clist_append(l, strdup("two"));
+	l = clist_append(l, strdup("three"));
+
+	clist_shuffle(l);		// TODO: improve test
+
+	clist_free_ext(l, free);
+}
+
 int main (int argc, char *argv[])
 {
 	test_reverse_copy();
 	test_ipv4_mapped();
 	test_btc_decimals();
+	test_misc();
+	test_shuffle();
 	return 0;
 }
 

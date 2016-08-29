@@ -27,6 +27,10 @@ static void test_encode1(void)
 	assert(strcmp(hexstr1, "f11f") == 0);
 
 	free(hexstr1);
+
+	cstring *chex = str2hex(data1, data1_len);
+	assert(strcmp(chex->str, "f11f") == 0);
+	cstr_free(chex, true);
 }
 
 static void test_encode2(void)
