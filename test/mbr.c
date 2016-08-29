@@ -35,6 +35,8 @@ static void testit(const char *ser_fn_base)
 	assert(mbr.error == false);
 
 	mbr_free(&mbr);
+	free(data);
+	free(ser_fn);
 }
 
 int main (int argc, char *argv[])
