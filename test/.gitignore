@@ -9,6 +9,7 @@ blkdb
 chain-verf
 clist
 cstr
+coredefs
 fileio
 hashtab
 hdkeys

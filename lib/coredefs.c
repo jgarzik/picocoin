@@ -42,7 +42,7 @@ const struct chain_info *chain_find(const char *name)
 	return NULL;
 }
 
-const struct chain_info *chain_find_by_netmagic(unsigned char netmagic[4])
+const struct chain_info *chain_find_by_netmagic(const unsigned char netmagic[4])
 {
 	unsigned int i;
 

@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <assert.h>
 #include <openssl/sha.h>
 
@@ -39,13 +40,35 @@ static void test_read(const char *filename)
 	assert(strcmp(hexstr, RANDOM_DATA_SHA1SUM) == 0);
 }
 
+static void test_write(const char *filename)
+{
+	bool rc = bu_write_file(filename, data, data_len);
+	assert(rc == true);
+
+	void *data2 = NULL;
+	size_t data2_len = 0;
+	rc = bu_read_file(filename, &data2, &data2_len, 100 * 1024 * 1024);
+	assert(rc == true);
+	assert(data_len == data2_len);
+	assert(memcmp(data, data2, data2_len) == 0);
+
+	int rcv = unlink(filename);
+	assert(rcv == 0);
+
+	free(data2);
+}
+
 int main (int argc, char *argv[])
 {
 	char *filename = test_filename("random.data");
+	const char *w_filename = "fileio.out";
 
 	test_read(filename);
+	test_write(w_filename);
 
 	free(filename);
+
+	free(data);
 
 	return 0;
 }
