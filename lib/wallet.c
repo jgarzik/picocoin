@@ -20,6 +20,8 @@
 #include <assert.h>
 #include <stdio.h>
 
+static void account_free(struct wallet_account *acct);
+
 struct hd_extended_key_serialized {
 	uint8_t data[78 + 1];	// 78 + NUL (the latter not written)
 };
@@ -65,13 +67,7 @@ static void wallet_free_account(void *p)
 {
 	struct wallet_account *acct = p;
 
-	if (!acct)
-		return;
-
-	cstr_free(acct->name, true);
-
-	memset(acct, 0, sizeof(*acct));
-	free(acct);
+	account_free(acct);
 }
 
 bool wallet_init(struct wallet *wlt, const struct chain_info *chain)
