@@ -103,12 +103,6 @@ struct net_engine {
 
 struct net_engine *neteng_new_start(void (*network_child)(int read_fd, int write_fd));
 
-static void nc_conn_kill(struct nc_conn *conn);
-static bool nc_conn_read_enable(struct nc_conn *conn);
-static bool nc_conn_read_disable(struct nc_conn *conn);
-static bool nc_conn_write_enable(struct nc_conn *conn);
-static bool nc_conn_write_disable(struct nc_conn *conn);
-
 extern void nc_conns_process(struct net_child_info *nci);
 extern void nc_conns_gc(struct net_child_info *nci, bool free_all);
 extern void nc_pipe_evt(int fd, short events, void *priv);

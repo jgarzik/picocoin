@@ -37,6 +37,12 @@
 #include <sys/uio.h>                    // for iovec, writev
 #endif
 
+static void nc_conn_kill(struct nc_conn *conn);
+static bool nc_conn_read_enable(struct nc_conn *conn);
+static bool nc_conn_read_disable(struct nc_conn *conn);
+static bool nc_conn_write_enable(struct nc_conn *conn);
+static bool nc_conn_write_disable(struct nc_conn *conn);
+
 void net_set(struct net_settings *_net_settings)
 {
 	net_settings = _net_settings;
