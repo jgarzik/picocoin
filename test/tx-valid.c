@@ -118,8 +118,6 @@ static void runtest(bool is_valid, const char *basefn)
 	char *fn = test_filename(basefn);
 	json_t *tests = read_json(fn);
 	assert(json_is_array(tests));
-	static unsigned int verify_flags;
-
 
 	struct bp_hashtab *input_map = bp_hashtab_new_ext(
 		input_hash, input_equal,
