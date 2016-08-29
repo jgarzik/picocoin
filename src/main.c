@@ -29,6 +29,7 @@
 #include <stdio.h>                      // for fprintf, printf, NULL, etc
 #include <stdlib.h>                     // for free, exit
 #include <string.h>                     // for strcmp, strdup, strlen, etc
+#include <jansson.h>
 
 enum command_type {
 	CMD_CHAIN_SET,
@@ -90,12 +91,12 @@ static char global_doc[] =
 	"\tchain-set - Select blockchain and network.\n"
 	"\tdns-seeds - Query and display bitcoin DNS seeds.\n"
 	"\tsettings - Display settings map.\n"
-	"\taddress - Generate a new address and output it. Store pair in wallet.\n"
-	"\tcreate - Initialize a new wallet. Refuses to initialize if the file exists.\n"
+	"\taddress - Generate a new HD address in default account, and output it.\n"
+	"\tcreate - Initialize a new HD wallet. Refuses to initialize if the file exists.\n"
 	"\tcreateAccount - Create new HD account\n"
 	"\tdefault - Switch default HD account\n"
 	"\tnetsync - Synchronize with the network, sending and receiving payments.\n"
-	"\taddressList - List all address in the wallet.\n"
+	"\taddressList - List all legacy addresses (non-HD) in the wallet.\n"
 	"\tdump - Dump entire wallet contents, including private keys.\n"
 	"\tinfo - Print informational summary of wallet data.\n"
 	"\n"
@@ -392,6 +393,7 @@ static bool preload_settings(void)
 
 struct lsi_info {
 	unsigned int	table_len;
+	json_t		*settings_obj;
 	unsigned int	iter_count;
 };
 
@@ -401,23 +403,20 @@ static void list_setting_iter(void *key_, void *value_, void *lsi_)
 	char *value = value_;
 	struct lsi_info *lsi = lsi_;
 
-	printf("  \"%s\": \"%s\"%s\n",
-	       key,
-	       value,
-	       lsi->iter_count == (lsi->table_len - 1) ? "" : ",");
-
-	lsi->iter_count++;
+	json_object_set_new(lsi->settings_obj, key, json_string(value));
 }
 
 static void list_settings(void)
 {
-	struct lsi_info lsi = { bp_hashtab_size(settings), };
+	json_t *settings_obj = json_object();
 
-	printf("{\n");
-
+	struct lsi_info lsi = { bp_hashtab_size(settings), settings_obj };
 	bp_hashtab_iter(settings, list_setting_iter, &lsi);
 
-	printf("}\n");
+	json_dumpf(settings_obj, stdout, JSON_INDENT(2) | JSON_SORT_KEYS);
+	json_decref(settings_obj);
+
+	printf("\n");
 }
 
 static void list_dns_seeds(void)
