@@ -109,6 +109,19 @@ static void check_with_chain(const struct chain_info *chain)
 
 	assert(wallet_create(&wlt, test_seed, sizeof(test_seed)));
 
+	assert(wallet_createAccount(&wlt, "test1") == true);
+	assert(wlt.accounts && (wlt.accounts->len == 2));
+
+	struct wallet_account *acct;
+	struct wallet_account *acct0 = parr_idx(wlt.accounts, 0);
+	struct wallet_account *acct1 = parr_idx(wlt.accounts, 1);
+	assert(acct1->acct_idx == (acct0->acct_idx + 1));
+
+	acct = account_byname(&wlt, "master");
+	assert(acct == acct0);
+	acct = account_byname(&wlt, "test1");
+	assert(acct == acct1);
+
 	for (i = 0; i < 100; i++) {
 		cstring *addr;
 
@@ -126,6 +139,12 @@ static void check_with_chain(const struct chain_info *chain)
 int main(int argc, char *argv[])
 {
 	unsigned int i;
+
+	assert(wallet_valid_name(NULL) == false);
+	assert(wallet_valid_name("") == false);
+	assert(wallet_valid_name("foo") == true);
+	assert(wallet_valid_name("foo1") == true);
+	assert(wallet_valid_name("!@#!foo1") == false);
 
 	for (i = 0; i < CHAIN_LAST; i++)
 		check_with_chain(&chain_metadata[i]);

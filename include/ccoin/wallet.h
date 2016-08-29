@@ -43,6 +43,9 @@ extern cstring *wallet_new_address(struct wallet *wlt);
 extern cstring *ser_wallet(const struct wallet *wlt);
 extern bool deser_wallet(struct wallet *wlt, struct const_buffer *buf);
 extern bool wallet_create(struct wallet *wlt, const void *seed, size_t seed_len);
+extern bool wallet_createAccount(struct wallet *wlt, const char *name);
+extern struct wallet_account *account_byname(struct wallet *wlt, const char *name);
+extern bool wallet_valid_name(const char *name);
 
 #define wallet_for_each_key_numbered(_wlt, _key, _num)			\
 	(_num) = 0;							\

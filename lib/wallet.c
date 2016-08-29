@@ -16,12 +16,26 @@
 #include <ccoin/serialize.h>
 #include <ccoin/util.h>
 
+#include <ctype.h>
 #include <assert.h>
 #include <stdio.h>
 
 struct hd_extended_key_serialized {
 	uint8_t data[78 + 1];	// 78 + NUL (the latter not written)
 };
+
+bool wallet_valid_name(const char *name)
+{
+	if (!name || (strlen(name) < 1) || (strlen(name) > 64))
+		return false;
+
+	unsigned int i;
+	for (i = 0; i < strlen(name); i++)
+		if (!isalnum(name[i]))
+			return false;
+
+	return true;
+}
 
 static void wallet_free_key(void *p)
 {
@@ -84,7 +98,7 @@ void wallet_free(struct wallet *wlt)
 	memset(wlt, 0, sizeof(*wlt));
 }
 
-static struct wallet_account *account_byname(struct wallet *wlt, const char *name)
+struct wallet_account *account_byname(struct wallet *wlt, const char *name)
 {
 	if (!wlt || !wlt->accounts || !wlt->accounts->len)
 		return NULL;
@@ -424,6 +438,46 @@ bool deser_wallet(struct wallet *wlt, struct const_buffer *buf)
 
 err_out:
 	return false;
+}
+
+bool wallet_createAccount(struct wallet *wlt, const char *name)
+{
+	// Verify valid name
+	if (!wallet_valid_name(name))
+		return false;
+
+	struct wallet_account *acct;
+
+	unsigned int i, nextIdx = 0;
+	for (i = 0; i < wlt->accounts->len; i++) {
+		// Verify name not duplicate
+		acct = parr_idx(wlt->accounts, i);
+		if (!strcmp(name, acct->name->str))
+			return false;
+
+		// Discover highest index + 1
+		if (acct->acct_idx >= nextIdx)
+			nextIdx = acct->acct_idx + 1;
+	}
+
+	// Create new account struct
+	acct = calloc(1, sizeof(*acct));
+	if (!acct)
+		return false;
+
+	acct->name = cstr_new(name);
+	if (!acct->name) {
+		free(acct);
+		return false;
+	}
+
+	acct->acct_idx = nextIdx;
+	acct->next_key_idx = 0;
+
+	// Add to wallet account list
+	parr_add(wlt->accounts, acct);
+
+	return true;
 }
 
 bool wallet_create(struct wallet *wlt, const void *seed, size_t seed_len)

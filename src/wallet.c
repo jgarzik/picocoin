@@ -403,3 +403,46 @@ void cur_wallet_dump(void)
 	printf("\n");
 }
 
+void cur_wallet_createAccount(const char *acct_name)
+{
+	if (!cur_wallet_load())
+		return;
+	struct wallet *wlt = cur_wallet;
+
+	if (!wallet_createAccount(wlt, acct_name)) {
+		fprintf(stderr, "wallet: creation of account %s failed\n", acct_name);
+		return;
+	}
+
+	if (!store_wallet(wlt)) {
+		fprintf(stderr, "wallet: failed to store\n");
+		return;
+	}
+}
+
+void cur_wallet_defaultAccount(const char *acct_name)
+{
+	if (!wallet_valid_name(acct_name)) {
+		fprintf(stderr, "Invalid account name %s\n", acct_name);
+		return;
+	}
+
+	if (!cur_wallet_load())
+		return;
+	struct wallet *wlt = cur_wallet;
+
+	struct wallet_account *acct = account_byname(wlt, acct_name);
+	if (!acct) {
+		fprintf(stderr, "wallet: unknown account %s\n", acct_name);
+		return;
+	}
+
+	cstr_free(wlt->def_acct, true);
+	wlt->def_acct = cstr_new(acct_name);
+
+	if (!store_wallet(wlt)) {
+		fprintf(stderr, "wallet: failed to store\n");
+		return;
+	}
+}
+

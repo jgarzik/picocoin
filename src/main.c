@@ -40,6 +40,8 @@ enum command_type {
 	CMD_WALLET_ADDR,
 	CMD_WALLET_DUMP,
 	CMD_WALLET_INFO,
+	CMD_ACCT_DEFAULT,
+	CMD_ACCT_CREATE,
 };
 
 const char *prog_name = "picocoin";
@@ -50,6 +52,7 @@ uint64_t instance_nonce;
 struct logging *log_state;
 bool debugging = false;
 static enum command_type opt_command = CMD_WALLET_INFO;
+static const char *opt_arg1 = NULL;
 
 static struct blkdb db;
 static unsigned int net_conn_timeout = 60;
@@ -89,6 +92,8 @@ static char global_doc[] =
 	"\tsettings - Display settings map.\n"
 	"\taddress - Generate a new address and output it. Store pair in wallet.\n"
 	"\tcreate - Initialize a new wallet. Refuses to initialize if the file exists.\n"
+	"\tcreateAccount - Create new HD account\n"
+	"\tdefault - Switch default HD account\n"
 	"\tnetsync - Synchronize with the network, sending and receiving payments.\n"
 	"\taddressList - List all address in the wallet.\n"
 	"\tdump - Dump entire wallet contents, including private keys.\n"
@@ -116,6 +121,29 @@ static error_t parse_no_opt (int key, char *arg, struct argp_state *state)
 
 	return 0;
 }
+
+static error_t parse_arg1_opt (int key, char *arg, struct argp_state *state)
+{
+	switch(key) {
+	case ARGP_KEY_ARG:
+		if (state->arg_num >= 1)	// too many arguments
+			argp_usage(state);
+
+		opt_arg1 = arg;
+		break;
+
+	case ARGP_KEY_END:
+		if (state->arg_num < 1)		// not enough arguments
+			argp_usage(state);
+		break;
+
+	default:
+		return ARGP_ERR_UNKNOWN;
+	}
+
+	return 0;
+}
+
 
 // ======================== command: chain-set ==========================
 
@@ -152,6 +180,19 @@ static struct argp argp_cmd_address = { cmd_no_options, parse_no_opt, NULL, cmd_
 static char cmd_create_doc[] = "Create new wallet\n";
 
 static struct argp argp_cmd_create = { cmd_no_options, parse_no_opt, NULL, cmd_create_doc };
+
+// ======================== command: createAccount ==========================
+
+static char cmd_createAccount_doc[] = "Create new HD account\n";
+static const char cmd_args_account_name_doc[] = "account-name";
+
+static struct argp argp_cmd_createAccount = { cmd_no_options, parse_arg1_opt, cmd_args_account_name_doc, cmd_createAccount_doc };
+
+// ======================== command: default ==========================
+
+static char cmd_default_doc[] = "Set default HD account\n";
+
+static struct argp argp_cmd_default = { cmd_no_options, parse_arg1_opt, cmd_args_account_name_doc, cmd_default_doc };
 
 // ======================== command: dump ==========================
 
@@ -223,6 +264,12 @@ static error_t parse_global_opt (int key, char *arg, struct argp_state *state)
 		} else if (strcmp(arg, "create") == 0) {
 			opt_command = CMD_WALLET_NEW;
 			parse_secondary_cmd(state, &argp_cmd_create, "create");
+		} else if (strcmp(arg, "createAccount") == 0) {
+			opt_command = CMD_ACCT_CREATE;
+			parse_secondary_cmd(state, &argp_cmd_createAccount, "createAccount");
+		} else if (strcmp(arg, "default") == 0) {
+			opt_command = CMD_ACCT_DEFAULT;
+			parse_secondary_cmd(state, &argp_cmd_default, "default");
 		} else if (strcmp(arg, "addressList") == 0) {
 			opt_command = CMD_WALLET_ADDR;
 			parse_secondary_cmd(state, &argp_cmd_addressList, "addressList");
@@ -602,15 +649,17 @@ int main (int argc, char *argv[])
 	chain_set();
 
 	switch (opt_command) {
-	case CMD_CHAIN_SET:		chain_set(); break;
-	case CMD_DNS_SEEDS:		list_dns_seeds(); break;
-	case CMD_LIST_SETTINGS:		list_settings(); break;
-	case CMD_NETSYNC:		network_sync(); break;
-	case CMD_ADDRESS_NEW:		cur_wallet_new_address(); break;
-	case CMD_WALLET_NEW:		cur_wallet_create(); break;
-	case CMD_WALLET_ADDR:		cur_wallet_addresses(); break;
-	case CMD_WALLET_DUMP:		cur_wallet_dump(); break;
-	case CMD_WALLET_INFO:		cur_wallet_info(); break;
+	case CMD_CHAIN_SET:	chain_set(); break;
+	case CMD_DNS_SEEDS:	list_dns_seeds(); break;
+	case CMD_LIST_SETTINGS:	list_settings(); break;
+	case CMD_NETSYNC:	network_sync(); break;
+	case CMD_ADDRESS_NEW:	cur_wallet_new_address(); break;
+	case CMD_WALLET_NEW:	cur_wallet_create(); break;
+	case CMD_WALLET_ADDR:	cur_wallet_addresses(); break;
+	case CMD_WALLET_DUMP:	cur_wallet_dump(); break;
+	case CMD_WALLET_INFO:	cur_wallet_info(); break;
+	case CMD_ACCT_CREATE:	cur_wallet_createAccount(opt_arg1); break;
+	case CMD_ACCT_DEFAULT:	cur_wallet_defaultAccount(opt_arg1); break;
 	}
 
 	free(log_state);
