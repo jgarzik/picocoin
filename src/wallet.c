@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <assert.h>
 #include <openssl/ripemd.h>
+#include <openssl/rand.h>               // for RAND_bytes
 #include <jansson.h>
 #include <ccoin/coredefs.h>
 #include "picocoin.h"
@@ -190,19 +191,8 @@ void cur_wallet_create(void)
 		return;
 	}
 
-	int rng_fd = open("/dev/urandom", O_RDONLY);
-	if (rng_fd < 0) {
-		perror("/dev/urandom open");
-		return;
-	}
-
 	char seed[256];
-	if (read(rng_fd, seed, sizeof(seed)) != sizeof(seed)) {
-		perror("/dev/urandom read");
-		return;
-	}
-
-	close(rng_fd);
+	RAND_bytes((unsigned char *) &seed[0], sizeof(seed));
 
 	char seed_str[(sizeof(seed) * 2) + 1];
 	encode_hex(seed_str, seed, sizeof(seed));
