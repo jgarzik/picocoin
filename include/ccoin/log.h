@@ -8,23 +8,23 @@
 #include <stdio.h>                      // for fprintf
 #include <stdbool.h>                    // for bool
 
-#define log_info(LOGMESSAGE, ...)						\
-            if ( log_state->logtofile ) {					\
-                fprintf(log_state->stream, "%s" LOGMESSAGE "\n",		\
-                    str_timenow(),						\
-                    ##__VA_ARGS__);						\
-            } else {								\
+#define log_info(LOGMESSAGE, ...)					\
+            if ( log_state->logtofile ) {				\
+                fprintf(log_state->stream, "%s" LOGMESSAGE "\n",	\
+                    str_timenow(),					\
+                    ##__VA_ARGS__);					\
+            } else {							\
                 fprintf(log_state->stream, LOGMESSAGE "\n", ##__VA_ARGS__); }
 
-#define log_error(LOGMESSAGE, ...)						\
-            fprintf(stderr, LOGMESSAGE "\n", ##__VA_ARGS__);			\
-            if ( log_state->logtofile ) {					\
-                fprintf(log_state->stream, "%s" LOGMESSAGE "\n",		\
-                    str_timenow(),						\
+#define log_error(LOGMESSAGE, ...)					\
+            fprintf(stderr, LOGMESSAGE "\n", ##__VA_ARGS__);		\
+            if ( log_state->logtofile ) {				\
+                fprintf(log_state->stream, "%s" LOGMESSAGE "\n",	\
+                    str_timenow(),					\
                     ##__VA_ARGS__); }
 
-#define log_debug(LOGMESSAGE, ...)						\
-            if ( log_state->debug ) {						\
+#define log_debug(LOGMESSAGE, ...)					\
+            if ( log_state->debug ) {					\
                 log_info(LOGMESSAGE, ##__VA_ARGS__); }
 
 #ifdef __cplusplus
