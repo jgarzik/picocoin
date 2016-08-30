@@ -4,12 +4,13 @@
  */
 #include "picocoin-config.h"
 
-#include <string.h>
-#include <assert.h>
-#include <openssl/ripemd.h>
-#include <openssl/sha.h>
-#include <ccoin/key.h>
-#include <ccoin/util.h>
+#include <assert.h>                     // for assert
+#include <string.h>                     // for NULL, memset
+
+#include <ccoin/crypto/ripemd160.h>     // for RIPEMD160_DIGEST_LENGTH
+#include <ccoin/crypto/sha2.h>          // for sha256_Raw
+#include <ccoin/key.h>                  // for bpks_lookup, bp_key, etc
+#include <ccoin/util.h>                 // for ARRAY_SIZE, bu_Hash160
 #include "libtest.h"
 
 static void keytest_secp256k1()
@@ -44,7 +45,7 @@ static void keytest()
 		const uint8_t test_secret[32] = { 0x1 };
 		const uint8_t test_data[] = { 1, 2, 3, 4, 5, 6, 7, 8 };
 		bu256_t hash;
-		SHA256(test_data, sizeof(test_data), (uint8_t *)&hash);
+		sha256_Raw(test_data, sizeof(test_data), (uint8_t *)&hash);
 
 		void *pub = NULL;
 		size_t publen = 0;

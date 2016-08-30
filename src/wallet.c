@@ -4,30 +4,34 @@
  */
 #include "picocoin-config.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <string.h>
-#include <fcntl.h>
-#include <assert.h>
-#include <openssl/ripemd.h>
-#include <openssl/rand.h>               // for RAND_bytes
-#include <jansson.h>
-#include <ccoin/coredefs.h>
-#include "picocoin.h"
 #include "wallet.h"
-#include <ccoin/message.h>
-#include <ccoin/address.h>
-#include <ccoin/serialize.h>
-#include <ccoin/key.h>
-#include <ccoin/util.h>
-#include <ccoin/mbr.h>
-#include <ccoin/hexcode.h>
-#include <ccoin/base58.h>
-#include <ccoin/hdkeys.h>
-#include <ccoin/compat.h>		/* for parr_new */
-#include <ccoin/wallet.h>
+#include "picocoin.h"                   // for cur_wallet, chain, setting
+
+#include <ccoin/address.h>              // for bp_pubkey_get_address
+#include <ccoin/base58.h>               // for base58_encode
+#include <ccoin/buffer.h>               // for const_buffer
+#include <ccoin/coredefs.h>             // for chain_info
+#include <ccoin/crypto/aes_util.h>      // for read_aes_file, etc
+#include <ccoin/cstr.h>                 // for cstring, cstr_free, etc
+#include <ccoin/hdkeys.h>               // for hd_extended_key_ser_priv
+#include <ccoin/hexcode.h>              // for encode_hex
+#include <ccoin/key.h>                  // for bp_privkey_get, etc
+#include <ccoin/parr.h>                 // for parr, parr_idx
+#include <ccoin/wallet.h>               // for wallet, wallet_free, etc
+#include <ccoin/compat.h>               // for parr_new
+
+#include <jansson.h>                    // for json_object_set_new, etc
+#include <openssl/rand.h>               // for RAND_bytes
+
+#include <assert.h>                     // for assert
+#include <stdbool.h>                    // for true, bool, false
+#include <stddef.h>                     // for size_t
+#include <stdint.h>                     // for uint8_t
+#include <stdio.h>                      // for fprintf, printf, stderr, etc
+#include <stdlib.h>                     // for free, calloc, getenv
+#include <string.h>                     // for strlen, memset
+#include <unistd.h>                     // for access, F_OK
+
 
 struct hd_extended_key_serialized {
 	uint8_t data[78 + 1];	// 78 + NUL (the latter not written)

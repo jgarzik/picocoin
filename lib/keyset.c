@@ -6,7 +6,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <openssl/ripemd.h>
+#include <ccoin/crypto/ripemd160.h>
 #include <ccoin/key.h>
 #include <ccoin/buffer.h>
 #include <ccoin/util.h>

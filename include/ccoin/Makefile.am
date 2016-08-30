@@ -2,6 +2,10 @@
 ccoinincludedir=$(includedir)/ccoin
 
 ccoininclude_HEADERS = \
+	crypto/hmac.h	\
+	crypto/ripemd160.h	\
+	crypto/sha1.h	\
+	crypto/sha2.h	\
 	address.h	\
 	addr_match.h	\
 	base58.h	\
@@ -37,3 +41,10 @@ ccoinnetinclude_HEADERS = \
     net/net.h	\
     net/netbase.h	\
     net/peerman.h
+
+ccoinaesincludedir = $(includedir)/ccoin/crypto
+
+ccoinaesinclude_HEADERS =	\
+    crypto/aes_util.h   \
+    crypto/ctaes.h
+

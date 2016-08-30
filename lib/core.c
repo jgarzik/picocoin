@@ -6,7 +6,6 @@
 
 #include <string.h>
 #include <time.h>
-#include <openssl/sha.h>
 #include <ccoin/core.h>
 #include <ccoin/util.h>
 #include <ccoin/coredefs.h>
