@@ -7,15 +7,15 @@
 
 #include <time.h>                       // for localtime, strftime, time, etc
 
-char *str_timenow() {
-    static char time_buf[22];
-    time_t now;
-    struct tm *tm_now;
+char *str_timenow(char *time_buf)
+{
+	time_t now;
+	struct tm tm_now;
 
-    time(&now);
-    tm_now = localtime(&now);
+	time(&now);
+	localtime_r(&now, &tm_now);
 
-    strftime(time_buf, 21, "%F %T ", tm_now);
+	strftime(time_buf, 21, "%F %T ", &tm_now);
 
-    return time_buf;
+	return time_buf;
 }

@@ -10,8 +10,9 @@
 
 #define log_info(LOGMESSAGE, ...)					\
             if ( log_state->logtofile ) {				\
+		char tmpstr[32];					\
                 fprintf(log_state->stream, "%s" LOGMESSAGE "\n",	\
-                    str_timenow(),					\
+                    str_timenow(tmpstr),				\
                     ##__VA_ARGS__);					\
             } else {							\
                 fprintf(log_state->stream, LOGMESSAGE "\n", ##__VA_ARGS__); }
@@ -19,8 +20,9 @@
 #define log_error(LOGMESSAGE, ...)					\
             fprintf(stderr, LOGMESSAGE "\n", ##__VA_ARGS__);		\
             if ( log_state->logtofile ) {				\
+		char tmpstr[32];					\
                 fprintf(log_state->stream, "%s" LOGMESSAGE "\n",	\
-                    str_timenow(),					\
+                    str_timenow(tmpstr),				\
                     ##__VA_ARGS__); }
 
 #define log_debug(LOGMESSAGE, ...)					\
@@ -39,7 +41,7 @@ struct logging {
 
 extern struct logging *log_state;
 
-char *str_timenow();
+char *str_timenow(char *strbuf);
 
 #ifdef __cplusplus
 }
