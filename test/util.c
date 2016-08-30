@@ -8,7 +8,6 @@
 #include <assert.h>
 #include <ccoin/util.h>
 #include <ccoin/net/netbase.h>
-#include <ccoin/log.h>
 
 static const char *s_a = "12345";
 static const char *s_b = "54321";
@@ -95,13 +94,6 @@ static void test_shuffle(void)
 	clist_free_ext(l, free);
 }
 
-static void test_log(void)
-{
-	char time_buf[32];
-	char *p = str_timenow(time_buf);
-	assert(p == &time_buf[0]);
-}
-
 int main (int argc, char *argv[])
 {
 	test_reverse_copy();
@@ -109,7 +101,6 @@ int main (int argc, char *argv[])
 	test_btc_decimals();
 	test_misc();
 	test_shuffle();
-	test_log();
 	return 0;
 }
 
