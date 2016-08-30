@@ -17,6 +17,8 @@ env:
     - BUILD=check
     - ENABLE_COVERAGE=no
     - ENABLE_VALGRIND=no
+    - secure: "rHwlRDO/xvFHScz9rCCUYVnf6okYLuSH9HMqvZPVwI/CFb9FlUnTYfXBnI0eEK/9PVrl2Q8CLxJpdUn0P7zSwcLlI1PaLWpx0W5meM4JDtYRaI4wbwNjOg2ziM20LgzEWeFSk+XvJQMuOEuW6z7T0NZl9se2MTfBfgQZs9cCH8WmMvjN2hFNXGfoROLbHtEGPo7pc0ob7WkAxQ3aJ1fm7ehCU1V7SxxrLFVWY37xrwRMeUBPLcV/F5owtZrOZFAB6burrrUy1kZhZEcrJRMrA8oFESK4cOdnpZEY5B3db3XBW1MtgFJXh+b6TbwkRIjYDgjt6OkGqAsgguaB3NJ1UENxT/S86Q6tvWRuh7E1d56IcGrb+BLF9S8KiYgr/iPfC8hmbGdV0PbLkSXL5/+03wMTmww4MwaDKq8TkMXRvuc8cdm73jxqoQhqhDxYbOr8z1zAFeCasPukE7unb7McuF85kdX1VAEcq7K70mz292BKGOVHi55KGpGf+QlXpecsjRIV7XkArK9NI1VyZDfJpsRjzBmz5K9wp08gT/bbKYuEeaQlkOk3b4qlSYGLA3HnYD0UweSYuEvux0flQoS6QAiYmTWRe5qmEVzo22L5h9x3f2+Fv93d7hwu1UAwLe5zs83YLURdzu6OQwAnk8imzya4hk3+nqU05PVFN9b65Fk="
+    - MAKEJOBS=-j3
 
   matrix:
     - BUILD=distcheck MAKEJOBS=-j3
@@ -37,9 +39,18 @@ addons:
       - valgrind
       - libtool
       - libltdl-dev
+  coverity_scan:
+    project:
+      name: "jgarzik/picocoin"
+      description: "Build submitted via Travis CI"
+    notification_email: jeff@bloq.com
+    build_command_prepend: "./autogen.sh && ./configure && make -s clean"
+    build_command:   "make -s check"
+    branch_pattern: master
 
 before_install:
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew update && brew upgrade; fi
+  - echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
 
 install:
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install jansson; fi
@@ -64,3 +75,4 @@ script:
 
 after_success:
   - if [ "$ENABLE_COVERAGE" = "yes" ]; then lcov --compat-libtool --directory . --capture --output-file coverage.info && coveralls-lcov coverage.info; fi
+
