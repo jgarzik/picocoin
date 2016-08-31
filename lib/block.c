@@ -88,7 +88,7 @@ parr *bp_block_merkle_tree(const struct bp_block *block)
 	if (!block->vtx || !block->vtx->len)
 		return NULL;
 
-	parr *arr = parr_new(0, bu256_free);
+	parr *arr = parr_new(0, bu256_freep);
 
 	unsigned int i;
 	for (i = 0; i < block->vtx->len; i++) {
@@ -141,7 +141,7 @@ parr *bp_block_merkle_branch(const struct bp_block *block,
 	if (!block || !block->vtx || !mrktree || (txidx >= block->vtx->len))
 		return NULL;
 
-	parr *ret = parr_new(0, bu256_free);
+	parr *ret = parr_new(0, bu256_freep);
 
 	unsigned int j = 0, nSize;
 	for (nSize = block->vtx->len; nSize > 1; nSize = (nSize + 1) / 2) {

@@ -72,12 +72,14 @@ cstring *message_str(const unsigned char netmagic[4],
 bool deser_msg_addr(unsigned int protover, struct msg_addr *ma,
 		    struct const_buffer *buf)
 {
-	memset(ma, 0, sizeof(*ma));
+	msg_addr_free(ma);
 
 	uint32_t vlen;
 	if (!deser_varlen(&vlen, buf)) return false;
 
-	ma->addrs = parr_new(vlen, free);
+	ma->addrs = parr_new(vlen, bp_addr_freep);
+	if (!ma->addrs)
+		return false;
 
 	unsigned int i;
 	for (i = 0; i < vlen; i++) {
@@ -124,6 +126,9 @@ cstring *ser_msg_addr(unsigned int protover, const struct msg_addr *ma)
 
 void msg_addr_free(struct msg_addr *ma)
 {
+	if (!ma)
+		return;
+
 	if (ma->addrs) {
 		parr_free(ma->addrs, true);
 		ma->addrs = NULL;

@@ -108,11 +108,13 @@ unsigned long bu160_hash(const void *key_)
 	return key->dword[BU160_WORDS / 2]; /* return rand int in the middle */
 }
 
-void bu256_free(void *bu256_v)
+void bu256_freep(void *bu256_v)
 {
 	bu256_t *v = bu256_v;
 	if (!v)
 		return;
+
+	bu256_free(v);
 
 	memset(v, 0, sizeof(*v));
 	free(v);

@@ -34,6 +34,19 @@ void ser_bp_addr(cstring *s, unsigned int protover, const struct bp_address *add
 	ser_u16(s, addr->port);
 }
 
+void bp_addr_freep(void *p)
+{
+	struct bp_address *addr = p;
+
+	if (!addr)
+		return;
+
+	bp_addr_free(addr);
+
+	memset(addr, 0, sizeof(*addr));
+	free(addr);
+}
+
 void bp_inv_init(struct bp_inv *inv)
 {
 	memset(inv, 0, sizeof(*inv));
@@ -85,7 +98,7 @@ void bp_locator_push(struct bp_locator *locator, const bu256_t *hash_in)
 {
 	/* TODO: replace '16' with number based on real world usage */
 	if (!locator->vHave)
-		locator->vHave = parr_new(16, bu256_free);
+		locator->vHave = parr_new(16, bu256_freep);
 
 	bu256_t *hash = bu256_new(hash_in);
 	parr_add(locator->vHave, hash);

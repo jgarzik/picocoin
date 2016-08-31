@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <ccoin/message.h>
+#include <ccoin/net/net.h>
 
 static void check_buffer(const cstring *buffer,
                          const void *expected_data,
@@ -305,9 +306,55 @@ static void test_version()
     }
 }
 
+static void test_addr(void)
+{
+	static const unsigned char pchLocal[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
+	struct bp_address *addr;
+
+	struct msg_addr ma;
+
+	msg_addr_init(&ma);
+
+	ma.addrs = parr_new(1, bp_addr_freep);
+
+	addr = calloc(1, sizeof(*addr));
+	assert(addr != NULL);
+
+	bp_addr_init(addr);
+
+	uint32_t time32 = (uint32_t) time(NULL);
+	addr->nTime = htole32(time32);
+	memcpy(&addr->ip[0], &pchLocal[0], sizeof(addr->ip));
+	addr->port = htole32(8333);
+
+	bool rc = parr_add(ma.addrs, addr);
+	assert(rc == true);
+
+	cstring *addr_ser = ser_msg_addr(PROTO_VERSION, &ma);
+	assert(addr_ser != NULL);
+	assert(addr_ser->len > 0);
+
+	struct const_buffer buf = { addr_ser->str, addr_ser->len };
+
+	// note: overwrites 'ma' objects, freeing them
+
+	rc = deser_msg_addr(PROTO_VERSION, &ma, &buf);
+	assert(rc == true);
+	assert(ma.addrs != NULL);
+	assert(ma.addrs->len == 1);
+
+	addr = parr_idx(ma.addrs, 0);
+	assert(addr->nTime == le32toh(time32));
+	assert(memcmp(&addr->ip[0], &pchLocal[0], sizeof(addr->ip)) == 0);
+	assert(le32toh(addr->port) == 8333);
+
+	msg_addr_free(&ma);
+}
+
 int main(int argc, char **argv)
 {
     test_version();
+    test_addr();
 
     return 0;
 }

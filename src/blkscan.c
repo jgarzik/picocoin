@@ -454,7 +454,7 @@ int main (int argc, char *argv[])
 	bpks_init(&bpks);
 
 	tx_idx = bp_hashtab_new_ext(bu256_hash, bu256_equal_,
-				    (bp_freefunc) bu256_free, NULL);
+				    bu256_freep, NULL);
 
 	load_addresses();
 	scan_blocks();

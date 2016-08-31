@@ -53,6 +53,7 @@ extern bool deser_bp_addr(unsigned int protover,
 		struct bp_address *addr, struct const_buffer *buf);
 extern void ser_bp_addr(cstring *s, unsigned int protover, const struct bp_address *addr);
 static inline void bp_addr_free(struct bp_address *addr) {}
+extern void bp_addr_freep(void *p);
 
 static inline void bp_addr_copy(struct bp_address *dest,
 				const struct bp_address *src)

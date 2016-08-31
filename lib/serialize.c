@@ -255,7 +255,7 @@ bool deser_u256_array(parr **ao, struct const_buffer *buf)
 	if (!vlen)
 		return true;
 
-	arr = parr_new(vlen, bu256_free);
+	arr = parr_new(vlen, bu256_freep);
 	if (!arr)
 		return false;
 
@@ -265,7 +265,7 @@ bool deser_u256_array(parr **ao, struct const_buffer *buf)
 
 		n = bu256_new(NULL);
 		if (!deser_u256(n, buf)) {
-			bu256_free(n);
+			bu256_freep(n);
 			goto err_out;
 		}
 
