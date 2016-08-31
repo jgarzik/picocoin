@@ -46,7 +46,7 @@ addons:
     notification_email: jeff@bloq.com
     build_command_prepend: "./autogen.sh && ./configure && make -s clean"
     build_command:   "make -s check"
-    branch_pattern: master
+    branch_pattern: coverity_scan
 
 before_install:
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew update && brew upgrade; fi
