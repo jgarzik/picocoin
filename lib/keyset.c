@@ -16,9 +16,9 @@ void bpks_init(struct bp_keyset *ks)
 	memset(ks, 0, sizeof(*ks));
 
 	ks->pub = bp_hashtab_new_ext(buffer_hash, buffer_equal,
-				     (bp_freefunc) buffer_free, NULL);
+				     buffer_freep, NULL);
 	ks->pubhash = bp_hashtab_new_ext(buffer_hash, buffer_equal,
-					 (bp_freefunc) buffer_free, NULL);
+					 buffer_freep, NULL);
 }
 
 bool bpks_add(struct bp_keyset *ks, struct bp_key *key)

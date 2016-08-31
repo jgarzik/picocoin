@@ -67,6 +67,18 @@ void ser_bp_inv(cstring *s, const struct bp_inv *inv)
 	ser_u256(s, &inv->hash);
 }
 
+void bp_inv_freep(void *bp_inv_p)
+{
+	struct bp_inv *inv = bp_inv_p;
+	if (!inv)
+		return;
+
+	bp_inv_free(inv);
+
+	memset(inv, 0, sizeof(*inv));
+	free(inv);
+}
+
 bool deser_bp_locator(struct bp_locator *locator, struct const_buffer *buf)
 {
 	bp_locator_free(locator);
@@ -160,7 +172,7 @@ void bp_txin_free(struct bp_txin *txin)
 	}
 }
 
-void bp_txin_free_cb(void *data)
+void bp_txin_freep(void *data)
 {
 	if (!data)
 		return;
@@ -217,7 +229,7 @@ void bp_txout_free(struct bp_txout *txout)
 	}
 }
 
-void bp_txout_free_cb(void *data)
+void bp_txout_freep(void *data)
 {
 	if (!data)
 		return;
@@ -261,8 +273,8 @@ bool deser_bp_tx(struct bp_tx *tx, struct const_buffer *buf)
 {
 	bp_tx_free(tx);
 
-	tx->vin = parr_new(8, bp_txin_free_cb);
-	tx->vout = parr_new(8, bp_txout_free_cb);
+	tx->vin = parr_new(8, bp_txin_freep);
+	tx->vout = parr_new(8, bp_txout_freep);
 
 	if (!deser_u32(&tx->nVersion, buf)) return false;
 
@@ -360,6 +372,18 @@ void bp_tx_free(struct bp_tx *tx)
 	tx->sha256_valid = false;
 }
 
+void bp_tx_freep(void *p)
+{
+	struct bp_tx *tx = p;
+	if (!tx)
+		return;
+
+	bp_tx_free(tx);
+
+	memset(tx, 0, sizeof(*tx));
+	free(tx);
+}
+
 void bp_tx_calc_sha256(struct bp_tx *tx)
 {
 	if (tx->sha256_valid)
@@ -404,7 +428,7 @@ void bp_tx_copy(struct bp_tx *dest, const struct bp_tx *src)
 	else {
 		unsigned int i;
 
-		dest->vin = parr_new(src->vin->len, bp_txin_free_cb);
+		dest->vin = parr_new(src->vin->len, bp_txin_freep);
 
 		for (i = 0; i < src->vin->len; i++) {
 			struct bp_txin *txin_old, *txin_new;
@@ -421,8 +445,7 @@ void bp_tx_copy(struct bp_tx *dest, const struct bp_tx *src)
 	else {
 		unsigned int i;
 
-		dest->vout = parr_new(src->vout->len,
-						  bp_txout_free_cb);
+		dest->vout = parr_new(src->vout->len, bp_txout_freep);
 
 		for (i = 0; i < src->vout->len; i++) {
 			struct bp_txout *txout_old, *txout_new;
@@ -455,7 +478,7 @@ bool deser_bp_block(struct bp_block *block, struct const_buffer *buf)
 	if (buf->len == 0)
 		return true;
 
-	block->vtx = parr_new(512, free);
+	block->vtx = parr_new(512, bp_tx_freep);
 
 	uint32_t vlen;
 	if (!deser_varlen(&vlen, buf)) return false;
@@ -507,23 +530,13 @@ void ser_bp_block(cstring *s, const struct bp_block *block)
 		}
 	}
 }
-
 void bp_block_vtx_free(struct bp_block *block)
 {
-	if (block && block->vtx) {
-		unsigned int i;
+	if (!block || !block->vtx)
+		return;
 
-		for (i = 0; i < block->vtx->len; i++) {
-			struct bp_tx *tx;
-
-			tx = parr_idx(block->vtx, i);
-			bp_tx_free(tx);
-		}
-
-		parr_free(block->vtx, true);
-
-		block->vtx = NULL;
-	}
+	parr_free(block->vtx, true);
+	block->vtx = NULL;
 }
 
 void bp_block_free(struct bp_block *block)
@@ -532,6 +545,18 @@ void bp_block_free(struct bp_block *block)
 		return;
 
 	bp_block_vtx_free(block);
+}
+
+void bp_block_freep(void *p)
+{
+	struct bp_block *block = p;
+	if (!block)
+		return;
+
+	bp_block_free(block);
+
+	memset(block, 0, sizeof(*block));
+	free(block);
 }
 
 void bp_block_free_cb(void *data)

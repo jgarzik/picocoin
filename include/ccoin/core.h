@@ -70,6 +70,7 @@ extern void bp_inv_init(struct bp_inv *inv);
 extern bool deser_bp_inv(struct bp_inv *inv, struct const_buffer *buf);
 extern void ser_bp_inv(cstring *s, const struct bp_inv *inv);
 static inline void bp_inv_free(struct bp_inv *inv) {}
+extern void bp_inv_freep(void *bp_inv_p);
 
 struct bp_locator {
 	uint32_t	nVersion;
@@ -123,7 +124,7 @@ extern void bp_txin_init(struct bp_txin *txin);
 extern bool deser_bp_txin(struct bp_txin *txin, struct const_buffer *buf);
 extern void ser_bp_txin(cstring *s, const struct bp_txin *txin);
 extern void bp_txin_free(struct bp_txin *txin);
-extern void bp_txin_free_cb(void *data);
+extern void bp_txin_freep(void *data);
 static inline bool bp_txin_valid(const struct bp_txin *txin) { return true; }
 extern void bp_txin_copy(struct bp_txin *dest, const struct bp_txin *src);
 
@@ -136,7 +137,7 @@ extern void bp_txout_init(struct bp_txout *txout);
 extern bool deser_bp_txout(struct bp_txout *txout, struct const_buffer *buf);
 extern void ser_bp_txout(cstring *s, const struct bp_txout *txout);
 extern void bp_txout_free(struct bp_txout *txout);
-extern void bp_txout_free_cb(void *data);
+extern void bp_txout_freep(void *data);
 extern void bp_txout_set_null(struct bp_txout *txout);
 extern void bp_txout_copy(struct bp_txout *dest, const struct bp_txout *src);
 
@@ -166,6 +167,7 @@ extern bool deser_bp_tx(struct bp_tx *tx, struct const_buffer *buf);
 extern void ser_bp_tx(cstring *s, const struct bp_tx *tx);
 extern void bp_tx_free_vout(struct bp_tx *tx);
 extern void bp_tx_free(struct bp_tx *tx);
+extern void bp_tx_freep(void *bp_tx_p);
 extern bool bp_tx_valid(const struct bp_tx *tx);
 extern void bp_tx_calc_sha256(struct bp_tx *tx);
 extern unsigned int bp_tx_ser_size(const struct bp_tx *tx);
@@ -239,6 +241,7 @@ extern void bp_block_init(struct bp_block *block);
 extern bool deser_bp_block(struct bp_block *block, struct const_buffer *buf);
 extern void ser_bp_block(cstring *s, const struct bp_block *block);
 extern void bp_block_free(struct bp_block *block);
+extern void bp_block_freep(void *bp_block_p);
 extern void bp_block_vtx_free(struct bp_block *block);
 extern void bp_block_calc_sha256(struct bp_block *block);
 extern void bp_block_merkle(bu256_t *vo, const struct bp_block *block);

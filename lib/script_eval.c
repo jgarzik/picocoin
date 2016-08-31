@@ -92,7 +92,7 @@ void bp_tx_sighash(bu256_t *hash, const cstring *scriptCode,
 	if ((nHashType & 0x1f) == SIGHASH_NONE) {
 		/* Wildcard payee */
 		bp_tx_free_vout(&txTmp);
-		txTmp.vout = parr_new(1, bp_txout_free_cb);
+		txTmp.vout = parr_new(1, bp_txout_freep);
 
 		/* Let the others update at will */
 		for (i = 0; i < txTmp.vin->len; i++) {
@@ -596,7 +596,7 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 	struct bscript_op op;
 	bool rc = false;
 	cstring *vfExec = cstr_new(NULL);
-	parr *altstack = parr_new(0, buffer_free);
+	parr *altstack = parr_new(0, buffer_freep);
 	mpz_t bn;
 	mpz_init(bn);
 
@@ -1387,7 +1387,7 @@ bool bp_script_verify(const cstring *scriptSig, const cstring *scriptPubKey,
 		      unsigned int flags, int nHashType)
 {
 	bool rc = false;
-	parr *stack = parr_new(0, buffer_free);
+	parr *stack = parr_new(0, buffer_freep);
 	parr *stackCopy = NULL;
 
 	struct const_buffer sigbuf = { scriptSig->str, scriptSig->len };
@@ -1398,7 +1398,7 @@ bool bp_script_verify(const cstring *scriptSig, const cstring *scriptPubKey,
 		goto out;
 
 	if (flags & SCRIPT_VERIFY_P2SH) {
-		stackCopy = parr_new(stack->len, buffer_free);
+		stackCopy = parr_new(stack->len, buffer_freep);
 		stack_copy(stackCopy, stack);
 	}
 
@@ -1421,7 +1421,7 @@ bool bp_script_verify(const cstring *scriptSig, const cstring *scriptPubKey,
 
 		cstring *pubkey2 = cstr_new_buf(pubkey2_buf->p, pubkey2_buf->len);
 
-		buffer_free(pubkey2_buf);
+		buffer_freep(pubkey2_buf);
 
 		bool rc2 = bp_script_eval(stackCopy, pubkey2, txTo, nIn,
 					  flags, nHashType);

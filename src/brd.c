@@ -516,7 +516,7 @@ static void readprep_blocks_file(void)
 static void init_orphans(void)
 {
 	orphans = bp_hashtab_new_ext(bu256_hash, bu256_equal_,
-				     bu256_freep, (bp_freefunc) buffer_free);
+				     bu256_freep, buffer_freep);
 }
 
 static bool have_orphan(const bu256_t *v)

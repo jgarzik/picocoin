@@ -48,8 +48,8 @@ bool bp_txout_match(const struct bp_txout *txout,
 	}
 
 out:
-	clist_free_ext(addrs.pub, buffer_free);
-	clist_free_ext(addrs.pubhash, buffer_free);
+	clist_free_ext(addrs.pub, buffer_freep);
+	clist_free_ext(addrs.pubhash, buffer_freep);
 
 	return rc;
 }

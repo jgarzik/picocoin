@@ -28,13 +28,24 @@ bool buffer_equal(const void *a_, const void *b_)
 	return memcmp(a->p, b->p, a->len) == 0;
 }
 
-void buffer_free(void *struct_buffer)
+void buffer_free(struct buffer *buf)
+{
+	if (!buf)
+		return;
+
+	free(buf->p);
+	buf->p = NULL;
+}
+
+void buffer_freep(void *struct_buffer)
 {
 	struct buffer *buf = struct_buffer;
 	if (!buf)
 		return;
 
-	free(buf->p);
+	buffer_free(buf);
+
+	memset(buf, 0, sizeof(*buf));
 	free(buf);
 }
 

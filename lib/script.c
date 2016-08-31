@@ -231,11 +231,11 @@ void bsp_addr_free(struct bscript_addr *addrs)
 		return;
 
 	if (addrs->pub) {
-		clist_free_ext(addrs->pub, buffer_free);
+		clist_free_ext(addrs->pub, buffer_freep);
 		addrs->pub = NULL;
 	}
 	if (addrs->pubhash) {
-		clist_free_ext(addrs->pubhash, buffer_free);
+		clist_free_ext(addrs->pubhash, buffer_freep);
 		addrs->pubhash = NULL;
 	}
 }

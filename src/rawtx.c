@@ -233,7 +233,7 @@ static void append_input(char *txid_str, char *vout_str)
 static void mutate_inputs(void)
 {
 	if (!tx.vin)
-		tx.vin = parr_new(8, bp_txin_free_cb);
+		tx.vin = parr_new(8, bp_txin_freep);
 
 	// delete inputs
 	clist *tmp = opt_del_txin;
@@ -303,7 +303,7 @@ static void append_output(char *addr_str, char *amount_str)
 static void mutate_outputs(void)
 {
 	if (!tx.vout)
-		tx.vout = parr_new(8, bp_txout_free_cb);
+		tx.vout = parr_new(8, bp_txout_freep);
 
 	// delete outputs
 	clist *tmp = opt_del_txout;

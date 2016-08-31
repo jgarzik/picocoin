@@ -270,8 +270,8 @@ static void print_txout(bool show_from, unsigned int i, struct bp_txout *txout)
 	printf("\n");
 
 out:
-        clist_free_ext(addrs.pub, buffer_free);
-        clist_free_ext(addrs.pubhash, buffer_free);
+        clist_free_ext(addrs.pub, buffer_freep);
+        clist_free_ext(addrs.pubhash, buffer_freep);
 }
 
 static void print_txouts(struct bp_tx *tx, int idx)
