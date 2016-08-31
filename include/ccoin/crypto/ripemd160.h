@@ -12,10 +12,10 @@ typedef struct _RIPEMD160_CTX {
 } RIPEMD160_CTX;
 
 void ripemd160_Init(RIPEMD160_CTX *ctx);
-void ripemd160_Update(RIPEMD160_CTX *ctx, const uint8_t *input, uint32_t ilen);
+void ripemd160_Update(RIPEMD160_CTX *ctx, const void *input, uint32_t ilen);
 void ripemd160_Final(uint8_t output[RIPEMD160_DIGEST_LENGTH],
 		     RIPEMD160_CTX *ctx);
-void ripemd160(const uint8_t *msg,
+void ripemd160(const void *msg,
 	       uint32_t msg_len,
 	       uint8_t hash[RIPEMD160_DIGEST_LENGTH]);
 

@@ -251,8 +251,9 @@ void ripemd160_process( RIPEMD160_CTX *ctx, const uint8_t data[64] )
 /*
  * RIPEMD-160 process buffer
  */
-void ripemd160_Update( RIPEMD160_CTX *ctx, const uint8_t *input, uint32_t ilen )
+void ripemd160_Update( RIPEMD160_CTX *ctx, const void *input_p, uint32_t ilen )
 {
+    const uint8_t *input = input_p;
     uint32_t fill;
     uint32_t left;
 
@@ -330,7 +331,7 @@ void ripemd160_Final( uint8_t output[20], RIPEMD160_CTX *ctx )
 /*
  * output = RIPEMD-160( input buffer )
  */
-void ripemd160(const uint8_t *msg, uint32_t msg_len, uint8_t hash[20])
+void ripemd160(const void *msg, uint32_t msg_len, uint8_t hash[20])
 {
     RIPEMD160_CTX ctx;
     ripemd160_Init( &ctx );

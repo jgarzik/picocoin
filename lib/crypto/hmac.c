@@ -27,8 +27,10 @@
 
 #define MEMSET_BZERO(p,l)	memset((p), 0, (l))
 
-void hmac_sha256(const uint8_t *key, const uint32_t keylen, const uint8_t *msg, const uint32_t msglen, uint8_t *hmac)
+void hmac_sha256(const void *key_p, const uint32_t keylen, const void *msg_p, const uint32_t msglen, uint8_t *hmac)
 {
+	const uint8_t *key = key_p;
+	const uint8_t *msg = msg_p;
 	int i;
 	uint8_t buf[SHA256_BLOCK_LENGTH], o_key_pad[SHA256_BLOCK_LENGTH], i_key_pad[SHA256_BLOCK_LENGTH];
 	SHA256_CTX ctx;
@@ -59,8 +61,10 @@ void hmac_sha256(const uint8_t *key, const uint32_t keylen, const uint8_t *msg, 
 	MEMSET_BZERO(i_key_pad, sizeof(i_key_pad));
 }
 
-void hmac_sha512(const uint8_t *key, const uint32_t keylen, const uint8_t *msg, const uint32_t msglen, uint8_t *hmac)
+void hmac_sha512(const void *key_p, const uint32_t keylen, const void *msg_p, const uint32_t msglen, uint8_t *hmac)
 {
+	const uint8_t *key = key_p;
+	const uint8_t *msg = msg_p;
 	int i;
 	uint8_t buf[SHA512_BLOCK_LENGTH], o_key_pad[SHA512_BLOCK_LENGTH], i_key_pad[SHA512_BLOCK_LENGTH];
 	SHA512_CTX ctx;

@@ -159,8 +159,9 @@ void sha1_Init(SHA1_CTX *ctx)
     Initialize(ctx->s);
 }
 
-void sha1_Update(SHA1_CTX *ctx, const unsigned char* data, size_t len)
+void sha1_Update(SHA1_CTX *ctx, const void *data_p, size_t len)
 {
+    const unsigned char* data = data_p;
     const unsigned char* end = data + len;
     size_t bufsize = ctx->bytes % 64;
     if (bufsize && bufsize + len >= 64) {
@@ -198,7 +199,7 @@ void sha1_Final(unsigned char hash[SHA1_DIGEST_LENGTH], SHA1_CTX *ctx)
     WriteBE32(hash + 16, ctx->s[4]);
 }
 
-void sha1_Raw(const uint8_t *data, size_t len, uint8_t digest[SHA1_DIGEST_LENGTH])
+void sha1_Raw(const void *data, size_t len, uint8_t digest[SHA1_DIGEST_LENGTH])
 {
     SHA1_CTX ctx;
     sha1_Init(&ctx);

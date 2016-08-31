@@ -12,6 +12,7 @@ clist
 cstr
 ctaes
 coredefs
+crypto
 fileio
 hash
 hashtab

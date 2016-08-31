@@ -22,9 +22,9 @@ typedef struct _SHA1_CTX {
 } SHA1_CTX;
 
 void sha1_Init(SHA1_CTX *);
-void sha1_Update(SHA1_CTX *, const uint8_t* data, size_t len);
+void sha1_Update(SHA1_CTX *, const void *data, size_t len);
 void sha1_Final(uint8_t[SHA1_DIGEST_LENGTH], SHA1_CTX *);
-void sha1_Raw(const uint8_t *, size_t, uint8_t[SHA1_DIGEST_LENGTH]);
+void sha1_Raw(const void *, size_t, uint8_t[SHA1_DIGEST_LENGTH]);
 
 #ifdef __cplusplus
 }
