@@ -349,6 +349,7 @@ static void test_addr(void)
 	assert(le32toh(addr->port) == 8333);
 
 	msg_addr_free(&ma);
+	cstr_free(addr_ser, true);
 }
 
 int main(int argc, char **argv)
