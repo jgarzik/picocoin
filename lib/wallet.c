@@ -481,7 +481,7 @@ bool wallet_create(struct wallet *wlt, const void *seed, size_t seed_len)
 	struct hd_extended_key *hdkey;
 	hdkey = calloc(1, sizeof(*hdkey));
 	if (!hd_extended_key_init(hdkey) ||
-	    !hd_extended_key_generate_master(hdkey, seed, sizeof(seed)))
+	    !hd_extended_key_generate_master(hdkey, seed, seed_len))
 		goto err_out_hdkey;
 
 	struct wallet_account *acct;
