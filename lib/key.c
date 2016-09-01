@@ -194,8 +194,11 @@ bool bp_pubkey_checklowS(const void *sig_, size_t sig_len)
 }
 
 bool bp_sign(const struct bp_key *key, const void *data, size_t data_len,
-	     void **sig_, size_t *sig_len_)
+	     void **sig_out, size_t *sig_len_out)
 {
+	*sig_out = NULL;
+	*sig_len_out = 0;
+
 	secp256k1_ecdsa_signature sig;
 
 	if (32 != data_len) {
@@ -219,15 +222,18 @@ bool bp_sign(const struct bp_key *key, const void *data, size_t data_len,
 		return false;
 	}
 
-	*sig_ = malloc(72);
-	*sig_len_ = 72;
+	size_t sig_len = 72;
+	void *sig_p = malloc(sig_len);
+	if (!sig_p)
+		return false;
 
-	if (!secp256k1_ecdsa_signature_serialize_der(ctx, *sig_, sig_len_, &sig)) {
-		free(sig_);
-		*sig_ = NULL;
+	if (!secp256k1_ecdsa_signature_serialize_der(ctx, sig_p, &sig_len, &sig)) {
+		free(sig_p);
 		return false;
 	}
 
+	*sig_out = sig_p;
+	*sig_len_out = sig_len;
 	return true;
 }
 
