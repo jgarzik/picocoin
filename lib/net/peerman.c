@@ -180,13 +180,13 @@ struct peer_manager *peerman_read(void *peers_file)
 	while (fread_message(fd, &msg, &read_ok)) {
 		if (!peerman_read_rec(peers, &msg)) {
 			log_error("peerman: read record failed");
-			goto err_out;
+			goto err_out_fd;
 		}
 	}
 
 	if (!read_ok) {
 		log_error("peerman: read I/O failed");
-		goto err_out;
+		goto err_out_fd;
 	}
 
 	free(msg.data);
@@ -194,6 +194,9 @@ struct peer_manager *peerman_read(void *peers_file)
 
 	return peers;
 
+err_out_fd:
+	free(msg.data);
+	close(fd);
 err_out:
 	peerman_free(peers);
 	return NULL;
