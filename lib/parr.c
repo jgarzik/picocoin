@@ -34,8 +34,10 @@ parr *parr_new(size_t res, void (*free_f)(void *))
 	pa->elem_free_f = free_f;
 	if (res == 0)
 		pa->data = NULL;
-	else if (!parr_grow(pa, res))
+	else if (!parr_grow(pa, res)) {
+		parr_free(pa, true);
 		return NULL;
+	}
 
 	return pa;
 }
