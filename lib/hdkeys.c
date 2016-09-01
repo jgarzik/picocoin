@@ -80,13 +80,16 @@ bool hd_extended_key_ser_pub(const struct hd_extended_key *ek, cstring *s)
 {
 	hd_extended_key_ser_base(ek, s, MAIN_PUBLIC);
 
-	void *pub;
-	size_t pub_len;
-	if (bp_pubkey_get(&ek->key, &pub, &pub_len) && 33 == pub_len) {
-		ser_bytes(s, pub, 33);
-		free(pub);
-		return true;
+	void *pub = NULL;
+	size_t pub_len = 0;
+	if (bp_pubkey_get(&ek->key, &pub, &pub_len)) {
+		if (33 == pub_len) {
+			ser_bytes(s, pub, 33);
+			free(pub);
+			return true;
+		}
 	}
+	free(pub);
 	return false;
 }
 
