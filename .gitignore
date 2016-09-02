@@ -32,5 +32,6 @@ test-driver
 # app-specific
 picocoin*.tar.gz
 picocoin-config.h*
+picocoin*.deb
 
 .project

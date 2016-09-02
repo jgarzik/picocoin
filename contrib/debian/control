@@ -1,8 +1,8 @@
 Source: picocoin
 Priority: optional
 Maintainer: Joel DeJesus <dejesus.joel@e-flamingo.jp>
-Build-Depends: debhelper (>= 9), libcrypto++-dev, libevent-dev, libjansson-dev, libc6-dev
-Standards-Version: 3.9.5
+Build-Depends: debhelper (>= 8.0.0), autotools-dev, libssl-dev, libgmp-dev, libevent-dev, libjansson-dev, libc6-dev
+Standards-Version: 3.9.4
 Section: libs
 #Homepage: <insert the upstream URL, if relevant>
 #Vcs-Git: git://anonscm.debian.org/collab-maint/picocoin.git
