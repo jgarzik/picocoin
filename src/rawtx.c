@@ -153,9 +153,10 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
 		addrstr[partlen] = 0;
 
 		cstring *payload = base58_decode_check(NULL, addrstr);
-		if (!payload || (payload->len != 21))
-			return ARGP_ERR_UNKNOWN;
+		bool payload_invalid = (!payload || (payload->len != 21));
 		cstr_free(payload, true);
+		if (payload_invalid)
+			return ARGP_ERR_UNKNOWN;
 
 		opt_txout = clist_append(opt_txout, strdup(arg));
 		break;
@@ -285,7 +286,7 @@ static void append_output(char *addr_str, char *amount_str)
 	uint64_t amt = (uint64_t) strtoull(amount_str, NULL, 10);
 
 	struct bp_txout *txout = calloc(1, sizeof(struct bp_txout));
-	if (!txout) {
+	if (!txout || !payload) {
 		fprintf(stderr, "OOM\n");
 		exit(1);
 	}

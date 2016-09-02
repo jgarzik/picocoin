@@ -111,7 +111,8 @@ static void print_ek_public(const struct hd_extended_key *ek)
 
 	void *pub;
 	size_t pub_len = 0;
-	bp_pubkey_get(&ek->key, &pub, &pub_len);
+	bool rc = bp_pubkey_get(&ek->key, &pub, &pub_len);
+	assert(rc == true);
 	printf(" pub key   : ");
 	print_n(pub, pub_len); NEWLINE;
 	free(pub);

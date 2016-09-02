@@ -15,7 +15,8 @@ cstring *bp_pubkey_get_address(const struct bp_key *key, unsigned char addrtype)
 	void *pubkey = NULL;
 	size_t pk_len = 0;
 
-	bp_pubkey_get(key, &pubkey, &pk_len);
+	if (!bp_pubkey_get(key, &pubkey, &pk_len))
+		return NULL;
 
 	unsigned char md160[RIPEMD160_DIGEST_LENGTH];
 
