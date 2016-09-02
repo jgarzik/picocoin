@@ -118,6 +118,9 @@ bool bp_key_secret_set(struct bp_key *key, const void *privkey_, size_t pk_len)
 
 bool bp_privkey_get(const struct bp_key *key, void **privkey, size_t *pk_len)
 {
+	*privkey = NULL;
+	*pk_len = 0;
+
 	secp256k1_context *ctx = get_secp256k1_context();
 	if (!ctx) {
 		return false;
@@ -138,6 +141,9 @@ bool bp_privkey_get(const struct bp_key *key, void **privkey, size_t *pk_len)
 
 bool bp_pubkey_get(const struct bp_key *key, void **pubkey, size_t *pk_len)
 {
+	*pubkey = NULL;
+	*pk_len = 0;
+
 	secp256k1_context *ctx = get_secp256k1_context();
 	if (!ctx) {
 		return false;
