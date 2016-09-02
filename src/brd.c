@@ -364,8 +364,10 @@ static bool spend_tx(struct bp_utxo_set *uset, const struct bp_tx *tx,
 	coin = calloc(1, sizeof(*coin));
 	bp_utxo_init(coin);
 
-	if (!bp_utxo_from_tx(coin, tx, is_coinbase, height))
+	if (!bp_utxo_from_tx(coin, tx, is_coinbase, height)) {
+		bp_utxo_freep(coin);
 		return false;
+	}
 
 	/* add unspent outputs to set */
 	bp_utxo_set_add(uset, coin);

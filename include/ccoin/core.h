@@ -197,6 +197,7 @@ struct bp_utxo {
 
 extern void bp_utxo_init(struct bp_utxo *coin);
 extern void bp_utxo_free(struct bp_utxo *coin);
+extern void bp_utxo_freep(void *bp_utxo_coin);
 extern bool bp_utxo_from_tx(struct bp_utxo *coin, const struct bp_tx *tx,
 		     bool is_coinbase, unsigned int height);
 
