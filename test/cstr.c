@@ -67,15 +67,34 @@ static void test_basic(void)
 	cstring *s1 = cstr_new("foo");
 	cstring *s2 = cstr_new("foo");
 	cstring *s3 = cstr_new("bar");
+	cstring *s4 = cstr_new("barre");
+	cstring *s5 = cstr_new("");
+	cstring *s6 = cstr_new("");
 
 	assert(cstr_equal(s1, s2) == true);
 	assert(cstr_equal(s1, s3) == false);
 	assert(cstr_equal(s2, s3) == false);
 	assert(cstr_equal(s3, s3) == true);
+	assert(cstr_equal(s1, NULL) == false);
+	assert(cstr_equal(NULL, s1) == false);
+	assert(cstr_equal(s1, s4) == false);
+	assert(cstr_equal(s5, s6) == true);
+
+	assert(cstr_erase(s4, s4->len, 0) == true);
+	assert(cstr_erase(s4, s4->len + 1, 2) == false);
+	assert(cstr_erase(s4, 3, 2) == true);
+	assert(strcmp(s4->str, "bar") == 0);
 
 	cstr_free(s1, true);
 	cstr_free(s2, true);
 	cstr_free(s3, true);
+	cstr_free(s4, true);
+	cstr_free(s5, true);
+	cstr_free(s6, true);
+
+	// free(NULL) should succeed, as a no-op
+	cstr_free(NULL, true);
+	cstr_free(NULL, false);
 }
 
 int main (int argc, char *argv[])

@@ -44,6 +44,10 @@ static void test_basic(void)
 	assert(rc == true);
 	assert(pa->len == 2);
 
+	rc = parr_remove(pa, baz_str);
+	assert(rc == false);
+	assert(pa->len == 2);
+
 	assert(strcmp(parr_idx(pa, 0), "foo") == 0);
 	assert(strcmp(parr_idx(pa, 1), "bar") == 0);
 
@@ -54,6 +58,11 @@ static void test_basic(void)
 	assert(strcmp(parr_idx(pa, 0), "bar") == 0);
 
 	parr_free(pa, true);
+
+	// free(NULL) should succeed, as a no-op
+	parr_free(NULL, true);
+	parr_free(NULL, false);
+	parr_remove_range(NULL, 10, 12);
 }
 
 static void test_resize(void)
