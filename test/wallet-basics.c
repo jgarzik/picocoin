@@ -99,7 +99,7 @@ static void runtest(const char *json_base_fn, const char *ser_in_fn,
 
 	/* load key that has received an incoming payment */
 	struct bp_key key;
-	assert(bp_key_init(&key) == true);
+	bp_key_init(&key);
 
 	load_json_key(wallet, &key);
 

@@ -330,8 +330,7 @@ static bool load_rec_privkey(struct wallet *wlt, const void *privkey, size_t pk_
 	struct bp_key *key;
 
 	key = calloc(1, sizeof(*key));
-	if (!bp_key_init(key))
-		goto err_out;
+	bp_key_init(key);
 	if (!bp_privkey_set(key, privkey, pk_len))
 		goto err_out_kf;
 
@@ -341,7 +340,6 @@ static bool load_rec_privkey(struct wallet *wlt, const void *privkey, size_t pk_
 
 err_out_kf:
 	bp_key_free(key);
-err_out:
 	free(key);
 	return false;
 }
@@ -351,10 +349,7 @@ static bool load_rec_hdmaster(struct wallet *wlt, const void *mkey, size_t mlen)
 	struct hd_extended_key *hdkey;
 
 	hdkey = calloc(1, sizeof(*hdkey));
-	if (!hd_extended_key_init(hdkey)) {
-		fprintf(stderr, "hdmaster fail 1\n");
-		goto err_out;
-	}
+	hd_extended_key_init(hdkey);
 	if (!hd_extended_key_deser(hdkey, mkey, mlen)) {
 		fprintf(stderr, "hdmaster fail 2\n");
 		goto err_out_kf;
@@ -366,7 +361,6 @@ static bool load_rec_hdmaster(struct wallet *wlt, const void *mkey, size_t mlen)
 
 err_out_kf:
 	hd_extended_key_free(hdkey);
-err_out:
 	free(hdkey);
 	return false;
 }
@@ -480,8 +474,8 @@ bool wallet_create(struct wallet *wlt, const void *seed, size_t seed_len)
 {
 	struct hd_extended_key *hdkey;
 	hdkey = calloc(1, sizeof(*hdkey));
-	if (!hd_extended_key_init(hdkey) ||
-	    !hd_extended_key_generate_master(hdkey, seed, seed_len))
+	hd_extended_key_init(hdkey);
+	if (!hd_extended_key_generate_master(hdkey, seed, seed_len))
 		goto err_out_hdkey;
 
 	struct wallet_account *acct;

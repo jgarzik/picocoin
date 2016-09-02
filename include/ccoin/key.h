@@ -25,7 +25,7 @@ struct bp_key {
 /// Frees any internally allocated static data.
 extern void bp_key_static_shutdown();
 
-extern bool bp_key_init(struct bp_key *key);
+extern void bp_key_init(struct bp_key *key);
 extern void bp_key_free(struct bp_key *key);
 extern bool bp_key_generate(struct bp_key *key);
 extern bool bp_privkey_set(struct bp_key *key, const void *privkey, size_t pk_len);

@@ -83,7 +83,7 @@ static void runtest(void)
 	/* generate keys */
 	for (i = 0; i < ARRAY_SIZE(keys); i++) {
 		struct bp_key *key = &keys[i];
-		assert(bp_key_init(key) == true);
+		bp_key_init(key);
 		assert(bp_key_generate(key) == true);
 	}
 

@@ -44,10 +44,9 @@ void bp_key_static_shutdown()
 	}
 }
 
-bool bp_key_init(struct bp_key *key)
+void bp_key_init(struct bp_key *key)
 {
-	memset(key->secret, 0, sizeof(key->secret));
-	return true;
+	memset(key, 0, sizeof(*key));
 }
 
 void bp_key_free(struct bp_key *key)

@@ -30,7 +30,7 @@ struct hd_extended_key {
 	uint8_t			depth;
 };
 
-extern bool hd_extended_key_init(struct hd_extended_key *ek);
+extern void hd_extended_key_init(struct hd_extended_key *ek);
 
 extern void hd_extended_key_free(struct hd_extended_key *ek);
 

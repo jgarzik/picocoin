@@ -16,17 +16,10 @@
 #define TEST_PUBLIC 0x043587CF
 #define TEST_PRIVATE 0x04358394
 
-bool hd_extended_key_init(struct hd_extended_key *ek)
+void hd_extended_key_init(struct hd_extended_key *ek)
 {
-	if (bp_key_init(&ek->key)) {
-		memset(ek->chaincode.data, 0, sizeof(ek->chaincode.data));
-		ek->index = 0;
-		ek->version = 0;
-		memset(ek->parent_fingerprint, 0, 4);
-		ek->depth = 0;
-		return true;
-	}
-	return false;
+	memset(ek, 0, sizeof(*ek));
+	bp_key_init(&ek->key);
 }
 
 void hd_extended_key_free(struct hd_extended_key *ek)
@@ -203,8 +196,8 @@ bool hd_derive(struct hd_extended_key *out_child,
 		if (is_last)
 			target = out_child;
 
-		if (!hd_extended_key_init(&tmp) ||
-		    !hd_extended_key_generate_child(&parent, val, target))
+		hd_extended_key_init(&tmp);
+		if (!hd_extended_key_generate_child(&parent, val, target))
 			return false;
 
 		if (!is_last)
