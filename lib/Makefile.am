@@ -53,6 +53,7 @@ libccoin_la_SOURCES=	\
 noinst_LTLIBRARIES= libccoinnet.la libccoinaes.la
 
 libccoinnet_la_SOURCES=	\
+	net/asocket.c	\
 	net/dns.c	\
 	net/net.c	\
 	net/netbase.c	\

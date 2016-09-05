@@ -36,6 +36,7 @@ ccoininclude_HEADERS = \
 ccoinnetincludedir=$(includedir)/ccoin/net
 
 ccoinnetinclude_HEADERS = \
+    net/asocket.h	\
     net/dns.h	\
     net/fakepoll.h	\
     net/net.h	\
