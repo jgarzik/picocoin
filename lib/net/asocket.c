@@ -19,6 +19,7 @@
 #include <event2/event.h>               // for event_free, event_base_new, etc
 #include <ccoin/buffer.h>
 #include <ccoin/clist.h>
+#include <ccoin/parr.h>
 #include <ccoin/net/asocket.h>
 #include <ccoin/net/netbase.h>
 
@@ -418,6 +419,55 @@ static void asocket_connect_cb(evutil_socket_t fd, short events, void *userpriv)
 	asocket_rx_on(as);
 }
 
+static bool asocket_open(struct asocket *as, bool is_v4)
+{
+	int sock_domain = is_v4 ? AF_INET : AF_INET6;
+
+	assert(as->fd < 0);
+
+	// Open non-blocking stream socket
+	as->fd = socket(sock_domain, SOCK_STREAM, IPPROTO_TCP);
+	if (as->fd < 0)
+		return false;
+	if (!setnonblock(as->fd)) {
+		close(as->fd);
+		as->fd = -1;
+		return false;
+	}
+
+	as->is_v4 = is_v4;
+	return true;
+}
+
+static void asocket_name(struct asocket *as, const struct sockaddr *saddr,
+			 socklen_t salen)
+{
+	char host[128];
+	char serv[16];
+
+	int rc = getnameinfo(saddr, salen,
+			     host, sizeof(host), serv, sizeof(serv),
+			     NI_NUMERICHOST | NI_NUMERICSERV);
+	assert(rc == 0);
+
+	if (as->is_v4) {
+		struct sockaddr_in *sin = (struct sockaddr_in *) saddr;
+		assert(salen >= sizeof(struct sockaddr_in));
+		memcpy(as->addr, ipv4_mapped_pfx, sizeof(ipv4_mapped_pfx));
+		memcpy(as->addr + 12, &sin->sin_addr.s_addr, 4);
+
+		snprintf(as->addr_str, sizeof(as->addr_str), "%s:%s",
+			 host, serv);
+	} else {
+		struct sockaddr_in6 *sin = (struct sockaddr_in6 *) saddr;
+		assert(salen >= sizeof(struct sockaddr_in6));
+		memcpy(as->addr, &sin->sin6_addr.s6_addr, 16);
+
+		snprintf(as->addr_str, sizeof(as->addr_str), "[%s]:%s",
+			 host, serv);
+	}
+}
+
 bool asocket_connect(struct asocket *as, const struct asocket_opt *opt)
 {
 	if (!as || !opt)
@@ -448,33 +498,15 @@ bool asocket_connect(struct asocket *as, const struct asocket_opt *opt)
 	if (rc != 0)
 		return false;
 
-	assert(as->fd < 0);
-
 	// Open non-blocking stream socket
-	as->fd = socket(sock_domain, SOCK_STREAM, IPPROTO_TCP);
-	if ((as->fd < 0) || (!setnonblock(as->fd))) {
+	assert(as->fd < 0);
+	if (!asocket_open(as, is_v4)) {
 		freeaddrinfo(res);
 		return false;
 	}
 
 	// Build bitcoin-parsable + human readable addresses
-	if (is_v4) {
-		struct sockaddr_in *sin = (struct sockaddr_in *) res->ai_addr;
-		assert(res->ai_addrlen >= sizeof(struct sockaddr_in));
-		memcpy(as->addr, ipv4_mapped_pfx, sizeof(ipv4_mapped_pfx));
-		memcpy(as->addr + 12, &sin->sin_addr.s_addr, 4);
-
-		snprintf(as->addr_str, sizeof(as->addr_str), "%s:%s",
-			 host, opt->port);
-	} else {
-		struct sockaddr_in6 *sin = (struct sockaddr_in6 *) res->ai_addr;
-		assert(res->ai_addrlen >= sizeof(struct sockaddr_in6));
-		memcpy(as->addr, &sin->sin6_addr.s6_addr, 16);
-
-		snprintf(as->addr_str, sizeof(as->addr_str), "[%s]:%s",
-			 host, opt->port);
-	}
-	as->is_v4 = is_v4;
+	asocket_name(as, res->ai_addr, res->ai_addrlen);
 
 	// Initiate non-blocking connection to remote peer
 	rc = connect(as->fd, res->ai_addr, res->ai_addrlen);
@@ -501,12 +533,55 @@ bool asocket_connect(struct asocket *as, const struct asocket_opt *opt)
 	return true;
 }
 
+static void asocket_accepted(struct asocket *as, const struct asocket *parent,
+			     int fd, struct sockaddr *saddr, socklen_t salen)
+{
+	assert(as->fd == -1);
+	assert(as->cfg != NULL);
+	assert(as->opt == NULL);
+
+	// Initialize from existing socket/fd
+	as->fd = fd;
+	as->is_v4 = parent->is_v4;
+	asocket_name(as, saddr, salen);
+
+	// Enable input data from remote peer
+	asocket_rx_on(as);
+}
+
+static void srv_sock_close(struct asocket *as, void *srv_p, bool had_err)
+{
+	struct aserver *srv = srv_p;
+
+	if (srv->cfg->srv_close)
+		srv->cfg->srv_close(srv, srv->cfg->priv, had_err);
+}
+
+static void srv_sock_error(struct asocket *as, void *srv_p, int err)
+{
+	struct aserver *srv = srv_p;
+
+	if (srv->cfg->srv_error)
+		srv->cfg->srv_error(srv, srv->cfg->priv, err);
+}
+
 void aserver_init(struct aserver *srv, const struct aserver_cfg *cfg,
-		  const struct asocket_cfg *sock_cfg)
+		  const struct asocket_cfg *accepted_cfg)
 {
 	memset(srv, 0, sizeof(*srv));
-	asocket_init(&srv->sock, sock_cfg);
+
+	struct asocket_cfg tmpcfg = {
+		.eb		= cfg->eb,
+		.priv		= srv,
+		.as_close	= srv_sock_close,
+		.as_error	= srv_sock_error,
+	};
+
+	asocket_init(&srv->sock, &srv->srv_sock_cfg);
+	srv->srv_sock_cfg = tmpcfg;
 	srv->cfg = cfg;
+	srv->accepted_cfg = accepted_cfg;
+	srv->cxn = parr_new(0, asocket_freep);
 }
 
 void aserver_free(struct aserver *srv)
@@ -527,5 +602,101 @@ void aserver_freep(void *p)
 
 	memset(srv, 0, sizeof(*srv));
 	free(srv);
+}
+
+static void aserver_accept_cb(evutil_socket_t fd, short events, void *userpriv)
+{
+	struct aserver *srv = userpriv;
+	struct sockaddr_storage addr;
+	socklen_t addr_len = sizeof(addr);
+
+	int in_fd = accept(fd, (struct sockaddr *) &addr, &addr_len);
+	if (in_fd < 0) {
+		asocket_err(&srv->sock, errno);
+		return;
+	}
+
+	struct asocket *cli_sock = calloc(1, sizeof(*cli_sock));
+	if (!cli_sock) {
+		close(in_fd);
+		asocket_err(&srv->sock, ENOMEM);
+		return;
+	}
+
+	asocket_init(cli_sock, srv->accepted_cfg);
+	asocket_accepted(cli_sock, &srv->sock, in_fd,
+			 (struct sockaddr *) &addr, addr_len);
+
+	parr_add(srv->cxn, cli_sock);
+
+	if (srv->cfg->srv_accepted)
+		srv->cfg->srv_accepted(srv, srv->cfg->priv);
+}
+
+bool aserver_listen(struct aserver *srv, const struct asocket_opt *opt)
+{
+	if (!srv || !opt)
+		return false;
+
+	struct asocket *as = &srv->sock;
+
+	// Pick (default) hostname for remote peer
+	bool is_v4 = (opt->family == 6) ? false : true;
+
+	// Fill hints for getaddrinfo(3) query limiting
+	int sock_domain = is_v4 ? AF_INET : AF_INET6;
+	struct addrinfo hints = {
+		.ai_family		= sock_domain,
+		.ai_socktype		= SOCK_STREAM,
+		.ai_protocol		= IPPROTO_TCP,
+		.ai_flags		= AI_PASSIVE | AI_NUMERICHOST | AI_NUMERICSERV,
+	};
+	struct addrinfo *res = NULL;
+
+	// Parse host/port strings -> network addresses
+	int rc = getaddrinfo(opt->host, opt->port, &hints, &res);
+	if (rc != 0)
+		return false;
+
+	// Open non-blocking stream socket
+	assert(as->fd < 0);
+	if (!asocket_open(as, is_v4)) {
+		freeaddrinfo(res);
+		return false;
+	}
+
+	// Build bitcoin-parsable + human readable addresses
+	asocket_name(as, res->ai_addr, res->ai_addrlen);
+
+	// Bind to (address?) and port
+	rc = bind(as->fd, res->ai_addr, res->ai_addrlen);
+
+	freeaddrinfo(res);
+
+	// Abort upon immediate error
+	if (rc < 0) {
+		as->error = true;
+		return false;
+	}
+
+	// Starting listening on address/port
+	rc = listen(as->fd, 100);
+	if (rc < 0) {
+		as->error = true;
+		return false;
+	}
+
+	// Wait for connection event
+	as->ev = event_new(as->cfg->eb, as->fd, EV_READ | EV_PERSIST,
+			   aserver_accept_cb, srv);
+	assert(as->ev != NULL);
+
+	rc = event_add(as->ev, NULL);
+	assert(rc == 0);
+
+	if (srv->cfg->srv_listening)
+		srv->cfg->srv_listening(srv, srv->cfg->priv);
+
+	return true;
 }
 

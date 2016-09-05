@@ -53,20 +53,24 @@ struct asocket_opt {
 };
 
 struct aserver {
-	struct asocket	sock;
+	struct asocket		sock;
 
+	struct asocket_cfg	srv_sock_cfg;
 	const struct aserver_cfg *cfg;	// Static configuration
+	const struct asocket_cfg *accepted_cfg;
+
+	parr			*cxn;
 };
 
 struct aserver_cfg {
 	struct event_base *eb;
 	void		*priv;
 
-	void		(*as_close)(struct asocket *, void *, bool had_err);
-	void		(*as_error)(struct asocket *, void *, int err);
+	void		(*srv_close)(struct aserver *, void *, bool had_err);
+	void		(*srv_error)(struct aserver *, void *, int err);
 
-	void		(*as_accepted)(struct asocket *, void *);
-	void		(*as_listening)(struct asocket *, void *);
+	void		(*srv_accepted)(struct aserver *, void *);
+	void		(*srv_listening)(struct aserver *, void *);
 };
 
 extern void asocket_init(struct asocket *as, const struct asocket_cfg *cfg);
@@ -78,8 +82,9 @@ extern void asocket_close(struct asocket *as);
 extern size_t asocket_writeq_sz(const struct asocket *as);
 
 extern void aserver_init(struct aserver *srv, const struct aserver_cfg *cfg,
-			 const struct asocket_cfg *sock_cfg);
+			 const struct asocket_cfg *accepted_cfg);
 extern void aserver_free(struct aserver *srv);
 extern void aserver_freep(void *p);
+extern bool aserver_listen(struct aserver *srv, const struct asocket_opt *opt);
 
 #endif // __CCOIN_NET_ASOCKET_H__
