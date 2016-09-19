@@ -1326,12 +1326,15 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 				struct buffer *vchSig	= stacktop(stack, -isig);
 				struct buffer *vchPubKey = stacktop(stack, -ikey);
 
-				// Check signature
+				// Note how this makes the exact order of pubkey/signature evaluation
+				// distinguishable by CHECKMULTISIG NOT if the STRICTENC flag is set.
+				// See the script_(in)valid tests for details.
 				if (!CheckSignatureEncoding(vchSig, flags) || !CheckPubKeyEncoding(vchPubKey, flags)) {
 					cstr_free(scriptCode, true);
 					goto out;
 				}
 
+				// Check signature
 				bool fOk = bp_checksig(vchSig, vchPubKey,
 							  scriptCode, txTo, nIn,
 							  nHashType);
@@ -1351,8 +1354,22 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 
 			cstr_free(scriptCode, true);
 
-			while (i-- > 0)
+			// Clean up stack of actual arguments
+			while (i-- > 1)
 				popstack(stack);
+
+			// A bug causes CHECKMULTISIG to consume one extra argument
+			// whose contents were not checked in any way.
+			//
+			// Unfortunately this is a potential source of mutability,
+			// so optionally verify it is exactly equal to zero prior
+			// to removing it from the stack.
+			if ((int)stack->len < 1)
+				goto out;
+			if ((flags & SCRIPT_VERIFY_NULLDUMMY) && stacktop(stack, -1)->len)
+				goto out;
+			popstack(stack);
+
 			stack_push_char(stack, fSuccess ? 1 : 0);
 
 			if (opcode == OP_CHECKMULTISIGVERIFY)
