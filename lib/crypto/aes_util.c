@@ -9,7 +9,6 @@
 #include <ccoin/util.h>                 // for bu_read_file, bu_write_file
 
 #include <stdlib.h>                     // for free
-#include <string.h>                     // for memcpy, memset
 
 
 int BytesToKeySHA512AES(unsigned char *salt, unsigned char *key_data, size_t key_data_len, int count, unsigned char *key, unsigned char *iv)
@@ -22,8 +21,8 @@ int BytesToKeySHA512AES(unsigned char *salt, unsigned char *key_data, size_t key
     if(!count || !key || !iv)
         return 0;
 
-    unsigned char _buf0[64];
-    unsigned char _buf1[64];
+    unsigned char _buf0[SHA512_DIGEST_LENGTH];
+    unsigned char _buf1[SHA512_DIGEST_LENGTH];
 
     SHA512_CTX ctx;
     sha512_Init(&ctx);
@@ -37,24 +36,24 @@ int BytesToKeySHA512AES(unsigned char *salt, unsigned char *key_data, size_t key
     int i;
 
     for(i = 0; i != count - 1; i++) {
-        sha512_Raw(buf0, 64, buf1);
+        sha512_Raw(buf0, SHA512_DIGEST_LENGTH, buf1);
         swap = buf1;
         buf1 = buf0;
         buf0 = swap;
     }
-    memset(buf1, 0, 64);
-    memcpy(key, buf0, 32);
-    memcpy(iv, buf0 + 32, 16);
-    memset(buf0, 0, 64);
+    MEMSET_BZERO(buf1, SHA512_DIGEST_LENGTH);
+    MEMCPY_BCOPY(key, buf0, AES256_KEY_LENGTH);
+    MEMCPY_BCOPY(iv, buf0 + AES256_KEY_LENGTH, AES256_BLOCK_LENGTH);
+    MEMSET_BZERO(buf0, SHA512_DIGEST_LENGTH);
 
-    return 32;
+    return AES256_KEY_LENGTH;
 }
 
 static int AES256CBCEncrypt(const unsigned char* key, const unsigned char* iv, const unsigned char* data, int size, bool pad, unsigned char* out)
 {
     int written = 0;
-    int padsize = size % 16;
-    unsigned char mixed[16];
+    int padsize = size % AES256_BLOCK_LENGTH;
+    unsigned char mixed[AES256_BLOCK_LENGTH];
 
     if (!data || !size || !out)
         return 0;
@@ -62,28 +61,28 @@ static int AES256CBCEncrypt(const unsigned char* key, const unsigned char* iv, c
     if (!pad && padsize != 0)
         return 0;
 
-    memcpy(mixed, iv, 16);
+    MEMCPY_BCOPY(mixed, iv, AES256_BLOCK_LENGTH);
 
     // Write all but the last block
     int i;
     AES256_ctx ctx;
     AES256_init(&ctx, key);
-    while (written + 16 <= size) {
-        for (i = 0; i != 16; i++)
+    while (written + AES256_BLOCK_LENGTH <= size) {
+        for (i = 0; i != AES256_BLOCK_LENGTH; i++)
             mixed[i] ^= *data++;
         AES256_encrypt(&ctx, 1, out + written, mixed);
-        memcpy(mixed, out + written, 16);
-        written += 16;
+        MEMCPY_BCOPY(mixed, out + written, AES256_BLOCK_LENGTH);
+        written += AES256_BLOCK_LENGTH;
     }
     if (pad) {
         // For all that remains, pad each byte with the value of the remaining
         // space. If there is none, pad by a full block.
         for (i = 0; i != padsize; i++)
             mixed[i] ^= *data++;
-        for (i = padsize; i != 16; i++)
-            mixed[i] ^= 16 - padsize;
+        for (i = padsize; i != AES256_BLOCK_LENGTH; i++)
+            mixed[i] ^= AES256_BLOCK_LENGTH - padsize;
         AES256_encrypt(&ctx, 1, out + written, mixed);
-        written += 16;
+        written += AES256_BLOCK_LENGTH;
     }
     return written;
 }
@@ -99,7 +98,7 @@ static int AES256CBCDecrypt(const unsigned char* key, const unsigned char* iv, c
     if (!data || !size || !out)
         return 0;
 
-    if (size % 16 != 0)
+    if (size % AES256_BLOCK_LENGTH != 0)
         return 0;
 
     // Decrypt all data. Padding will be checked in the output.
@@ -107,10 +106,10 @@ static int AES256CBCDecrypt(const unsigned char* key, const unsigned char* iv, c
     AES256_init(&ctx, key);
     while (written != size) {
         AES256_decrypt(&ctx, 1, out, data + written);
-        for (i = 0; i != 16; i++)
+        for (i = 0; i != AES256_BLOCK_LENGTH; i++)
             *out++ ^= prev[i];
         prev = data + written;
-        written += 16;
+        written += AES256_BLOCK_LENGTH;
     }
 
     // When decrypting padding, attempt to run in constant-time
@@ -118,14 +117,14 @@ static int AES256CBCDecrypt(const unsigned char* key, const unsigned char* iv, c
         // If used, padding size is the value of the last decrypted byte. For
         // it to be valid, It must be between 1 and 16.
         padsize = *--out;
-        fail = !padsize | (padsize > 16);
+        fail = !padsize | (padsize > AES256_BLOCK_LENGTH);
 
         // If not well-formed, treat it as though there's no padding.
         padsize *= !fail;
 
         // All padding must equal the last byte otherwise it's not well-formed
-        for (i = 16; i != 0; i--)
-            fail |= ((i > 16 - padsize) & (*out-- != padsize));
+        for (i = AES256_BLOCK_LENGTH; i != 0; i--)
+            fail |= ((i > AES256_BLOCK_LENGTH - padsize) & (*out-- != padsize));
 
         written -= padsize;
     }
@@ -148,7 +147,7 @@ cstring *read_aes_file(const char *filename, void *key_data, size_t key_data_len
         // ie slightly lower than the lowest hardware we need bother supporting
         int nrounds = 1721;
         unsigned int salt[] = { 4185398345U, 2729682459U };
-        unsigned char key[32], iv[16];
+        unsigned char key[AES256_KEY_LENGTH], iv[AES256_BLOCK_LENGTH];
 
         /*
          * Gen key & IV for AES 256 CBC mode. A SHA1 digest is used to hash the supplied key material.
@@ -156,7 +155,7 @@ cstring *read_aes_file(const char *filename, void *key_data, size_t key_data_len
          * slower.
          */
         if (BytesToKeySHA512AES((unsigned char *)salt, key_data,
-                key_data_len, nrounds, key, iv) == 32) {
+                key_data_len, nrounds, key, iv) == AES256_KEY_LENGTH) {
             if (AES256CBCDecrypt(key, iv, ciphertext, ct_len, pad, plaintext) > 0) {
                 if (pad)
                     pt_len -= plaintext[pt_len - 1];
@@ -164,18 +163,19 @@ cstring *read_aes_file(const char *filename, void *key_data, size_t key_data_len
                 rs = cstr_new_buf(plaintext, pt_len);
             }
         }
-        memset(key, 0, 32);
-        memset(iv, 0, 16);
-        memset(plaintext, 0, ct_len);
+        MEMSET_BZERO(key, AES256_KEY_LENGTH);
+        MEMSET_BZERO(iv, AES256_BLOCK_LENGTH);
+        MEMSET_BZERO(plaintext, ct_len);
     }
     free(ciphertext);
 
     return rs;
 }
 
-bool write_aes_file(const char *filename, void *key_data, size_t key_data_len,
+bool write_aes_file(const char *filename_, void *key_data, size_t key_data_len,
 		    const void *plaintext, size_t pt_len)
 {
+    char *filename = malloc(strlen(filename_) + 1);
     size_t ct_len = pt_len;
     unsigned char ciphertext[ct_len];
     bool pad = true;
@@ -185,7 +185,9 @@ bool write_aes_file(const char *filename, void *key_data, size_t key_data_len,
     // ie slightly lower than the lowest hardware we need bother supporting
     int nrounds = 1721;
     unsigned int salt[] = { 4185398345U, 2729682459U };
-    unsigned char key[32], iv[16];
+    unsigned char key[AES256_KEY_LENGTH], iv[AES256_BLOCK_LENGTH];
+
+    strcpy(filename, filename_);
 
     /*
      * Gen key & IV for AES 256 CBC mode. A SHA1 digest is used to hash the supplied key material.
@@ -193,13 +195,15 @@ bool write_aes_file(const char *filename, void *key_data, size_t key_data_len,
      * slower.
      */
     if (BytesToKeySHA512AES((unsigned char *)salt, key_data,
-            key_data_len, nrounds, key, iv) == 32)
+            key_data_len, nrounds, key, iv) == AES256_KEY_LENGTH)
         if ((ct_len = AES256CBCEncrypt(key, iv, plaintext, pt_len, pad,
                 ciphertext)) > 0 )
             rc = bu_write_file(filename, &ciphertext, ct_len);
 
-    memset(key, 0, 32);
-    memset(iv, 0, 16);
+    MEMSET_BZERO(key, AES256_KEY_LENGTH);
+    MEMSET_BZERO(iv, AES256_BLOCK_LENGTH);
+
+    free(filename);
 
     return rc;
 }
