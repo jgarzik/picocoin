@@ -58,8 +58,8 @@ case "${host}" in
 		#ifndef O_LARGEFILE
 		# define O_LARGEFILE 0
 		#endif])
-		CPPFLAGS="$CPPFLAGS -I/usr/local/opt/openssl/include -I/usr/local/include"
-		LDFLAGS="$LDFLAGS -L/usr/local/opt/openssl/lib -L/usr/local/lib"
+		CPPFLAGS="$CPPFLAGS -I/usr/local/include"
+		LDFLAGS="$LDFLAGS -L/usr/local/lib"
 		;;
 esac
 
@@ -69,8 +69,6 @@ dnl -----------------------------
 
 AC_CHECK_LIB(m, log, MATH_LIBS=-lm,
   [AC_MSG_ERROR([Missing required libm])])
-AC_CHECK_LIB(crypto, MD5_Init, CRYPTO_LIBS=-lcrypto,
-  [AC_MSG_ERROR([Missing required libcrypto])])
 AC_CHECK_LIB(gmp, __gmpz_init, GMP_LIBS=-lgmp,
   [AC_MSG_ERROR([Missing required libgmp])])
 AC_CHECK_LIB(event_core, event_base_new, EVENT_LIBS=-levent_core,
@@ -118,6 +116,7 @@ AS_IF([test "$enable_valgrind" = "yes"], [
 	AC_PATH_PROG(VALGRIND, valgrind, no)
 	AS_IF([test "$VALGRIND" = "no"], [
 		AC_MSG_ERROR(valgrind tool is not installed)])
+	AC_DEFINE(USE_VALGRIND, 1, [Define if valgrind should be used])
 ])
 AM_CONDITIONAL(ENABLE_VALGRIND, [test "$enable_valgrind" = "yes"])
 
@@ -149,7 +148,6 @@ dnl autoconf output generation
 dnl --------------------------
 
 AC_SUBST(MATH_LIBS)
-AC_SUBST(CRYPTO_LIBS)
 AC_SUBST(GMP_LIBS)
 AC_SUBST(EVENT_LIBS)
 AC_SUBST(JANSSON_LIBS)

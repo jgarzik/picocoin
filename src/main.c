@@ -10,12 +10,14 @@
 #include <ccoin/compat.h>               // for strndup
 #include <ccoin/core.h>                 // for bp_address
 #include <ccoin/coredefs.h>             // for chain_find, chain_info
+#include <ccoin/crypto/prng.h>          // for prng_get_random_bytes
 #include <ccoin/log.h>                  // for log_info, log_debug, etc
 #include <ccoin/net/dns.h>              // for bu_dns_seed_addrs
 #include <ccoin/net/net.h>              // for net_child_info, nc_conns_gc, etc
 #include <ccoin/net/netbase.h>          // for bn_address_str, etc
 #include <ccoin/net/peerman.h>          // for peer_manager, peerman_write, etc
 #include <ccoin/util.h>                 // for ARRAY_SIZE, czstr_equal, etc
+
 #include "wallet.h"                     // for cur_wallet_addresses, etc
 
 #include <argp.h>
@@ -25,7 +27,6 @@
 #include <errno.h>                      // for errno
 #include <event2/event.h>               // for event_free, event_base_new, etc
 #include <fcntl.h>                      // for open
-#include <openssl/rand.h>               // for RAND_bytes
 #include <stdio.h>                      // for fprintf, printf, NULL, etc
 #include <stdlib.h>                     // for free, exit
 #include <string.h>                     // for strcmp, strdup, strlen, etc
@@ -642,7 +643,10 @@ int main (int argc, char *argv[])
 	/* Parsing of commandline parameters */
 	argp_parse(&argp, argc, argv, ARGP_IN_ORDER, NULL, NULL);
 
-	RAND_bytes((unsigned char *)&instance_nonce, sizeof(instance_nonce));
+	if (prng_get_random_bytes((unsigned char *)&instance_nonce, sizeof(instance_nonce)) < 0) {
+		fprintf(stderr, "picocoin: no random data available\n");
+		return 1;
+	}
 
 	init_log();
 	chain_set();

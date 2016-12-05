@@ -25,6 +25,7 @@ message
 misc
 net
 parr
+prng
 script
 script-parse
 tx
