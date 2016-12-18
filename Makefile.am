@@ -24,3 +24,11 @@ pkg-deb: dist
 		mv ../*.deb ../../
 
 	$(am__post_remove_distdir)
+
+pkg-bin:
+	- rm -rf $(distdir)
+	make DESTDIR=$(abs_srcdir)/$(distdir) install
+	cd $(distdir); \
+          tar zcvf $(abs_srcdir)/$(distdir)-$(tag_os).tar.gz `find . -type f -print`
+
+	$(am__post_remove_distdir)

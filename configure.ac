@@ -51,8 +51,34 @@ AH_VERBATIM([_LARGEFILE64_SOURCE],
 # define _LARGEFILE64_SOURCE 1
 #endif])
 
-case "${host}" in
-	*-*-darwin*)
+tag_os=""
+AS_CASE([$host_os],
+	[linux*],
+	[
+		AS_CASE([$host_cpu],
+			[x86_64],
+				[
+				tag_os="linux-x86_64"
+				],
+			[i?86],
+				[
+				tag_os="linux-x86_32"
+				],
+			[arm*],
+				[
+				tag_os="linux-arm32"
+				],
+			[aarch32],
+				[
+				tag_os="linux-arm32"
+				],
+			[aarch64],
+				[
+				tag_os="linux-arm64"
+				])
+	],
+    [darwin*],
+    [
 		AH_VERBATIM([O_LARGEFILE],
 		[/* OSX naturally supports 64-bit files */
 		#ifndef O_LARGEFILE
@@ -60,8 +86,9 @@ case "${host}" in
 		#endif])
 		CPPFLAGS="$CPPFLAGS -I/usr/local/opt/openssl/include -I/usr/local/include"
 		LDFLAGS="$LDFLAGS -L/usr/local/opt/openssl/lib -L/usr/local/lib"
-		;;
-esac
+		tag_os="osx"
+    ])
+AC_SUBST([tag_os])
 
 dnl -----------------------------
 dnl Checks for required libraries
