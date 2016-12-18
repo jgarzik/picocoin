@@ -9,10 +9,18 @@
 
 #include <stdbool.h>                    // for bool
 #include <stddef.h>                     // for size_t
+#include <string.h>                     // for memcpy, memset
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define AES256_BLOCK_LENGTH             16
+#define AES256_KEY_LENGTH               32
+
+#define MEMSET_BZERO(p,l)     memset((p), 0, (l))
+#define MEMCPY_BCOPY(d,s,l)   memcpy((d), (s), (l))
 
 extern cstring *read_aes_file(const char *filename, void *key, size_t key_len,
 			      size_t max_file_len);
