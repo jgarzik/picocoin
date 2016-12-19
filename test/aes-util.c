@@ -17,38 +17,12 @@
 #include <stdbool.h>                    // for bool, true
 #include <unistd.h>                     // for unlink
 
-static void print_n(const void *_data, size_t len)
-{
-	const uint8_t *data = (const uint8_t *)_data;
-	size_t i;
-	for (i = 0; i < len; ++i) {
-		printf("%02x", (int)data[i]);
-	}
-}
-
-static void from_hex(unsigned char* data, int len, const char* hex) {
-    int p;
-    for (p = 0; p < len; p++) {
-        int v = 0;
-        int n;
-        for (n = 0; n < 2; n++) {
-            assert((*hex >= '0' && *hex <= '9') || (*hex >= 'a' && *hex <= 'f'));
-            if (*hex >= '0' && *hex <= '9') {
-                v |= (*hex - '0') << (4 * (1 - n));
-            } else {
-                v |= (*hex - 'a' + 10) << (4 * (1 - n));
-            }
-            hex++;
-        }
-        *(data++) = v;
-    }
-    assert(*hex == 0);
-}
+#include "libtest.h"
 
 static const char s_password[] = "test_picocoin_password";
 static const char filename[] = "aes_util.dat";
 
-static const char s_plaintext_0[418] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus cursus, tellus at commodo tristique, nisi mi euismod erat, at fringilla ligula quam semper nibh. Cras blandit venenatis venenatis. Curabitur sollicitudin fermentum cursus. Aliquam gravida augue eu tortor commodo, a consectetur nulla convallis. Nullam id mattis purus. Sed nec velit quis magna finibus suscipit. Aenean ornare accumsan ipsum at tempor.";
+static const char s_plaintext_0[417+1] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus cursus, tellus at commodo tristique, nisi mi euismod erat, at fringilla ligula quam semper nibh. Cras blandit venenatis venenatis. Curabitur sollicitudin fermentum cursus. Aliquam gravida augue eu tortor commodo, a consectetur nulla convallis. Nullam id mattis purus. Sed nec velit quis magna finibus suscipit. Aenean ornare accumsan ipsum at tempor.";
 static const uint8_t s_ciphertext_0[432] = {
 0xab,0xf6,0xb0,0xfa,0x06,0x36,0x98,0xe0,0x98,0xb1,0xd8,0xb2,0xd7,0x68,0xf7,0x9b,
 0x16,0xf6,0xf9,0xb2,0xff,0x02,0xfd,0x67,0x63,0x47,0xe0,0x58,0x53,0x66,0xc0,0xa9,
@@ -143,6 +117,7 @@ static void test_write_aes_file(const uint8_t *pt, size_t pt_len,
 {
 	void *ciphertext;
 	size_t ciphertext_len;
+	char prefix[32];
 
 	bool rc = write_aes_file(filename, (char *)s_password, strlen(s_password),
 		    pt, pt_len);
@@ -152,16 +127,18 @@ static void test_write_aes_file(const uint8_t *pt, size_t pt_len,
 	assert(ciphertext);
 	assert(ciphertext_len);
 
-	printf("====================\n");
-	printf("ENCRYPT TEST:\n");
-	printf(" plaintext (%d bytes): %s\n", (int )pt_len, pt);
-	printf(" ciphertext(%d bytes):\n", (int )ciphertext_len);
-	print_n(ciphertext, ciphertext_len);
-	printf("\n");
-	printf("====================\n\n");
+	fprintf(stderr, "====================\n");
+	fprintf(stderr, "ENCRYPT TEST:\n");
+	fprintf(stderr, " plaintext (%d bytes): %s\n", (int )pt_len, pt);
+	sprintf(prefix, " ciphertext(%d bytes)", (int )ciphertext_len);
+	dumphex(prefix, ciphertext, ciphertext_len);
+	fprintf(stderr, "====================\n\n");
 
 	assert(ct_len == ciphertext_len);
 	assert(!memcmp(ct, ciphertext, sizeof(ct_len)));
+
+	int rcv = unlink(filename);
+	assert(rcv == 0);
 
 	free(ciphertext);
 }
@@ -169,23 +146,27 @@ static void test_write_aes_file(const uint8_t *pt, size_t pt_len,
 static void test_read_aes_file(const uint8_t *ct, size_t ct_len,
 			       const uint8_t *pt, size_t pt_len)
 {
+	char prefix[32];
+
 	bool rc = bu_write_file(filename, ct, ct_len);
 	assert(rc);
 
 	cstring *plaintext = read_aes_file(filename, (char *)s_password,
 			   			   strlen(s_password), ct_len);
 
-	printf("====================\n");
-	printf("DECRYPT TEST:\n");
-	printf(" ciphertext(%d bytes):\n", (int )ct_len);
-	print_n(ct, ct_len);
-	printf("\n");
-	printf(" plaintext (%d bytes): %s\n", (int )pt_len, pt);
-	printf("====================\n\n");
+	fprintf(stderr, "====================\n");
+	fprintf(stderr, "DECRYPT TEST:\n");
+	sprintf(prefix, " ciphertext(%d bytes)", (int )ct_len);
+	dumphex(prefix, ct, ct_len);
+	fprintf(stderr, " plaintext (%d bytes): %s\n", (int )pt_len, pt);
+	fprintf(stderr, "====================\n\n");
 
 	assert(NULL != plaintext);
 	assert(pt_len == plaintext->len);
 	assert(!memcmp(pt, plaintext->str, pt_len));
+
+	int rcv = unlink(filename);
+	assert(rcv == 0);
 
 	cstr_free(plaintext, true);
 }
@@ -218,7 +199,6 @@ int main(int argc, char **argv)
 {
 	test_encryption();
 	test_decryption();
-	unlink(filename);
 
 	return 0;
 }
