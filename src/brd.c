@@ -10,6 +10,7 @@
 #include <ccoin/clist.h>                // for clist_length
 #include <ccoin/core.h>                 // for bp_block, bp_utxo, bp_tx, etc
 #include <ccoin/coredefs.h>             // for chain_info, chain_find, etc
+#include <ccoin/crypto/prng.h>          // for prng_get_random_bytes
 #include <ccoin/cstr.h>                 // for cstring, cstr_free
 #include <ccoin/hexcode.h>              // for decode_hex
 #include <ccoin/log.h>                  // for log_info, logging, etc
@@ -21,13 +22,13 @@
 #include <ccoin/script.h>               // for bp_verify_sig
 #include <ccoin/util.h>                 // for ARRAY_SIZE, czstr_equal, etc
 
+
 #include <assert.h>                     // for assert
 #include <stdbool.h>                    // for bool
 #include <ctype.h>                      // for isspace
 #include <errno.h>                      // for errno
 #include <event2/event.h>               // for event_base_dispatch, etc
 #include <fcntl.h>                      // for open
-#include <openssl/rand.h>               // for RAND_bytes
 #include <signal.h>                     // for signal, SIG_IGN, SIGHUP, etc
 #include <stddef.h>                     // for size_t
 #include <stdio.h>                      // for fprintf, NULL, fclose, etc
@@ -708,7 +709,10 @@ int main (int argc, char *argv[])
 	if (!preload_settings())
 		return 1;
 
-	RAND_bytes((unsigned char *)&instance_nonce, sizeof(instance_nonce));
+	if (prng_get_random_bytes((unsigned char *)&instance_nonce, sizeof(instance_nonce)) < 0) {
+		fprintf(stderr, "brd: no random data available\n");
+		return 1;
+	};
 
 	unsigned int arg;
 	for (arg = 1; arg < argc; arg++) {

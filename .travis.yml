@@ -31,7 +31,6 @@ cache:
 addons:
   apt:
     packages:
-      - libssl-dev
       - libgmp-dev
       - libjansson-dev
       - libevent-dev
@@ -55,7 +54,6 @@ install:
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install jansson; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install libevent; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install argp-standalone; fi
-  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install openssl; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ] && [ "$ENABLE_COVERAGE" = "yes" ]; then brew install lcov; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ] && [ "$ENABLE_VALGRIND" = "yes" ]; then brew install valgrind; fi
   - if [ "$ENABLE_COVERAGE" = "yes" ]; then gem install coveralls-lcov; fi
