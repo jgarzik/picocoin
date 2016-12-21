@@ -6,7 +6,3 @@ Running tests with valgrind:
 or
 
 	make check TESTS_ENVIRONMENT='libtool --mode=execute valgrind --error-exitcode=1'
-
-It is recommended to build OpenSSL with -DPURIFY to eliminate lots of
-valgrind noise.
-

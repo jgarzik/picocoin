@@ -11,16 +11,13 @@ This contains several pieces of interest:
 * Comprehensive test suite.
 
 libccoin library dependencies:
-	OpenSSL
 	GMP
 
 picocoin client dependencies:
-	OpenSSL
 	GMP
 	jansson 2.x (2.1 used for development)
 
 block relay daemon (brd) dependencies:
-	OpenSSL
 	GMP
 
 

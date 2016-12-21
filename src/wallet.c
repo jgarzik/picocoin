@@ -12,6 +12,7 @@
 #include <ccoin/buffer.h>               // for const_buffer
 #include <ccoin/coredefs.h>             // for chain_info
 #include <ccoin/crypto/aes_util.h>      // for read_aes_file, etc
+#include <ccoin/crypto/prng.h>          // for prng_get_random_bytes
 #include <ccoin/cstr.h>                 // for cstring, cstr_free, etc
 #include <ccoin/hdkeys.h>               // for hd_extended_key_ser_priv
 #include <ccoin/hexcode.h>              // for encode_hex
@@ -21,7 +22,6 @@
 #include <ccoin/compat.h>               // for parr_new
 
 #include <jansson.h>                    // for json_object_set_new, etc
-#include <openssl/rand.h>               // for RAND_bytes
 
 #include <assert.h>                     // for assert
 #include <stdbool.h>                    // for true, bool, false
@@ -196,7 +196,10 @@ void cur_wallet_create(void)
 	}
 
 	char seed[256];
-	RAND_bytes((unsigned char *) &seed[0], sizeof(seed));
+	if (prng_get_random_bytes((unsigned char *) &seed[0], sizeof(seed)) < 0) {
+		fprintf(stderr, "wallet: no random data available\n");
+		return;
+	}
 
 	char seed_str[(sizeof(seed) * 2) + 1];
 	encode_hex(seed_str, seed, sizeof(seed));
