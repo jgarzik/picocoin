@@ -12,15 +12,15 @@ This guide assumes usage of [Homebrew](http://brew.sh) or
 [MacPorts](https://www.macports.org) for installing dependencies.
 
 You will need to install `OpenSSL` and `GMP` in order to build *libccoin*, and
-those plus `libevent` and `jansson` to build *picocoin*.
+those plus `jansson` to build *picocoin*.
 
 Install these packages. It will take a few minutes.
 
-    brew install autoconf automake libtool argp-standalone jansson libevent openssl gmp
+    brew install autoconf automake libtool argp-standalone jansson openssl gmp
 
 or
 
-    sudo port install autoconf automake libtool argp-standalone jansson libevent pkgconfig openssl gmp
+    sudo port install autoconf automake libtool argp-standalone jansson pkgconfig openssl gmp
 
 
 Building
@@ -42,7 +42,7 @@ MacPorts
 You should also run `make check` in order to run tests. This is a vital step
 early in the development of `picocoin`.
 
-You can install it if you want with `make install`. It will be installed to 
+You can install it if you want with `make install`. It will be installed to
 `/usr/local/picocoin`.
 
 The `picocoin` binary will be in `./src`.

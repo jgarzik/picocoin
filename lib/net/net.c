@@ -5,6 +5,8 @@
 #include "picocoin-config.h"            // for VERSION
 
 #include "ccoin/net/net.h"              // for nc_conn, net_child_info, etc
+#include <ccoin/net/event.h>            // for event_del, event_add, etc
+#include <ccoin/net/ev.h>               // for ev_break
 #include <ccoin/net/netbase.h>          // for bn_address_str, etc
 #include <ccoin/blkdb.h>                // for blkdb, blkdb_locator, etc
 #include <ccoin/buffer.h>               // for buffer, const_buffer
@@ -18,7 +20,6 @@
 
 #include <assert.h>                     // for assert
 #include <errno.h>                      // for errno, EAGAIN, EWOULDBLOCK, etc
-#include <event2/event.h>               // for event_free, event_del, etc
 #include <fcntl.h>                      // for fcntl
 #include <signal.h>                     // for kill, SIGTERM
 #include <stddef.h>                     // for size_t

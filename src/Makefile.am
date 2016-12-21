@@ -10,7 +10,7 @@ brd_SOURCES=		\
 
 brd_LDADD	= $(top_builddir)/lib/libccoin.la \
 		  $(top_builddir)/lib/libccoinnet.la \
-		  @CRYPTO_LIBS@ @GMP_LIBS@ @EVENT_LIBS@
+		  @CRYPTO_LIBS@ @GMP_LIBS@
 
 picocoin_SOURCES=	\
 	main.c		\
@@ -21,7 +21,7 @@ picocoin_LDADD	= $(top_builddir)/lib/libccoin.la \
 		  $(top_builddir)/lib/libccoinnet.la \
 		  $(top_builddir)/lib/libccoinaes.la \
 		  @CRYPTO_LIBS@ @GMP_LIBS@ @ARGP_LIBS@ \
-		  @EVENT_LIBS@ @JANSSON_LIBS@
+		  @JANSSON_LIBS@
 
 blkscan_LDADD	= $(top_builddir)/lib/libccoin.la \
 		  @CRYPTO_LIBS@ @GMP_LIBS@ @ARGP_LIBS@

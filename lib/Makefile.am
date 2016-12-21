@@ -1,6 +1,7 @@
 AUTOMAKE_OPTIONS= subdir-objects
 
 AM_CPPFLAGS	=   -I$(top_srcdir)/include \
+                -I$(top_srcdir)/include/ccoin/net \
                 -I$(top_srcdir)/external/secp256k1/include \
                 -I$(top_srcdir)/external/secp256k1/contrib
 
@@ -54,6 +55,8 @@ noinst_LTLIBRARIES= libccoinnet.la libccoinaes.la
 
 libccoinnet_la_SOURCES=	\
 	net/dns.c	\
+	net/ev.c	\
+	net/event.c	\
 	net/net.c	\
 	net/netbase.c	\
 	net/peerman.c
@@ -61,3 +64,10 @@ libccoinnet_la_SOURCES=	\
 libccoinaes_la_SOURCES=	\
     crypto/aes_util.c   \
     crypto/ctaes.c
+
+EXTRA_DIST=	\
+	net/ev_epoll.c	\
+	net/ev_poll.c	\
+	net/ev_kqueue.c	\
+	net/ev_port.c	\
+	net/ev_select.c

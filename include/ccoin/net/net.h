@@ -16,6 +16,13 @@
 #include <stdio.h>                      // for FILE
 #include <time.h>                       // for pid_t, time_t
 
+#define event_free(EV)				free((EV))
+#define event_base_loopbreak(EB)	ev_break((struct ev_loop *)(EB), EVBREAK_ONE)
+#define event_new(EB, FD, FL, CB, ARG) \
+			({struct event* (EV) = (struct event*)malloc(sizeof(struct event)); \
+			event_set((EV), (FD), (FL), (CB), (ARG)); \
+			event_base_set((EB), (EV)); (EV);})
+
 #ifdef __cplusplus
 extern "C" {
 #endif

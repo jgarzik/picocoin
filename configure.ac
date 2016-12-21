@@ -73,8 +73,6 @@ AC_CHECK_LIB(crypto, MD5_Init, CRYPTO_LIBS=-lcrypto,
   [AC_MSG_ERROR([Missing required libcrypto])])
 AC_CHECK_LIB(gmp, __gmpz_init, GMP_LIBS=-lgmp,
   [AC_MSG_ERROR([Missing required libgmp])])
-AC_CHECK_LIB(event_core, event_base_new, EVENT_LIBS=-levent_core,
-  [AC_MSG_ERROR([Missing required libevent])])
 AC_CHECK_LIB(jansson, json_loads, JANSSON_LIBS=-ljansson,
   [AC_MSG_ERROR([Missing required libjansson])])
 AC_CHECK_LIB(argp, argp_parse, ARGP_LIBS=-lARGP)
@@ -148,10 +146,12 @@ dnl --------------------------
 dnl autoconf output generation
 dnl --------------------------
 
+dnl libev
+m4_include([m4/libev.m4])
+
 AC_SUBST(MATH_LIBS)
 AC_SUBST(CRYPTO_LIBS)
 AC_SUBST(GMP_LIBS)
-AC_SUBST(EVENT_LIBS)
 AC_SUBST(JANSSON_LIBS)
 AC_SUBST(ARGP_LIBS)
 
