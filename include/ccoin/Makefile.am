@@ -41,14 +41,18 @@ ccoinnetincludedir=$(includedir)/ccoin/net
 
 ccoinnetinclude_HEADERS = \
     net/dns.h	\
-    net/ev.h	\
-    net/ev_vars.h	\
-    net/ev_wrap.h	\
-    net/event.h	\
     net/fakepoll.h	\
     net/net.h	\
     net/netbase.h	\
     net/peerman.h
+
+ccoinevincludedir=$(includedir)/ccoin/net
+
+ccoinevinclude_HEADERS = \
+    net/ev.h	\
+    net/ev_vars.h	\
+    net/ev_wrap.h	\
+    net/event.h
 
 ccoinaesincludedir = $(includedir)/ccoin/crypto
 

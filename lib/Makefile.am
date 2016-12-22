@@ -55,12 +55,10 @@ libccoin_la_SOURCES=	\
 	utxo.c		\
 	wallet.c
 
-noinst_LTLIBRARIES= libccoinnet.la libccoinaes.la
+noinst_LTLIBRARIES= libccoinnet.la libccoinev.la libccoinaes.la
 
 libccoinnet_la_SOURCES=	\
 	net/dns.c	\
-	net/ev.c	\
-	net/event.c	\
 	net/net.c	\
 	net/netbase.c	\
 	net/peerman.c
@@ -68,6 +66,12 @@ libccoinnet_la_SOURCES=	\
 libccoinaes_la_SOURCES=	\
     crypto/aes_util.c   \
     crypto/ctaes.c
+
+libccoinev_la_CFLAGS = -w
+
+libccoinev_la_SOURCES=	\
+	net/ev.c	\
+	net/event.c
 
 EXTRA_DIST=	\
 	net/ev_epoll.c	\

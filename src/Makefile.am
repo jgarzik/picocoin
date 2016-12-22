@@ -10,6 +10,7 @@ brd_SOURCES=		\
 
 brd_LDADD	= $(top_builddir)/lib/libccoin.la \
 		  $(top_builddir)/lib/libccoinnet.la \
+		  $(top_builddir)/lib/libccoinev.la \
 		  @GMP_LIBS@
 
 picocoin_SOURCES=	\
@@ -19,6 +20,7 @@ picocoin_SOURCES=	\
 
 picocoin_LDADD	= $(top_builddir)/lib/libccoin.la \
 		  $(top_builddir)/lib/libccoinnet.la \
+		  $(top_builddir)/lib/libccoinev.la \
 		  $(top_builddir)/lib/libccoinaes.la \
 		  @GMP_LIBS@ @ARGP_LIBS@ @JANSSON_LIBS@
 
