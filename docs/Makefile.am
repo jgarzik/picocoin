@@ -5,3 +5,9 @@ EXTRA_DIST = \
 	valgrind.txt \
 	PRNG.md
 
+SUBDIRS		= Doxygen
+
+DISTCLEANFILES = index.html _config.yml
+
+distclean-local:
+	-rm -rf Doxygen
