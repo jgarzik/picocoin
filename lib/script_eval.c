@@ -728,7 +728,7 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 			if (mpz_sgn(bn) < 0)
 				goto out;
 
-			uint64_t nSequence = mpz_get_ui(bn);
+			uint32_t nSequence = mpz_get_ui(bn);
 
 			// To provide for future soft-fork extensibility, if the
 			// operand has the disabled lock-time flag set,
