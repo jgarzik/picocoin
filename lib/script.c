@@ -278,8 +278,10 @@ void bsp_push_data(cstring *s, const void *data, size_t data_len)
 void bsp_push_int64(cstring *s, int64_t n)
 {
 	if (n == -1 || (n >= 1 && n <= 16)) {
-		unsigned char c = (unsigned char) (n + (OP_1 - 1));
-		cstr_append_buf(s, &c, 1);
+		cstr_append_c(s, (unsigned char) (n + (OP_1 - 1)));
+		return;
+	} else if (n == 0) {
+		cstr_append_c(s, (unsigned char) (OP_0));
 		return;
 	}
 
@@ -312,8 +314,10 @@ void bsp_push_int64(cstring *s, int64_t n)
 void bsp_push_uint64(cstring *s, uint64_t n)
 {
 	if (n >= 1 && n <= 16) {
-		unsigned char c = (unsigned char) (n + (OP_1 - 1));
-		cstr_append_buf(s, &c, 1);
+		cstr_append_c(s, (unsigned char) (n + (OP_1 - 1)));
+		return;
+	} else if (n == 0) {
+		cstr_append_c(s, (unsigned char) (OP_0));
 		return;
 	}
 

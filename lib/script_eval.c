@@ -600,6 +600,10 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 	mpz_t bn;
 	mpz_init(bn);
 
+        mpz_t bn_Zero, bn_One;
+        mpz_init_set_ui(bn_Zero, 0);
+        mpz_init_set_ui(bn_One,1);
+
 	if (script->len > MAX_SCRIPT_SIZE)
 		goto out;
 
@@ -999,7 +1003,7 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 			//	fEqual = !fEqual;
 			popstack(stack);
 			popstack(stack);
-			stack_push_char(stack, fEqual ? 1 : 0);
+			stack_push_str(stack, fEqual ? bn_getvch(bn_One) : bn_getvch(bn_Zero));
 			if (opcode == OP_EQUALVERIFY) {
 				if (fEqual)
 					popstack(stack);
@@ -1170,7 +1174,7 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 			popstack(stack);
 			popstack(stack);
 			popstack(stack);
-			stack_push_char(stack, fValue ? 1 : 0);
+			stack_push_str(stack, fValue ? bn_getvch(bn_One) : bn_getvch(bn_Zero));
 			mpz_clear(bn1);
 			mpz_clear(bn2);
 			mpz_clear(bn3);
@@ -1267,7 +1271,7 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 
 			popstack(stack);
 			popstack(stack);
-			stack_push_char(stack, fSuccess ? 1 : 0);
+			stack_push_str(stack, fSuccess ? bn_getvch(bn_One) : bn_getvch(bn_Zero));
 			if (opcode == OP_CHECKSIGVERIFY)
 			{
 				if (fSuccess)
@@ -1370,7 +1374,7 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 				goto out;
 			popstack(stack);
 
-			stack_push_char(stack, fSuccess ? 1 : 0);
+			stack_push_str(stack, fSuccess ? bn_getvch(bn_One) : bn_getvch(bn_Zero));
 
 			if (opcode == OP_CHECKMULTISIGVERIFY)
 			{
@@ -1394,6 +1398,8 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 
 out:
 	mpz_clear(bn);
+	mpz_clear(bn_Zero);
+	mpz_clear(bn_One);
 	parr_free(altstack, true);
 	cstr_free(vfExec, true);
 	return rc;

@@ -37,7 +37,7 @@ struct bp_tx BuildCreditingTransaction(struct cstring *scriptPubKey)
     return txCredit;
 }
 
-struct bp_tx BuildSpendingTransaction(struct cstring *scriptSig, struct bp_tx txCredit)
+struct bp_tx BuildSpendingTransaction(struct cstring* scriptSig, struct bp_tx* txCredit)
 {
     struct bp_tx txSpend;
     bp_tx_init(&txSpend);
@@ -46,9 +46,9 @@ struct bp_tx BuildSpendingTransaction(struct cstring *scriptSig, struct bp_tx tx
     txSpend.vin = parr_new(0, bp_txin_freep);
     txSpend.vout = parr_new(0, bp_txout_freep);
 
-    struct bp_txin *txinSpend = calloc(1, sizeof(struct bp_txin));
+    struct bp_txin* txinSpend = calloc(1, sizeof(struct bp_txin));
     bp_txin_init(txinSpend);
-    bu256_copy(&txinSpend->prevout.hash, &txCredit.sha256);
+    bu256_copy(&txinSpend->prevout.hash, &txCredit->sha256);
     txinSpend->prevout.n = 0;
     txinSpend->scriptSig = cstr_new_buf(scriptSig->str, scriptSig->len);
     txinSpend->nSequence = SEQUENCE_FINAL;
@@ -60,31 +60,29 @@ struct bp_tx BuildSpendingTransaction(struct cstring *scriptSig, struct bp_tx tx
     txoutSpend->nValue =(uint64_t) 0;
     parr_add(txSpend.vout, txoutSpend);
 
-    bp_tx_free(&txCredit);
+    bp_tx_free(txCredit);
     return txSpend;
 }
 
-static void test_script(bool is_valid,cstring *scriptSig, cstring *scriptPubKey,
-			unsigned int idx, const char *scriptSigEnc,
-			const char *scriptPubKeyEnc,
-			const unsigned int test_flags)
+static void test_script(bool is_valid, cstring* scriptSig,
+                        cstring* scriptPubKey, unsigned int idx,
+                        const char* scriptSigEnc, const char* scriptPubKeyEnc,
+                        const unsigned int test_flags)
 {
-	struct bp_tx tx = BuildSpendingTransaction(scriptSig, BuildCreditingTransaction(scriptPubKey));
+    struct bp_tx tx = BuildCreditingTransaction(scriptPubKey);
+    tx = BuildSpendingTransaction(scriptSig, &tx);
 
-	bool rc;
-	rc = bp_script_verify(scriptSig, scriptPubKey, &tx, 0,
-			      test_flags, SIGHASH_NONE);
+    bool rc;
+    rc = bp_script_verify(scriptSig, scriptPubKey, &tx, 0, test_flags, SIGHASH_NONE);
 
-	if (rc != is_valid) {
-		fprintf(stderr,
-			"script: %sis_valid test %u failed\n"
-			"script: [\"%s\", \"%s\"]\n",
-			is_valid ? "" : "!",
-			idx, scriptSigEnc, scriptPubKeyEnc);
-		assert(rc == is_valid);
-	}
+    if (rc != is_valid) {
+        fprintf(stderr, "script: %sis_valid test %u failed\n"
+                        "script: [\"%s\", \"%s\"]\n",
+            is_valid ? "" : "!", idx, scriptSigEnc, scriptPubKeyEnc);
+        assert(rc == is_valid);
+    }
 
-	bp_tx_free(&tx);
+    bp_tx_free(&tx);
 }
 
 static void runtest(const char *basefn)
