@@ -69,7 +69,9 @@ dnl -----------------------------
 
 AC_CHECK_LIB(m, log, MATH_LIBS=-lm,
   [AC_MSG_ERROR([Missing required libm])])
-AC_CHECK_LIB(gmp, __gmpz_init, GMP_LIBS=-lgmp,
+AC_CHECK_LIB(gmp, __gmpz_init,
+  [GMP_LIBS=-lgmp
+   AC_DEFINE(USE_GMP, 1, [Define if gmp is to be used])],
   [AC_MSG_ERROR([Missing required libgmp])])
 AC_CHECK_LIB(event_core, event_base_new, EVENT_LIBS=-levent_core,
   [AC_MSG_ERROR([Missing required libevent])])
