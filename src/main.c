@@ -13,6 +13,7 @@
 #include <ccoin/crypto/prng.h>          // for prng_get_random_bytes
 #include <ccoin/log.h>                  // for log_info, log_debug, etc
 #include <ccoin/net/dns.h>              // for bu_dns_seed_addrs
+#include <ccoin/net/event.h>            // for event_base_dispatch, etc
 #include <ccoin/net/net.h>              // for net_child_info, nc_conns_gc, etc
 #include <ccoin/net/netbase.h>          // for bn_address_str, etc
 #include <ccoin/net/peerman.h>          // for peer_manager, peerman_write, etc
@@ -25,7 +26,6 @@
 #include <stdbool.h>                    // for bool
 #include <ctype.h>                      // for isspace
 #include <errno.h>                      // for errno
-#include <event2/event.h>               // for event_free, event_base_new, etc
 #include <fcntl.h>                      // for open
 #include <stdio.h>                      // for fprintf, printf, NULL, etc
 #include <stdlib.h>                     // for free, exit

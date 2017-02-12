@@ -16,6 +16,7 @@
 #include <ccoin/log.h>                  // for log_info, logging, etc
 #include <ccoin/mbr.h>                  // for fread_message
 #include <ccoin/message.h>              // for p2p_message, etc
+#include <ccoin/net/event.h>            // for event_base_dispatch, etc
 #include <ccoin/net/net.h>              // for net_child_info, nc_conns_gc, etc
 #include <ccoin/net/peerman.h>          // for peer_manager, peerman_write, etc
 #include <ccoin/parr.h>                 // for parr, parr_idx, parr_free, etc
@@ -27,7 +28,6 @@
 #include <stdbool.h>                    // for bool
 #include <ctype.h>                      // for isspace
 #include <errno.h>                      // for errno
-#include <event2/event.h>               // for event_base_dispatch, etc
 #include <fcntl.h>                      // for open
 #include <signal.h>                     // for signal, SIG_IGN, SIGHUP, etc
 #include <stddef.h>                     // for size_t

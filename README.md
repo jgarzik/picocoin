@@ -15,12 +15,10 @@ libccoin library dependencies:
 
 picocoin client dependencies:
 	GMP
-	libevent 2.x
 	jansson 2.x (2.1 used for development)
 
 block relay daemon (brd) dependencies:
 	GMP
-	libevent 2.x
 
 
 

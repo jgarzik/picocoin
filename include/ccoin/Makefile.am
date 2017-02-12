@@ -46,6 +46,14 @@ ccoinnetinclude_HEADERS = \
     net/netbase.h	\
     net/peerman.h
 
+ccoinevincludedir=$(includedir)/ccoin/net
+
+ccoinevinclude_HEADERS = \
+    net/ev.h	\
+    net/ev_vars.h	\
+    net/ev_wrap.h	\
+    net/event.h
+
 ccoinaesincludedir = $(includedir)/ccoin/crypto
 
 ccoinaesinclude_HEADERS =	\

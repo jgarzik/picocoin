@@ -33,7 +33,6 @@ addons:
     packages:
       - libgmp-dev
       - libjansson-dev
-      - libevent-dev
       - lcov
       - valgrind
       - libtool
@@ -52,7 +51,6 @@ before_install:
 
 install:
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install jansson; fi
-  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install libevent; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install argp-standalone; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ] && [ "$ENABLE_COVERAGE" = "yes" ]; then brew install lcov; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ] && [ "$ENABLE_VALGRIND" = "yes" ]; then brew install valgrind; fi
