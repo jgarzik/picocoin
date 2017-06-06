@@ -20,10 +20,13 @@ struct bp_tx BuildCreditingTransaction(struct cstring *scriptPubKey)
     txCredit.vin = parr_new(0, bp_txin_freep);
     txCredit.vout = parr_new(0, bp_txout_freep);
 
-    struct bp_txin *txinCredit = calloc(1, sizeof(struct bp_txin));
+    struct bp_txin* txinCredit = calloc(1, sizeof(struct bp_txin));
     bp_txin_init(txinCredit);
-    bp_outpt_null(&txinCredit->prevout);
+    txinCredit->prevout.n = (uint32_t)-1;
+    bu256_set_u64(&txinCredit->prevout.hash, 0);
     txinCredit->scriptSig = cstr_new(NULL);
+    cstr_append_c(txinCredit->scriptSig, 0);
+    cstr_append_c(txinCredit->scriptSig, 0);
     txinCredit->nSequence = SEQUENCE_FINAL;
     parr_add(txCredit.vin, txinCredit);
 
