@@ -634,7 +634,7 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 		if (disabled_op[opcode])
 			goto out;
 
-		if (fExec && is_bsp_pushdata(opcode)) {
+		if (fExec && 0 <= opcode && opcode <= OP_PUSHDATA4) {
 			if (fRequireMinimal && !CheckMinimalPush(&op.data, opcode))
 				goto out;
 			stack_push(stack, (struct buffer *) &op.data);
@@ -1430,17 +1430,21 @@ bool bp_script_verify(const cstring *scriptSig, const cstring *scriptPubKey,
 		goto out;
 
 	if ((flags & SCRIPT_VERIFY_P2SH) && is_bsp_p2sh_str(scriptPubKey)) {
+		// scriptSig must be literals-only or validation fails
 		if (!is_bsp_pushonly(&sigbuf))
 			goto out;
+		// stack cannot be empty here, because if it was the
+		// P2SH  HASH <> EQUAL  scriptPubKey would be evaluated with
+		// an empty stack and the script_eval above would return false.
 		if (stackCopy->len < 1)
 			goto out;
 
-		struct buffer *pubkey2_buf = stack_take(stackCopy, -1);
+		struct buffer *pubKeySerialized = stack_take(stackCopy, -1);
 		popstack(stackCopy);
 
-		cstring *pubkey2 = cstr_new_buf(pubkey2_buf->p, pubkey2_buf->len);
+		cstring *pubkey2 = cstr_new_buf(pubKeySerialized->p, pubKeySerialized->len);
 
-		buffer_freep(pubkey2_buf);
+		buffer_freep(pubKeySerialized);
 
 		bool rc2 = bp_script_eval(stackCopy, pubkey2, txTo, nIn,
 					  flags, nHashType);
@@ -1460,7 +1464,7 @@ bool bp_script_verify(const cstring *scriptSig, const cstring *scriptPubKey,
 		// Disallow CLEANSTACK without P2SH, as otherwise a switch CLEANSTACK->P2SH+CLEANSTACK
 		// would be possible, which is not a softfork (and P2SH should be one).
 		assert((flags & SCRIPT_VERIFY_P2SH) != 0);
-		if (stack->len != 1)
+		if (stackCopy->len != 1)
 			goto out;
 	}
 

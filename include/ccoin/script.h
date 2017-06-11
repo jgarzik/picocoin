@@ -257,7 +257,7 @@ extern bool is_bsp_multisig(parr *ops);
 
 static inline bool is_bsp_pushdata(enum opcodetype op)
 {
-	return (op <= OP_PUSHDATA4);
+	return (op <= OP_16);
 }
 
 static inline bool is_bsp_p2sh(struct const_buffer *buf)
