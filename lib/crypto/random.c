@@ -219,6 +219,39 @@ static uint8_t *try_unix_std(uint8_t *dst) {
 }
 #endif
 
+#ifdef USE_GMP
+
+#define TRY_GMP_RAND
+
+#include <gmp.h>
+
+static uint8_t *try_gmp_rand(uint8_t *dst, uint8_t *p) {
+    mpz_t rand, seed;
+    gmp_randstate_t state;
+    mp_bitcnt_t n = 8 * RND_BYTES;
+
+    mpz_inits(rand, seed, NULL);
+
+    mpz_import(seed, p - dst, 1, 1, 1, 0, dst);
+
+    gmp_randinit_default(state);
+    gmp_randseed(state, seed);
+    mpz_urandomb(rand, state, n);
+
+    size_t sz;
+    char *buf = mpz_export(NULL, &sz, 1, 1, 1, 0, rand);
+    memcpy(p, buf, sz);
+
+    free(buf);
+    gmp_randclear(state);
+    mpz_clears(rand, seed, NULL);
+
+    p += sz;
+
+    return p;
+}
+#endif
+
 /*
  * try to extract some randomness for initial seeding
  *
@@ -238,6 +271,10 @@ unsigned prng_acquire_system_randomness(uint8_t *dst) {
 #endif
 #ifdef TRY_UNIXSTD
     p = try_unix_std(p);
+#endif
+#ifdef TRY_GMP_RAND
+    if (p > dst)
+        p = try_gmp_rand(dst, p);
 #endif
     return p - dst;
 }
