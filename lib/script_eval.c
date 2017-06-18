@@ -118,9 +118,9 @@ void bp_tx_sigserializer(cstring *s, const cstring *scriptCode,
 		struct bp_txout *txout = parr_idx(txTo->vout, nOutput);
 		if (fHashSingle && (nOutput != nIn))
 			// Do not lock-in the txout payee at other indices as txin;
-			ser_s64(s, (int)-1);
-		else
-			ser_bp_txout(s, txout);
+			bp_txout_set_null(txout);
+
+		ser_bp_txout(s, txout);
     }
     // Serialize nLockTime
     ser_u32(s, txTo->nLockTime);
@@ -1388,6 +1388,7 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 			goto out;
 		}
 
+		// Size limits
 		if (stack->len + altstack->len > 1000)
 			goto out;
 	}

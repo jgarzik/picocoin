@@ -1,4 +1,4 @@
-#Picocoin
+# Picocoin
 
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/jgarzik/picocoin/master/COPYING) [![Build Status](https://travis-ci.org/jgarzik/picocoin.svg?branch=master)](https://travis-ci.org/jgarzik/picocoin) [![Coverage Status](https://coveralls.io/repos/github/jgarzik/picocoin/badge.svg?branch=master)](https://coveralls.io/github/jgarzik/picocoin?branch=master)
 
