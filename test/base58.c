@@ -2,17 +2,23 @@
  * Distributed under the MIT/X11 software license, see the accompanying
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.
  */
-#include "picocoin-config.h"
 
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
+#include <ccoin/base58.h>               // for base58_decode_check, etc
+#include <ccoin/coredefs.h>             // for bitc_address_type, etc
+#include <ccoin/cstr.h>                 // for cstring, cstr_free, etc
+#include <ccoin/hexcode.h>              // for hex2str, decode_hex
+#include <ccoin/key.h>                  // for bitc_key_static_shutdown
+#include <ccoin/crypto/ripemd160.h>     // for RIPEMD160_DIGEST_LENGTH
+#include "libtest.h"                    // for dumphex, read_json, etc
+
 #include <jansson.h>
-#include "libtest.h"
-#include <ccoin/base58.h>
-#include <ccoin/hexcode.h>
-#include <ccoin/key.h>
-#include <ccoin/coredefs.h>
+
+#include <assert.h>                     // for assert
+#include <stdbool.h>                    // for bool, true
+#include <stddef.h>                     // for size_t
+#include <stdio.h>                      // for fprintf, NULL, stderr
+#include <stdlib.h>                     // for free, calloc
+#include <string.h>                     // for strcmp, memcmp, strlen
 
 static void test_encode(const char *hexstr, const char *enc)
 {
@@ -70,25 +76,22 @@ static void test_decode(const char *hexstr, const char *base58_str)
 	cstr_free(s, true);
 }
 
-static void runtest_encdec(const char *base_fn)
+static void runtest_encdec(const char *json_base_fn)
 {
-	char *fn = NULL;
+	char *json_fn = test_filename(json_base_fn);
+	json_t *tests = read_json(json_fn);
+	assert(json_is_array(tests));
 
-	fn = test_filename(base_fn);
-	json_t *data = read_json(fn);
-	assert(json_is_array(data));
+	size_t n_tests = json_array_size(tests);
+	unsigned int idx;
 
-	size_t n_tests = json_array_size(data);
-	unsigned int i;
+	for (idx = 0; idx < n_tests; idx++) {
+		json_t *test = json_array_get(tests, idx);
+	    assert(json_is_array(test));
+	    assert(json_array_size(test) == 2);
 
-	for (i = 0; i < n_tests; i++) {
-		json_t *inner;
-
-		inner = json_array_get(data, i);
-		assert(json_is_array(inner));
-
-		json_t *j_raw = json_array_get(inner, 0);
-		json_t *j_enc = json_array_get(inner, 1);
+		json_t *j_raw = json_array_get(test, 0);
+		json_t *j_enc = json_array_get(test, 1);
 		assert(json_is_string(j_raw));
 		assert(json_is_string(j_enc));
 
@@ -98,8 +101,8 @@ static void runtest_encdec(const char *base_fn)
 			    json_string_value(j_enc));
 	}
 
-	free(fn);
-	json_decref(data);
+	free(json_fn);
+	json_decref(tests);
 }
 
 static void test_privkey_valid_enc(const char *base58_str,
@@ -228,7 +231,7 @@ static void test_pubkey_valid_dec(const char *base58_str,
 	assert(dec != NULL);
 
 	assert(addrtype == addrtype_dec);
-	assert(dec->len == 20);
+	assert(dec->len == RIPEMD160_DIGEST_LENGTH);
 	assert(payload->len == dec->len);
 	assert(memcmp(payload->str, dec->str, dec->len) == 0);
 
@@ -236,29 +239,26 @@ static void test_pubkey_valid_dec(const char *base58_str,
 	cstr_free(payload, true);
 }
 
-static void runtest_keys_valid(const char *base_fn)
+static void runtest_keys_valid(const char *json_base_fn)
 {
-	char *fn = NULL;
+	char *json_fn = test_filename(json_base_fn);
+	json_t *tests = read_json(json_fn);
+	assert(json_is_array(tests));
 
-	fn = test_filename(base_fn);
-	json_t *data = read_json(fn);
-	assert(json_is_array(data));
+	size_t n_tests = json_array_size(tests);
+	unsigned int idx;
 
-	size_t n_tests = json_array_size(data);
-	unsigned int i;
+	for (idx = 0; idx < n_tests; idx++) {
+		json_t *test = json_array_get(tests, idx);
+	    assert(json_is_array(test));
+	    assert(json_array_size(test) == 3);
 
-	for (i = 0; i < n_tests; i++) {
-		json_t *inner;
-
-		inner = json_array_get(data, i);
-		assert(json_is_array(inner));
-
-		json_t *j_base58 = json_array_get(inner, 0);
-		json_t *j_payload = json_array_get(inner, 1);
+		json_t *j_base58 = json_array_get(test, 0);
+		json_t *j_payload = json_array_get(test, 1);
 		assert(json_is_string(j_base58));
 		assert(json_is_string(j_payload));
 
-		json_t *j_meta = json_array_get(inner, 2);
+		json_t *j_meta = json_array_get(test, 2);
 		assert(json_is_object(j_meta));
 
 		json_t *j_addrtype = json_object_get(j_meta, "addrType");
@@ -296,14 +296,57 @@ static void runtest_keys_valid(const char *base_fn)
 		}
 	}
 
-	free(fn);
-	json_decref(data);
+	free(json_fn);
+	json_decref(tests);
+}
+
+static void runtest_keys_invalid(const char *json_base_fn)
+{
+	char *json_fn = test_filename(json_base_fn);
+	json_t *tests = read_json(json_fn);
+	assert(json_is_array(tests));
+
+	size_t n_tests = json_array_size(tests);
+	unsigned int idx;
+
+	for (idx = 0; idx < n_tests; idx++) {
+
+	    json_t *test = json_array_get(tests, idx);
+	    assert(json_is_array(test));
+	    assert(json_array_size(test) == 1);
+
+	    json_t *j_base58 = json_array_get(test, 0);
+	    assert(json_is_string(j_base58));
+
+	    unsigned char addrtype;
+	    cstring *payload = base58_decode_check(&addrtype, json_string_value(j_base58));
+	    bool is_valid = (payload != NULL);
+
+	    if (is_valid)
+			if ((addrtype == PUBKEY_ADDRESS_TEST) ||
+				(addrtype == PUBKEY_ADDRESS) ||
+				(addrtype == SCRIPT_ADDRESS_TEST) ||
+				(addrtype == SCRIPT_ADDRESS))
+				    is_valid = (payload->len == RIPEMD160_DIGEST_LENGTH);
+			else if
+				((addrtype == PRIVKEY_ADDRESS_TEST) ||
+				(addrtype == PRIVKEY_ADDRESS))
+				    is_valid = (payload->len == 32 || payload->len == 33 && payload->str[32] == 1);
+			else is_valid = false;
+
+	    cstr_free(payload, true);
+	    assert(!is_valid);
+	}
+
+	free(json_fn);
+	json_decref(tests);
 }
 
 int main (int argc, char *argv[])
 {
 	runtest_encdec("base58_encode_decode.json");
 	runtest_keys_valid("base58_keys_valid.json");
+	runtest_keys_invalid("base58_keys_invalid.json");
 
 	bp_key_static_shutdown();
 	return 0;

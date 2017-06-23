@@ -10,7 +10,7 @@ AM_CPPFLAGS	= -DTEST_SRCDIR=\"$(top_srcdir)/test\" \
 
 EXTRA_DIST	= \
 	base58_encode_decode.json	\
-	base58_keys_valid.json		\
+	base58_keys_invalid.json base58_keys_valid.json	\
 	random.data			\
 	blk0.json  blk120383.json  tx3e0dc3da.json \
 	blk0.ser  blk120383.ser  tx3e0dc3da.ser \

@@ -269,8 +269,8 @@ static void mutate_inputs(void)
 static bool is_script_addr(unsigned char addrtype)
 {
 	switch (addrtype) {
-	case 5:		// mainnet
-	case 196:	// testnet
+	case SCRIPT_ADDRESS:		// mainnet
+	case SCRIPT_ADDRESS_TEST:	// testnet
 		return true;
 	default:
 		return false;
