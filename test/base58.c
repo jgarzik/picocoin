@@ -344,9 +344,9 @@ static void runtest_keys_invalid(const char *json_base_fn)
 
 int main (int argc, char *argv[])
 {
-	runtest_encdec("base58_encode_decode.json");
-	runtest_keys_valid("base58_keys_valid.json");
-	runtest_keys_invalid("base58_keys_invalid.json");
+	runtest_encdec("data/base58_encode_decode.json");
+	runtest_keys_valid("data/base58_keys_valid.json");
+	runtest_keys_invalid("data/base58_keys_invalid.json");
 
 	bp_key_static_shutdown();
 	return 0;

@@ -165,6 +165,6 @@ static void runtest(const char *basefn)
 
 int main (int argc, char *argv[])
 {
-	runtest("script_tests.json");
-	return 0;
+    runtest("data/script_tests.json");
+    return 0;
 }

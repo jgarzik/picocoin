@@ -97,9 +97,9 @@ static void runtest(const char *ser_base_fn, const struct chain_info *chain,
 
 int main (int argc, char *argv[])
 {
-	runtest("hdr193000.ser", &chain_metadata[CHAIN_BITCOIN], 193000,
+	runtest("data/hdr193000.ser", &chain_metadata[CHAIN_BITCOIN], 193000,
 	    "000000000000059f452a5f7340de6682a977387c17010ff6e6c3bd83ca8b1317");
-	runtest("tn_hdr35141.ser", &chain_metadata[CHAIN_TESTNET3], 35141,
+	runtest("data/tn_hdr35141.ser", &chain_metadata[CHAIN_TESTNET3], 35141,
 	    "0000000000dde6ce4b9ad1e2a5be59f1b7ace6ef8d077d846263b0bfbc984f7f");
 
 	bp_key_static_shutdown();

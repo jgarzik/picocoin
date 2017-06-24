@@ -78,6 +78,6 @@ static void runtest(const char* json_base_fn)
 
 int main(int argc, char* argv[])
 {
-    runtest("sighash.json");
+    runtest("data/sighash.json");
     return 0;
 }

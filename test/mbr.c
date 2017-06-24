@@ -41,7 +41,7 @@ static void testit(const char *ser_fn_base)
 
 int main (int argc, char *argv[])
 {
-	testit("blk120383.ser");
+	testit("data/blk120383.ser");
 	return 0;
 }
 

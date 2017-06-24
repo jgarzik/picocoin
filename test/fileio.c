@@ -1,18 +1,20 @@
-/* Copyright 2012 exMULTI, Inc.
+/* Copyright 2017 Bloq, Inc.
  * Distributed under the MIT/X11 software license, see the accompanying
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <assert.h>
 
-#include <ccoin/crypto/sha1.h>
-#include <ccoin/util.h>
-#include <ccoin/hexcode.h>
+#include "libtest.h"                    // for test_filename
 
-#include "libtest.h"
+#include <ccoin/crypto/sha1.h>          // for SHA1_DIGEST_LENGTH, etc
+#include <ccoin/hexcode.h>              // for encode_hex
+#include <ccoin/util.h>                 // for bu_read_file, bu_write_file, etc
+
+#include <assert.h>                     // for assert
+#include <stdio.h>                      // for NULL
+#include <stdlib.h>                     // for free
+#include <string.h>                     // for memcmp, strcmp
+#include <unistd.h>                     // for unlink
+
 
 #define RANDOM_DATA_SHA1SUM "18833691a6d0ad9c481dcbc6d0da0d3245d7c627"
 
@@ -66,7 +68,7 @@ static void test_misc(void)
 
 int main (int argc, char *argv[])
 {
-	char *filename = test_filename("random.data");
+	char *filename = test_filename("data/random.data");
 	const char *w_filename = "fileio.out";
 
 	test_read(filename);

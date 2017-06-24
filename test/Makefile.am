@@ -4,20 +4,11 @@ if ENABLE_VALGRIND
                         --error-exitcode=1
 endif
 
+SUBDIRS		= data
+
 AM_CPPFLAGS	= -DTEST_SRCDIR=\"$(top_srcdir)/test\" \
 		  -I$(top_srcdir)/include \
 		  -I$(top_srcdir)/external/secp256k1/include
-
-EXTRA_DIST	= \
-	base58_encode_decode.json	\
-	base58_keys_invalid.json base58_keys_valid.json	\
-	random.data			\
-	blk0.json  blk120383.json  tx3e0dc3da.json \
-	blk0.ser  blk120383.ser  tx3e0dc3da.ser \
-	blks10.ser \
-	hdr193000.ser tn_hdr35141.ser \
-	tn_blk35133.ser wallet-basics.json sighash.json \
-	script_tests.json tx_valid.json tx_invalid.json
 
 noinst_LIBRARIES= libtest.a
 
