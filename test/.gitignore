@@ -28,6 +28,7 @@ parr
 prng
 script
 script-parse
+sighash
 tx
 tx-valid
 util

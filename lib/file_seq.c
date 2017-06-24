@@ -5,10 +5,10 @@
  */
 #include "picocoin-config.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <ccoin/util.h>
+#include <ccoin/util.h>                 // for file_seq_open
+
+#include <fcntl.h>                      // for open, posix_fadvise
+#include <unistd.h>                     // for close
 
 int file_seq_open(const char *filename)
 {

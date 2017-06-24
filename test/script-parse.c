@@ -120,7 +120,7 @@ int main (int argc, char *argv[])
 	opn = GetOpName(OP_INVALIDOPCODE);
 	assert(!strcmp(opn, "<unknown>"));
 
-	runtest("blk120383.ser");
+	runtest("data/blk120383.ser");
 
 	bp_key_static_shutdown();
 	return 0;

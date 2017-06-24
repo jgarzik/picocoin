@@ -58,7 +58,7 @@ static void runtest(const char *ser_fn_base)
 
 int main (int argc, char *argv[])
 {
-	runtest("blks10.ser");
+	runtest("data/blks10.ser");
 
 	bp_key_static_shutdown();
 	return 0;

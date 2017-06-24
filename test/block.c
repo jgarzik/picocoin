@@ -86,8 +86,8 @@ static void runtest(const char *json_fn_base, const char *ser_fn_base)
 
 int main (int argc, char *argv[])
 {
-	runtest("blk0.json", "blk0.ser");
-	runtest("blk120383.json", "blk120383.ser");
+	runtest("data/blk0.json", "data/blk0.ser");
+	runtest("data/blk120383.json", "data/blk120383.ser");
 
 	bp_key_static_shutdown();
 	return 0;

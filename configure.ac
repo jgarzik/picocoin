@@ -163,6 +163,7 @@ AC_CONFIG_FILES([
 	lib/Makefile
 	src/Makefile
 	test/Makefile
+	test/data/Makefile
 	external/Makefile
 	])
 AC_OUTPUT
