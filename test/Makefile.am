@@ -16,7 +16,7 @@ EXTRA_DIST	= \
 	blk0.ser  blk120383.ser  tx3e0dc3da.ser \
 	blks10.ser \
 	hdr193000.ser tn_hdr35141.ser \
-	tn_blk35133.ser wallet-basics.json \
+	tn_blk35133.ser wallet-basics.json sighash.json \
 	script_tests.json tx_valid.json tx_invalid.json
 
 noinst_LIBRARIES= libtest.a
@@ -24,12 +24,12 @@ noinst_LIBRARIES= libtest.a
 libtest_a_SOURCES= libtest.h libtest.c chisq.c randtest.c
 
 noinst_PROGRAMS	= clist cstr coredefs hex hdkeys hashtab base58 fileio util \
-		  crypto keystore keyset bloom mbr misc net \
+		  crypto keystore keyset bloom mbr misc net sighash \
 		  message parr prng script-parse tx block blockfile blkdb script \
 		  tx-valid wallet wallet-basics chain-verf hash ctaes aes-util
 
 TESTS		= clist cstr coredefs hex hdkeys hashtab base58 fileio util \
-		  crypto keystore keyset bloom mbr misc net \
+		  crypto keystore keyset bloom mbr misc net sighash \
 		  message parr prng script-parse tx block blockfile blkdb script \
 		  tx-valid wallet wallet-basics chain-verf hash ctaes aes-util
 
@@ -64,7 +64,8 @@ parr_LDADD		    = $(COMMON_LDADD)
 prng_LDADD		    = $(COMMON_LDADD)
 script_LDADD		= $(COMMON_LDADD)
 script_parse_LDADD	= $(COMMON_LDADD)
-tx_LDADD            = $(COMMON_LDADD)
+sighash_LDADD		= $(COMMON_LDADD)
+tx_LDADD		= $(COMMON_LDADD)
 tx_valid_LDADD		= $(COMMON_LDADD)
 util_LDADD		    = $(COMMON_LDADD) $(top_builddir)/lib/libccoinnet.la
 wallet_LDADD		= $(COMMON_LDADD)

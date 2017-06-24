@@ -71,6 +71,8 @@ void bp_tx_sigserializer(cstring *s, const cstring *scriptCode,
 		if (nInput != nIn)
 			// Blank out other inputs' signatures
 			ser_varlen(s, (int)0);
+		else if (scriptCode == NULL)
+		    cstr_append_c(s, 0);
 		else {
 			/** Serialize the passed scriptCode, skipping OP_CODESEPARATORs */
 			struct const_buffer it = { scriptCode->str, scriptCode->len };
