@@ -82,6 +82,16 @@ dnl Checks for optional library functions
 dnl -------------------------------------
 AC_CHECK_FUNCS(fdatasync memmem strndup mkstemp)
 
+dnl -------------------------------------
+dnl Checks for Doxygen
+dnl -------------------------------------
+AC_CHECK_PROGS([DOXYGEN], [doxygen])
+AS_IF([test -z "$DOXYGEN"], [
+	AC_MSG_WARN([Doxygen not found - continuing without Doxygen support])
+])
+AM_CONDITIONAL([HAVE_DOXYGEN],[test -n "$DOXYGEN"])
+AM_COND_IF([HAVE_DOXYGEN], [AC_CONFIG_FILES([docs/Doxygen/Doxyfile])])
+
 dnl -----------------
 dnl Configure options
 dnl -----------------
@@ -157,7 +167,8 @@ AC_CONFIG_SUBDIRS([external/secp256k1])
 AC_CONFIG_FILES([
 	Makefile
 	m4/Makefile
-	doc/Makefile
+	docs/Makefile
+	docs/Doxygen/Makefile
 	include/Makefile
 	include/ccoin/Makefile
 	lib/Makefile

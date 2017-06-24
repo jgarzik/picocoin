@@ -1,0 +1,53 @@
+Instructions by $<$a href=\char`\"{}http\-://github.\-com/colindean\char`\"{}$>$colindean.
+
+\subsection*{Dependencies }
+
+This guide assumes usage of \href{http://brew.sh}{\tt Homebrew} or \href{https://www.macports.org}{\tt Mac\-Ports} for installing dependencies.
+
+You will need to install {\ttfamily G\-M\-P} in order to build {\itshape libccoin}, plus {\ttfamily libevent} and {\ttfamily jansson} to build {\itshape picocoin}.
+
+Install these packages. It will take a few minutes. \begin{DoxyVerb}brew install autoconf automake libtool argp-standalone jansson libevent gmp
+\end{DoxyVerb}
+
+
+or \begin{DoxyVerb}sudo port install autoconf automake libtool argp-standalone jansson libevent pkgconfig gmp
+\end{DoxyVerb}
+
+
+\subsection*{Building }
+
+Homebrew \begin{DoxyVerb}./autogen.sh
+./configure
+make
+\end{DoxyVerb}
+
+
+Mac\-Ports \begin{DoxyVerb}./autogen.sh
+./configure CPPFLAGS="-I /opt/local/include -L /opt/local/lib"
+make
+\end{DoxyVerb}
+
+
+You should also run {\ttfamily make check} in order to run tests. This is a vital step early in the development of {\ttfamily picocoin}.
+
+You can install it if you want with {\ttfamily make install}. It will be installed to {\ttfamily /usr/local/picocoin}.
+
+The {\ttfamily picocoin} binary will be in {\ttfamily ./src}.
+
+\subsection*{Running }
+
+To ensure that at least the basics compiled correctly, execute a command\-: \begin{DoxyVerb}src/picocoin list-settings
+\end{DoxyVerb}
+
+
+You should see output formatted in J\-S\-O\-N, \begin{DoxyVerb}{
+  "wallet": "picocoin.wallet",
+  "chain": "bitcoin",
+  "net.connect.timeout": "11",
+  "peers": "picocoin.peers",
+  "blkdb": "picocoin.blkdb"
+}
+\end{DoxyVerb}
+
+
+If that works, {\ttfamily picocoin} is ready for use. 
