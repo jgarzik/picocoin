@@ -75,7 +75,7 @@ AC_CHECK_LIB(event_core, event_base_new, EVENT_LIBS=-levent_core,
   [AC_MSG_ERROR([Missing required libevent])])
 AC_CHECK_LIB(jansson, json_loads, JANSSON_LIBS=-ljansson,
   [AC_MSG_ERROR([Missing required libjansson])])
-AC_CHECK_LIB(argp, argp_parse, ARGP_LIBS=-lARGP)
+AC_CHECK_LIB(argp, argp_parse, ARGP_LIBS=-largp)
 
 dnl -------------------------------------
 dnl Checks for optional library functions

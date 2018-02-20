@@ -11,7 +11,7 @@
  * It is public domain.
  * */
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
 
 #include <libkern/OSByteOrder.h>
 
@@ -32,11 +32,23 @@
 
 #define bswap_32(x) OSSwapInt32(x)
 
-#else
+#elif defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__)
+
+#include <sys/endian.h>
+
+#define bswap_32(x) bswap32(x)
+
+#elif defined(__OpenBSD__)
+
+#include <endian.h>
+
+#define bswap_32(x) swap32(x)
+
+#else // assume glibc
 
 #include <endian.h>
 #include <byteswap.h>
 
-#endif // __APPLE__
+#endif
 
 #endif /* __LIBCCOIN_ENDIAN_H__ */

@@ -37,7 +37,8 @@
 #include <sys/uio.h>                    // for iovec, writev
 #include <unistd.h>                     // for lseek64, access, lseek, etc
 
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__DragonFly__) || defined(__FreeBSD__) || \
+    defined(__NetBSD__) || defined(__OpenBSD__)
 #  define off64_t off_t
 #  define lseek64 lseek
 #endif
