@@ -5,7 +5,6 @@
 #include <ccoin/key.h>
 #include <ccoin/core.h>
 #include <ccoin/buint.h>
-#include <ccoin/key.h>
 #include <ccoin/util.h>
 
 static bool sign1(const bu160_t *key_id, struct bp_keystore *ks,
