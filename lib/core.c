@@ -166,6 +166,11 @@ void bp_txin_free(struct bp_txin *txin)
 
 	bp_outpt_free(&txin->prevout);
 
+	if (txin->scriptWitness) {
+		parr_free(txin->scriptWitness, true);
+		txin->scriptWitness = NULL;
+	}
+
 	if (txin->scriptSig) {
 		cstr_free(txin->scriptSig, true);
 		txin->scriptSig = NULL;
@@ -189,6 +194,16 @@ void bp_txin_copy(struct bp_txin *dest, const struct bp_txin *src)
 	bp_outpt_copy(&dest->prevout, &src->prevout);
 	dest->nSequence = src->nSequence;
 
+	if (!src->scriptWitness)
+		dest->scriptWitness = NULL;
+	else {
+	    dest->scriptWitness = parr_new(src->scriptWitness->len, buffer_freep);
+	    unsigned int i;
+	    for (i = 0; i < src->scriptWitness->len; i++) {
+	        struct buffer *witness_src = parr_idx(src->scriptWitness, i);
+	        parr_add(dest->scriptWitness, buffer_copy(witness_src->p, witness_src->len));
+	    }
+	}
 	if (!src->scriptSig)
 		dest->scriptSig = NULL;
 	else {
@@ -273,11 +288,13 @@ bool deser_bp_tx(struct bp_tx *tx, struct const_buffer *buf)
 {
 	bp_tx_free(tx);
 
+	if (!deser_u32(&tx->nVersion, buf)) return false;
+
+	unsigned char flags = 0;
 	tx->vin = parr_new(8, bp_txin_freep);
 	tx->vout = parr_new(8, bp_txout_freep);
 
-	if (!deser_u32(&tx->nVersion, buf)) return false;
-
+	/* Try to read the vin. In case the dummy is there, this will be read as an empty vector. */
 	uint32_t vlen;
 	if (!deser_varlen(&vlen, buf)) return false;
 
@@ -294,22 +311,68 @@ bool deser_bp_tx(struct bp_tx *tx, struct const_buffer *buf)
 
 		parr_add(tx->vin, txin);
 	}
+    if (tx->vin->len == 0) {
+        /* We read a dummy or an empty vin. */
+        deser_bytes(&flags, buf, 1);
+        if (flags != 0) {
+            if (!deser_varlen(&vlen, buf)) return false;
+            for (i = 0; i < vlen; i++) {
+                struct bp_txin *txin;
 
-	if (!deser_varlen(&vlen, buf)) return false;
+                txin = calloc(1, sizeof(*txin));
+                bp_txin_init(txin);
+                if (!deser_bp_txin(txin, buf)) {
+                    free(txin);
+                    goto err_out;
+                }
 
-	for (i = 0; i < vlen; i++) {
-		struct bp_txout *txout;
+            	parr_add(tx->vin, txin);
+            }
 
-		txout = calloc(1, sizeof(*txout));
-		bp_txout_init(txout);
-		if (!deser_bp_txout(txout, buf)) {
-			free(txout);
-			goto err_out;
-		}
+            if (!deser_varlen(&vlen, buf)) return false;
 
-		parr_add(tx->vout, txout);
-	}
+        	for (i = 0; i < vlen; i++) {
+        	    struct bp_txout *txout;
 
+        	    txout = calloc(1, sizeof(*txout));
+        	    bp_txout_init(txout);
+        	    if (!deser_bp_txout(txout, buf)) {
+        	        free(txout);
+        	        goto err_out;
+        	    }
+
+        	    parr_add(tx->vout, txout);
+        	}
+        }
+    } else {
+        /* We read a non-empty vin. Assume a normal vout follows. */
+        if (!deser_varlen(&vlen, buf)) return false;
+        for (i = 0; i < vlen; i++) {
+            struct bp_txout *txout;
+
+            txout = calloc(1, sizeof(*txout));
+            bp_txout_init(txout);
+            if (!deser_bp_txout(txout, buf)) {
+                free(txout);
+                goto err_out;
+            }
+
+            parr_add(tx->vout, txout);;
+        }
+    }
+    if (flags & 1) {
+        /* The witness flag is present, and we support witnesses. */
+        flags ^= 1;
+        for (i = 0; i < tx->vin->len; i++) {
+            struct bp_txin *txin = parr_idx(tx->vin, i);
+            if (!deser_varlen_array(&txin->scriptWitness, buf))
+                goto err_out;
+        }
+    }
+    if (flags) {
+        /* Unknown flag in the serialization */
+        goto err_out;
+    }
 	if (!deser_u32(&tx->nLockTime, buf)) return false;
 	return true;
 

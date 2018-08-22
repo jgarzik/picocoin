@@ -10,7 +10,7 @@ AM_CPPFLAGS	= -DTEST_SRCDIR=\"$(top_srcdir)/test\" \
 		  -I$(top_srcdir)/include \
 		  -I$(top_srcdir)/external/secp256k1/include
 
-noinst_LIBRARIES= libtest.a
+noinst_LIBRARIES = libtest.a
 
 libtest_a_SOURCES= libtest.h libtest.c chisq.c randtest.c
 

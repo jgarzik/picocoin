@@ -5,15 +5,16 @@
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.
  */
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <string.h>
-#include <ccoin/buffer.h>
-#include <ccoin/buint.h>
-#include <ccoin/coredefs.h>
-#include <ccoin/hashtab.h>
-#include <ccoin/cstr.h>
-#include <ccoin/parr.h>
+#include <ccoin/buffer.h>               // for const_buffer
+#include <ccoin/buint.h>                // for bu256_t, bu256_equal, etc
+#include <ccoin/coredefs.h>             // for ::COIN
+#include <ccoin/cstr.h>                 // for cstring
+#include <ccoin/hashtab.h>              // for bitc_hashtab_get, etc
+#include <ccoin/parr.h>                 // for parr, parr_idx
+
+#include <stdbool.h>                    // for bool, false, true
+#include <stdint.h>                     // for uint32_t, int64_t, uint16_t, etc
+#include <string.h>                     // for memcpy, memset, NULL
 
 #ifdef __cplusplus
 extern "C" {
@@ -116,6 +117,7 @@ static inline void bp_outpt_copy(struct bp_outpt *dest,
 
 struct bp_txin {
 	struct bp_outpt	prevout;
+	parr*       scriptWitness;
 	cstring		*scriptSig;
 	uint32_t	nSequence;
 };

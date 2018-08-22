@@ -4,13 +4,20 @@
  */
 #include "picocoin-config.h"
 
-#include <string.h>
-#include <time.h>
-#include <ccoin/core.h>
-#include <ccoin/util.h>
-#include <ccoin/parr.h>
-#include <ccoin/coredefs.h>
-#include <ccoin/serialize.h>
+#include <ccoin/buint.h>                // for bu256_t, bu256_new, etc
+#include <ccoin/core.h>                 // for bitc_block, bitc_tx, etc
+#include <ccoin/coredefs.h>             // for ::MAX_BLOCK_WEIGHT, etc
+#include <ccoin/cstr.h>                 // for cstring
+#include <ccoin/parr.h>                 // for parr, parr_idx, parr_add, etc
+#include <ccoin/serialize.h>            // for u256_from_compact
+#include <ccoin/util.h>                 // for bu_Hash_, MIN
+
+#include <gmp.h>                        // for mpz_clear, mpz_init, mpz_t, etc
+
+#include <stdbool.h>                    // for false, bool, true
+#include <stdint.h>                     // for int64_t
+#include <string.h>                     // for NULL, memset
+#include <time.h>                       // for time, time_t
 
 static bool bp_has_dup_inputs(const struct bp_tx *tx)
 {
@@ -46,7 +53,7 @@ bool bp_tx_valid(const struct bp_tx *tx)
 		return false;
 
 	// Size limits
-	if (bp_tx_ser_size(tx) > MAX_BLOCK_SIZE)
+	if (bp_tx_ser_size(tx) * WITNESS_SCALE_FACTOR > MAX_BLOCK_WEIGHT)
 		return false;
 
 	// Check for negative or overflow output values
@@ -215,7 +222,10 @@ bool bp_block_valid(struct bp_block *block)
 	if (!block->vtx || !block->vtx->len)
 		return false;
 
-	if (bp_block_ser_size(block) > MAX_BLOCK_SIZE)
+	if (block->vtx->len * WITNESS_SCALE_FACTOR > MAX_BLOCK_WEIGHT)
+		return false;
+
+	if (bp_block_ser_size(block) * WITNESS_SCALE_FACTOR > MAX_BLOCK_WEIGHT)
 		return false;
 
 	if (!bp_block_valid_target(block)) return false;

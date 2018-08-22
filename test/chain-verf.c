@@ -1,21 +1,26 @@
 #include "picocoin-config.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <assert.h>
-#include <ccoin/coredefs.h>
-#include <ccoin/message.h>
-#include <ccoin/mbr.h>
-#include <ccoin/blkdb.h>
-#include <ccoin/script.h>
-#include <ccoin/util.h>
-#include <ccoin/checkpoints.h>
-#include "libtest.h"
+#include <ccoin/blkdb.h>                // for blkinfo, blkdb_reorg, etc
+#include <ccoin/buffer.h>               // for const_buffer
+#include <ccoin/buint.h>                // for bu256_hex, BU256_STRSZ, etc
+#include <ccoin/checkpoints.h>          // for bp_ckpt_last
+#include <ccoin/core.h>                 // for bp_block, bp_tx, bp_utxo, etc
+#include <ccoin/coredefs.h>             // for chain_info, etc
+#include <ccoin/key.h>                  // for bp_key_static_shutdown
+#include <ccoin/mbr.h>                  // for fread_block
+#include <ccoin/message.h>              // for p2p_message, etc
+#include <ccoin/parr.h>                 // for parr, parr_idx
+#include <ccoin/script.h>               // for bp_verify_sig, etc
+#include <ccoin/util.h>                 // for file_seq_open
+
+#include <assert.h>                     // for assert
+#include <stdbool.h>                    // for true, false, bool
+#include <stdio.h>                      // for fprintf, stderr, perror, etc
+#include <stdlib.h>                     // for getenv, calloc, free
+#include <string.h>                     // for memcmp, strncmp
+#include <sys/types.h>                  // for int64_t
+#include <unistd.h>                     // for close
+
 
 static bool no_script_verf = false;
 static bool force_script_verf = false;
@@ -67,8 +72,7 @@ static bool spend_tx(struct bp_utxo_set *uset, const struct bp_tx *tx,
 				check_script = true;
 
 			if (check_script &&
-			    !bp_verify_sig(coin, tx, i,
-						/* SCRIPT_VERIFY_P2SH */ 0, 0))
+			    !bp_verify_sig(coin, tx, i, SCRIPT_VERIFY_NONE, SIGHASH_NONE, 0))
 				return false;
 
 			if (!bp_utxo_spend(uset, &txin->prevout))

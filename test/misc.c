@@ -36,7 +36,7 @@ static void test_checkpoints(void)
 	rc = bp_ckpt_block(CHAIN_BITCOIN, 11111, &tmp);
 	assert(rc == false);
 
-	assert(bp_ckpt_last(CHAIN_BITCOIN) == 193000);
+	assert(bp_ckpt_last(CHAIN_BITCOIN) == 295000);
 	assert(bp_ckpt_last(CHAIN_TESTNET3) == 546);
 }
 

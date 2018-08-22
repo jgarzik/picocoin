@@ -340,10 +340,10 @@ static bool spend_tx(struct bp_utxo_set *uset, const struct bp_tx *tx,
 			txout = parr_idx(coin->vout, txin->prevout.n);
 			total_in += txout->nValue;
 
-			if (script_verf &&
-			    !bp_verify_sig(coin, tx, i,
-						/* SCRIPT_VERIFY_P2SH */ 0, 0))
-				return false;
+                        if (script_verf &&
+                                !bp_verify_sig(coin, tx, i, SCRIPT_VERIFY_NONE,
+                                                SIGHASH_NONE, 0))
+                                return false;
 
 			if (!bp_utxo_spend(uset, &txin->prevout))
 				return false;

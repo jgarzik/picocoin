@@ -6,7 +6,7 @@ AM_CPPFLAGS	=   -I$(top_srcdir)/include \
 
 lib_LTLIBRARIES= libccoin.la
 
-libccoin_la_LIBADD= -lm \
+libccoin_la_LIBADD = @MATH_LIBS@ \
                     $(top_builddir)/external/secp256k1/libsecp256k1.la
 
 libccoin_la_SOURCES=	\

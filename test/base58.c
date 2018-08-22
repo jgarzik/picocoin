@@ -4,10 +4,10 @@
  */
 
 #include <ccoin/base58.h>               // for base58_decode_check, etc
-#include <ccoin/coredefs.h>             // for bitc_address_type, etc
+#include <ccoin/coredefs.h>             // for bp_address_type, etc
 #include <ccoin/cstr.h>                 // for cstring, cstr_free, etc
 #include <ccoin/hexcode.h>              // for hex2str, decode_hex
-#include <ccoin/key.h>                  // for bitc_key_static_shutdown
+#include <ccoin/key.h>                  // for bp_key_static_shutdown
 #include <ccoin/crypto/ripemd160.h>     // for RIPEMD160_DIGEST_LENGTH
 #include "libtest.h"                    // for dumphex, read_json, etc
 
@@ -331,8 +331,8 @@ static void runtest_keys_invalid(const char *json_base_fn)
 			else if
 				((addrtype == PRIVKEY_ADDRESS_TEST) ||
 				(addrtype == PRIVKEY_ADDRESS))
-				    is_valid = (payload->len == 32 || payload->len == 33 && payload->str[32] == 1);
-			else is_valid = false;
+                                    is_valid = (payload->len == 32 || (payload->len == 33 && payload->str[32] == 1));
+                        else is_valid = false;
 
 	    cstr_free(payload, true);
 	    assert(!is_valid);

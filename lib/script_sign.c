@@ -55,9 +55,9 @@ bool bp_script_sign(struct bp_keystore *ks, const cstring *fromPubKey,
 
 	/* get signature hash */
 	bu256_t hash;
-	bp_tx_sighash(&hash, fromPubKey, txTo, nIn, nHashType);
+        bp_tx_sighash(&hash, fromPubKey, txTo, nIn, nHashType, 0, 0);
 
-	/* match fromPubKey against templates, to find what pubkey[hashes]
+        /* match fromPubKey against templates, to find what pubkey[hashes]
 	 * are required for signing
 	 */
 	struct bscript_addr addrs;

@@ -4,12 +4,31 @@
  */
 #include "picocoin-config.h"
 
-#include <assert.h>
-#include <ccoin/script.h>
-#include <ccoin/serialize.h>
-#include <ccoin/util.h>
-#include <ccoin/buffer.h>
-#include <ccoin/endian.h>
+#include <ccoin/buffer.h>               // for const_buffer, buffer_copy, etc
+#include <ccoin/endian.h>               // for htole16, htole32
+#include <ccoin/script.h>               // for bscript_op, bscript_parser, etc
+#include <ccoin/serialize.h>            // for deser_bytes, deser_skip, etc
+#include <ccoin/util.h>                 // for bn_getvch, memdup
+
+#include <assert.h>                     // for assert
+
+
+/** Encode/decode small integers: */
+static int DecodeOP_N(enum opcodetype opcode)
+{
+    if (opcode == OP_0)
+        return 0;
+    assert(opcode >= OP_1 && opcode <= OP_16);
+    return (int)opcode - (int)(OP_1 - 1);
+}
+
+static enum opcodetype EncodeOP_N(int n)
+{
+    assert(n >= 0 && n <= 16);
+    if (n == 0)
+        return OP_0;
+    return (enum opcodetype)(OP_1 + n - 1);
+}
 
 bool bsp_getop(struct bscript_op *op, struct bscript_parser *bp)
 {
@@ -81,6 +100,48 @@ parr *bsp_parse_all(const void *data_, size_t data_len)
 err_out:
 	parr_free(arr, true);
 	return NULL;
+}
+
+unsigned int bsp_get_sigopcount(struct const_buffer* buf, bool fAccurate)
+{
+    unsigned int n = 0;
+    struct bscript_parser bp;
+    struct bscript_op op;
+
+    bsp_start(&bp, buf);
+    enum opcodetype lastOpcode = OP_INVALIDOPCODE;
+    while (bsp_getop(&op, &bp)) {
+        enum opcodetype opcode;
+
+        if (op.op == OP_CHECKSIG || op.op == OP_CHECKSIGVERIFY)
+            n++;
+        else if (op.op == OP_CHECKMULTISIG || op.op == OP_CHECKMULTISIGVERIFY) {
+            if (fAccurate && lastOpcode >= OP_1 && lastOpcode <= OP_16)
+                n += DecodeOP_N(lastOpcode);
+            else
+                n += MAX_PUBKEYS_PER_MULTISIG;
+        }
+        lastOpcode = op.op;
+    }
+    return n;
+}
+
+// A witness program is any valid script that consists of a 1-byte push opcode
+// followed by a data push between 2 and 40 bytes.
+bool is_bsp_witnessprogram(const cstring* s, int* version, cstring* program)
+{
+    if (s->len < 4 || s->len > 42) {
+        return false;
+    }
+    if (s->str[0] != OP_0 && (s->str[0] < OP_1 || s->str[0] > OP_16)) {
+        return false;
+    }
+    if ((size_t)(s->str[1] + 2) == s->len) {
+        *version = DecodeOP_N((enum opcodetype)s->str[0]);
+        cstr_append_buf(program, s->str + 2, s->len - 2);
+        return true;
+    }
+    return false;
 }
 
 bool is_bsp_pushonly(struct const_buffer *buf)

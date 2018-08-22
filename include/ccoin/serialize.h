@@ -5,13 +5,17 @@
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.
  */
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <gmp.h>
-#include <ccoin/buffer.h>
-#include <ccoin/buint.h>
-#include <ccoin/cstr.h>
-#include <ccoin/parr.h>
+#include <ccoin/buffer.h>               // for const_buffer
+#include <ccoin/buint.h>                // for bu256_t
+#include <ccoin/cstr.h>                 // for cstring
+#include <ccoin/parr.h>                 // for parr
+
+#include <gmp.h>                        // for mpz_t
+
+#include <stdbool.h>                    // for bool
+#include <stddef.h>                     // for size_t
+#include <stdint.h>                     // for uint32_t, uint64_t, int64_t, etc
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,6 +47,7 @@ static inline void ser_s64(cstring *s, int64_t v_)
 }
 
 extern void ser_u256_array(cstring *s, parr *arr);
+extern void ser_varlen_array(cstring *s, parr *arr);
 
 extern bool deser_skip(struct const_buffer *buf, size_t len);
 extern bool deser_bytes(void *po, struct const_buffer *buf, size_t len);
@@ -66,6 +71,7 @@ static inline bool deser_s64(int64_t *vo, struct const_buffer *buf)
 }
 
 extern bool deser_u256_array(parr **ao, struct const_buffer *buf);
+extern bool deser_varlen_array(parr **ao, struct const_buffer *buf);
 
 extern void u256_from_compact(mpz_t vo, uint32_t c);
 

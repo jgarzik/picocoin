@@ -2,14 +2,20 @@
  * Distributed under the MIT/X11 software license, see the accompanying
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.
  */
-#include "picocoin-config.h"
 
-#include <stdint.h>
-#include <string.h>
-#include <ccoin/serialize.h>
-#include <ccoin/util.h>
-#include <ccoin/compat.h>
-#include <ccoin/endian.h>
+#include <ccoin/buint.h>                // for bu256_t
+#include <ccoin/cstr.h>                 // for cstring, cstr_append_buf, etc
+#include <ccoin/endian.h>               // for htole16, htole32, htole64, etc
+#include <ccoin/parr.h>                 // for parr, parr_idx
+#include <ccoin/serialize.h>            // for ser_u256
+
+#include <gmp.h>                        // for mpz_mul_2exp, mpz_set_ui, etc
+
+#include <stdbool.h>                    // for false, true, bool
+#include <stddef.h>                     // for size_t
+#include <stdint.h>                     // for uint32_t, uint16_t, etc
+#include <string.h>                     // for NULL, strnlen
+
 
 void ser_bytes(cstring *s, const void *p, size_t len)
 {
@@ -95,6 +101,22 @@ void ser_u256_array(cstring *s, parr *arr)
 		av = parr_idx(arr, i);
 		ser_u256(s, av);
 	}
+}
+
+void ser_varlen_array(cstring* s, parr* arr)
+{
+    unsigned int arr_len = arr ? arr->len : 0;
+
+    ser_varlen(s, arr_len);
+
+    unsigned int i;
+    for (i = 0; i < arr_len; i++) {
+        struct buffer* buf;
+
+        buf = parr_idx(arr, i);
+        ser_varlen(s, buf->len);
+        ser_bytes(s, buf->p, buf->len);
+    }
 }
 
 bool deser_skip(struct const_buffer *buf, size_t len)
@@ -278,6 +300,44 @@ bool deser_u256_array(parr **ao, struct const_buffer *buf)
 err_out:
 	parr_free(arr, true);
 	return false;
+}
+
+bool deser_varlen_array(parr** ao, struct const_buffer* buf)
+{
+    parr* arr = *ao;
+    if (arr) {
+        parr_free(arr, true);
+        *ao = arr = NULL;
+    }
+
+    uint32_t vlen;
+    if (!deser_varlen(&vlen, buf))
+        return false;
+
+    if (!vlen)
+        return true;
+
+    arr = parr_new(vlen, buffer_freep);
+    if (!arr)
+        return false;
+
+    unsigned int i;
+    for (i = 0; i < vlen; i++) {
+        uint32_t ivlen;
+        if (!deser_varlen(&ivlen, buf))
+            return false;
+
+        parr_add(arr, buffer_copy(buf->p, ivlen));
+        buf->p += ivlen;
+        buf->len -= ivlen;
+    }
+
+    *ao = arr;
+    return true;
+
+err_out:
+    parr_free(arr, true);
+    return false;
 }
 
 void u256_from_compact(mpz_t vo, uint32_t c)

@@ -1,18 +1,24 @@
+/* Copyright 2017 BitPay, Inc.
+ * Distributed under the MIT/X11 software license, see the accompanying
+ * file COPYING or http://www.opensource.org/licenses/mit-license.php.
+ */
 
 #include "picocoin-config.h"
 
-#define _GNU_SOURCE			/* for memmem */
-#include <stdint.h>
-#include <string.h>
-#include <assert.h>
-#include <ccoin/script.h>
-#include <ccoin/util.h>
-#include <ccoin/key.h>
-#include <ccoin/serialize.h>
-#include <ccoin/compat.h>		/* for parr_new */
-#include <ccoin/crypto/sha1.h>
-#include <ccoin/crypto/sha2.h>
-#include <ccoin/crypto/ripemd160.h>
+#define _GNU_SOURCE                     // for memmem
+
+#include <ccoin/compat.h>               // for parr_new
+#include <ccoin/crypto/ripemd160.h>     // for RIPEMD160_DIGEST_LENGTH, etc
+#include <ccoin/crypto/sha1.h>          // for sha1_Raw, etc
+#include <ccoin/crypto/sha2.h>          // for SHA256_DIGEST_LENGTH, etc
+#include <ccoin/key.h>                  // for bo_key_free, etc
+#include <ccoin/script.h>               // for bscript_op, etc
+#include <ccoin/serialize.h>            // for ser_u32, ser_varlen, etc
+#include <ccoin/util.h>                 // for bn_getvch, bu_Hash, etc
+
+#include <assert.h>                     // for assert
+#include <stdint.h>                     // for int64_t, uint8_t, uint32_t, etc
+#include <string.h>                     // for NULL, memmove, memcpy, etc
 
 static const size_t nDefaultMaxNumSize = 4;
 
@@ -43,29 +49,29 @@ void bp_tx_sigserializer(cstring *s, const cstring *scriptCode,
 			const struct bp_tx *txTo, unsigned int nIn,
 			int nHashType)
 {
-    const bool fAnyoneCanPay = (!!(nHashType & SIGHASH_ANYONECANPAY));
-    const bool fHashSingle = ((nHashType & 0x1f) == SIGHASH_SINGLE);
-    const bool fHashNone = ((nHashType & 0x1f) == SIGHASH_NONE);
+        const bool fAnyoneCanPay = (!!(nHashType & SIGHASH_ANYONECANPAY));
+        const bool fHashSingle = ((nHashType & 0x1f) == SIGHASH_SINGLE);
+        const bool fHashNone = ((nHashType & 0x1f) == SIGHASH_NONE);
 
-    /** Serialize txTo */
-    // Serialize nVersion
-    ser_u32(s, txTo->nVersion);
+        /** Serialize txTo */
+        // Serialize nVersion
+        ser_u32(s, txTo->nVersion);
 
-    // Serialize vin
-    unsigned int nInputs = fAnyoneCanPay ? 1 : txTo->vin->len;
-    ser_varlen(s, nInputs);
+        // Serialize vin
+        unsigned int nInputs = fAnyoneCanPay ? 1 : txTo->vin->len;
+        ser_varlen(s, nInputs);
 
-	unsigned int nInput;
-	for (nInput = 0; nInput < nInputs; nInput++) {
-	    /** Serialize an input of txTo */
-	    // In case of SIGHASH_ANYONECANPAY, only the input being signed is serialized
+        unsigned int nInput;
+        for (nInput = 0; nInput < nInputs; nInput++) {
+                /** Serialize an input of txTo */
+                // In case of SIGHASH_ANYONECANPAY, only the input being signed is serialized
 		if (fAnyoneCanPay)
 			nInput = nIn;
 
-	    struct bp_txin *txin = parr_idx(txTo->vin, nInput);
+                struct bp_txin *txin = parr_idx(txTo->vin, nInput);
 
-	    // Serialize the prevout
-	    ser_bp_outpt(s, &txin->prevout);
+                // Serialize the prevout
+                ser_bp_outpt(s, &txin->prevout);
 
 		// Serialize the script
 		if (nInput != nIn)
@@ -115,47 +121,123 @@ void bp_tx_sigserializer(cstring *s, const cstring *scriptCode,
     unsigned int nOutputs = fHashNone ? 0 : (fHashSingle ? (nIn + 1) : txTo->vout->len);
     ser_varlen(s, nOutputs);
 
-	unsigned int nOutput;
+    unsigned int nOutput;
     for (nOutput = 0; nOutput < nOutputs; nOutput++) {
 		struct bp_txout *txout = parr_idx(txTo->vout, nOutput);
-		if (fHashSingle && (nOutput != nIn))
-			// Do not lock-in the txout payee at other indices as txin;
-			bp_txout_set_null(txout);
-
-		ser_bp_txout(s, txout);
+		if (fHashSingle && (nOutput != nIn)) {
+		    // Do not lock-in the txout payee at other indices as txin
+		    ser_s64(s, (int)-1);
+		    ser_varlen(s, 0);
+		} else {
+		    ser_bp_txout(s, txout);
+		}
     }
     // Serialize nLockTime
     ser_u32(s, txTo->nLockTime);
 }
 
-void bp_tx_sighash(bu256_t *hash, const cstring *scriptCode,
-		   const struct bp_tx *txTo, unsigned int nIn,
-		   int nHashType)
+void bp_tx_sighash(bu256_t* hash, const cstring* scriptCode, const struct bp_tx* txTo,
+    unsigned int nIn, int nHashType,int64_t amount, enum SigVersion sigversion)
 {
-	if (nIn >= txTo->vin->len) {
-		//  nIn out of range
-		bu256_set_u64(hash, 1);
-		return;
-	}
+    cstring* s = cstr_new_sz(512);
 
-	// Check for invalid use of SIGHASH_SINGLE
-	if ((nHashType & 0x1f) == SIGHASH_SINGLE) {
-		if (nIn >= txTo->vout->len) {
-			//  nOut out of range
-			bu256_set_u64(hash, 1);
-			return;
-		}
-	}
+    if (sigversion == SIGVERSION_WITNESS_V0) {
+        bu256_t* hashPrevouts = bu256_new(NULL);
+        bu256_t* hashSequence = bu256_new(NULL);
+        bu256_t* hashOutputs = bu256_new(NULL);
 
-	cstring *s = cstr_new_sz(512);
+        if (!(nHashType & SIGHASH_ANYONECANPAY)) {
+            cstring* s_prevout = cstr_new_sz(512);
+            struct bp_txin* txin;
+            unsigned int i;
+            for (i = 0; i < txTo->vin->len; i++) {
+                txin = parr_idx(txTo->vin, i);
+                // Serialize the prevout
+                ser_bp_outpt(s_prevout, &txin->prevout);
+            }
+            bu_Hash((unsigned char*)hashPrevouts, s_prevout->str, s_prevout->len);
+            cstr_free(s_prevout, true);
+        }
 
-	// Serialize only the necessary parts of the transaction being signed
-	bp_tx_sigserializer(s, scriptCode, txTo, nIn, nHashType);
+        if (!(nHashType & SIGHASH_ANYONECANPAY) && (nHashType & 0x1f) != SIGHASH_SINGLE &&
+            (nHashType & 0x1f) != SIGHASH_NONE) {
+            cstring* s_seq = cstr_new_sz(512);
+            struct bp_txin* txin;
+            unsigned int i;
+            for (i = 0; i < txTo->vin->len; i++) {
+                txin = parr_idx(txTo->vin, i);
+                // Serialize the nSequence
+                ser_u32(s_seq, txin->nSequence);
+            }
+            bu_Hash((unsigned char*)hashSequence, s_seq->str, s_seq->len);
+            cstr_free(s_seq, true);
+        }
 
-	ser_s32(s, nHashType);
-	bu_Hash((unsigned char *) hash, s->str, s->len);
+        if ((nHashType & 0x1f) != SIGHASH_SINGLE && (nHashType & 0x1f) != SIGHASH_NONE) {
+            cstring* s_out = cstr_new_sz(512);
+            struct bp_txout* txout;
+            unsigned int i;
+            for (i = 0; i < txTo->vout->len; i++) {
+                txout = parr_idx(txTo->vout, i);
+                ser_bp_txout(s_out, txout);
+            }
+            bu_Hash((unsigned char*)hashOutputs, s_out->str, s_out->len);
+            cstr_free(s_out, true);
+        } else if ((nHashType & 0x1f) == SIGHASH_SINGLE && nIn < txTo->vout->len) {
+            cstring* s_out = cstr_new_sz(512);
+            struct bp_txout* txout = parr_idx(txTo->vout, nIn);
+            ser_bp_txout(s_out, txout);
+            bu_Hash((unsigned char*)hashOutputs, s_out->str, s_out->len);
+            cstr_free(s_out, true);
+        }
 
-	cstr_free(s, true);
+        // Version
+        ser_u32(s, txTo->nVersion);
+        // Input prevouts/nSequence (none/all, depending on flags)
+        ser_u256(s, hashPrevouts);
+        ser_u256(s, hashSequence);
+        // The input being signed (replacing the scriptSig with scriptCode + amount)
+        // The prevout may already be contained in hashPrevout, and the nSequence
+        // may already be contain in hashSequence.
+        struct bp_txin* txin = parr_idx(txTo->vin, nIn);
+        ser_bp_outpt(s, &txin->prevout);
+        ser_varstr(s, (struct cstring*)scriptCode);
+        ser_s64(s, amount);
+        ser_u32(s, txin->nSequence);
+        // Outputs (none/one/all, depending on flags)
+        ser_u256(s, hashOutputs);
+        // Locktime
+        ser_u32(s, txTo->nLockTime);
+
+        bu256_freep(hashPrevouts);
+        bu256_freep(hashSequence);
+        bu256_freep(hashOutputs);
+    } else {
+        if (nIn >= txTo->vin->len) {
+            //  nIn out of range
+            bu256_set_u64(hash, 1);
+            goto out;
+        }
+
+        // Check for invalid use of SIGHASH_SINGLE
+        if ((nHashType & 0x1f) == SIGHASH_SINGLE) {
+            if (nIn >= txTo->vout->len) {
+                //  nOut out of range
+                bu256_set_u64(hash, 1);
+                goto out;
+            }
+        }
+        // Serialize only the necessary parts of the transaction being signed
+        bp_tx_sigserializer(s, scriptCode, txTo, nIn, nHashType);
+    }
+
+    // Sighash type
+    ser_s32(s, nHashType);
+
+    bu_Hash((unsigned char*)hash, s->str, s->len);
+
+out:
+    cstr_free(s, true);
 }
 
 static const unsigned char disabled_op[256] = {
@@ -232,7 +314,7 @@ static void stack_insert(parr *stack, const struct buffer *buf, int index_)
 
 static void stack_push(parr *stack, const struct buffer *buf)
 {
-	parr_add(stack, buffer_copy(buf->p, buf->len));
+        parr_add(stack, buffer_copy(buf->p, buf->len));
 }
 
 static void stack_push_nocopy(parr *stack, struct buffer *buf)
@@ -313,34 +395,33 @@ static unsigned int count_false(cstring *vfExec)
 	return count;
 }
 
-static bool bp_checksig(const struct buffer *vchSigIn,
-			const struct buffer *vchPubKey,
-			const cstring *scriptCode,
-			const struct bp_tx *txTo, unsigned int nIn)
+static bool bp_checksig(const struct buffer* vchSigIn, const struct buffer* vchPubKey,
+    const cstring* scriptCode, const struct bp_tx* txTo, unsigned int nIn,
+    int64_t amount, enum SigVersion sigversion)
 {
-	if (!vchSigIn || !vchPubKey || !scriptCode || !txTo ||
-	    !vchSigIn->len || !vchPubKey->len || !scriptCode->len)
-		return false;
+    if (!vchSigIn || !vchPubKey || !scriptCode || !txTo || !vchSigIn->len || !vchPubKey->len ||
+        !scriptCode->len)
+        return false;
 
-	// Hash type is one byte tacked on to the end of the signature
-	unsigned char *vch_back = vchSigIn->p + (vchSigIn->len - 1);
-	int nHashType = *vch_back;
-	struct buffer vchSig = { vchSigIn->p, vchSigIn->len - 1 };
+    // Hash type is one byte tacked on to the end of the signature
+    unsigned char* vch_back = vchSigIn->p + (vchSigIn->len - 1);
+    int nHashType = *vch_back;
+    struct buffer vchSig = {vchSigIn->p, vchSigIn->len - 1};
 
-	/* calculate signature hash of transaction */
-	bu256_t sighash;
-	bp_tx_sighash(&sighash, scriptCode, txTo, nIn, nHashType);
+    /* calculate signature hash of transaction */
+    bu256_t sighash;
+    bp_tx_sighash(&sighash, scriptCode, txTo, nIn, nHashType, amount, sigversion);
 
-	/* verify signature hash */
-	struct bp_key pubkey;
-	bp_key_init(&pubkey);
-	bool rc = false;
-	if (!bp_pubkey_set(&pubkey, vchPubKey->p, vchPubKey->len))
-		goto out;
-	if (!bp_verify(&pubkey, &sighash, sizeof(sighash), vchSig.p, vchSig.len))
-		goto out;
+    /* verify signature hash */
+    struct bp_key pubkey;
+    bp_key_init(&pubkey);
+    bool rc = false;
+    if (!bp_pubkey_set(&pubkey, vchPubKey->p, vchPubKey->len))
+        goto out;
+    if (!bp_verify(&pubkey, &sighash, sizeof(sighash), vchSig.p, vchSig.len))
+        goto out;
 
-	rc = true;
+    rc = true;
 
 out:
 	bp_key_free(&pubkey);
@@ -372,6 +453,31 @@ bool static IsCompressedOrUncompressedPubKey(const struct buffer *vchPubKey) {
     return true;
 }
 
+bool static IsCompressedPubKey(const struct buffer* vchPubKey)
+{
+    const unsigned char* pubkey = vchPubKey->p;
+
+    if (vchPubKey->len != 33) {
+        //  Non-canonical public key: invalid length for compressed key
+        return false;
+    }
+    if (pubkey[0] != 0x02 && pubkey[0] != 0x03) {
+        //  Non-canonical public key: invalid prefix for compressed key
+        return false;
+    }
+    return true;
+}
+
+/**
+ * A canonical signature exists of: <30> <total len> <02> <len R> <R> <02> <len S> <S> <hashtype>
+ * Where R and S are not negative (their first byte has its highest bit not set), and not
+ * excessively padded (do not start with a 0 byte, unless an otherwise negative number follows,
+ * in which case a single 0 byte is necessary and even required).
+ *
+ * See https://bitcointalk.org/index.php?topic=8392.msg127623#msg127623
+ *
+ * This function is consensus-critical since BIP66.
+ */
 static bool IsValidSignatureEncoding(const struct buffer *vch)
 {
     // Format: 0x30 [total-length] 0x02 [R-length] [R] 0x02 [S-length] [S] [sighash]
@@ -478,10 +584,17 @@ static bool CheckSignatureEncoding(const struct buffer *vchSig, unsigned int fla
     return true;
 }
 
-static bool CheckPubKeyEncoding(const struct buffer *vchPubKey, unsigned int flags) {
+static bool CheckPubKeyEncoding(const struct buffer* vchPubKey,
+    unsigned int flags,
+    enum SigVersion sigversion)
+{
     if ((flags & SCRIPT_VERIFY_STRICTENC) != 0 && !IsCompressedOrUncompressedPubKey(vchPubKey))
         return false;
-
+    // Only compressed keys are accepted in segwit
+    if ((flags & SCRIPT_VERIFY_WITNESS_PUBKEYTYPE) != 0 && sigversion == SIGVERSION_WITNESS_V0 &&
+        !IsCompressedPubKey(vchPubKey)) {
+        return false;
+    }
     return true;
 }
 
@@ -597,9 +710,9 @@ bool CheckSequence(const unsigned int nSequence, const struct bp_tx *txTo, unsig
 	return true;
 }
 
-static bool bp_script_eval(parr *stack, const cstring *script,
-			   const struct bp_tx *txTo, unsigned int nIn,
-			   unsigned int flags, int nHashType)
+static bool bp_script_eval(parr* stack, const cstring* script,
+    const struct bp_tx* txTo, unsigned int nIn, unsigned int flags,
+    int nHashType, int64_t amount, enum SigVersion sigversion)
 {
 	struct const_buffer pc = { script->str, script->len };
 	struct const_buffer pend = { script->str + script->len, 0 };
@@ -770,8 +883,16 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 				if (stack->len < 1)
 					goto out;
 				struct buffer *vch = stacktop(stack, -1);
-				fValue = CastToBool(vch);
-				if (opcode == OP_NOTIF)
+                if ((sigversion == SIGVERSION_WITNESS_V0) &&
+                    (flags & SCRIPT_VERIFY_MINIMALIF)) {
+                    if (vch->len > 1)
+                        goto out;
+                    const unsigned char* _vch = vch->p;
+                    if (vch->len == 1 && _vch[0] != 1)
+                        goto out;
+                }
+                fValue = CastToBool(vch);
+                if (opcode == OP_NOTIF)
 					fValue = !fValue;
 				popstack(stack);
 			}
@@ -1209,25 +1330,25 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 
 			switch (opcode) {
 			case OP_RIPEMD160:
-				hashlen = 20;
-				ripemd160(vch->p, vch->len, md);
-				break;
+                hashlen = RIPEMD160_DIGEST_LENGTH;
+                ripemd160(vch->p, vch->len, md);
+                break;
 			case OP_SHA1:
-				hashlen = 20;
-				sha1_Raw(vch->p, vch->len, md);
-				break;
-			case OP_SHA256:
-				hashlen = 32;
-				sha256_Raw(vch->p, vch->len, md);
-				break;
+                hashlen = SHA1_DIGEST_LENGTH;
+                sha1_Raw(vch->p, vch->len, md);
+                break;
+            case OP_SHA256:
+                hashlen = SHA256_DIGEST_LENGTH;
+                sha256_Raw(vch->p, vch->len, md);
+                break;
 			case OP_HASH160:
-				hashlen = 20;
-				bu_Hash160(md, vch->p, vch->len);
-				break;
+                hashlen = RIPEMD160_DIGEST_LENGTH;
+                bu_Hash160(md, vch->p, vch->len);
+                break;
 			case OP_HASH256:
-				hashlen = 32;
-				bu_Hash(md, vch->p, vch->len);
-				break;
+                hashlen = SHA256_DIGEST_LENGTH;
+                bu_Hash(md, vch->p, vch->len);
+                break;
 			default:
 				// impossible
 				goto out;
@@ -1257,22 +1378,26 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 			cstring *scriptCode = cstr_new_buf(pbegincodehash.p,
                                                 pbegincodehash.len);
 
-			// Drop the signature, since there's no way for
-			// a signature to sign itself
-			string_find_del(scriptCode, vchSig);
+            // Drop the signature in pre-segwit scripts but not segwit scripts
+            if (sigversion == SIGVERSION_BASE) {
+                string_find_del(scriptCode, vchSig);
+            }
 
-			if (!CheckSignatureEncoding(vchSig, flags) || !CheckPubKeyEncoding(vchPubKey, flags)) {
-				cstr_free(scriptCode, true);
-				goto out;
-			}
+            if (!CheckSignatureEncoding(vchSig, flags) ||
+                !CheckPubKeyEncoding(vchPubKey, flags, sigversion)) {
+                cstr_free(scriptCode, true);
+                goto out;
+            }
 
-			bool fSuccess = bp_checksig(vchSig, vchPubKey,
-						       scriptCode,
-						       txTo, nIn);
+            bool fSuccess = bp_checksig(
+                vchSig, vchPubKey, scriptCode, txTo, nIn, amount, sigversion);
 
-			cstr_free(scriptCode, true);
+            cstr_free(scriptCode, true);
 
-			popstack(stack);
+            if (!fSuccess && (flags & SCRIPT_VERIFY_NULLFAIL) && vchSig->len)
+                goto out;
+
+            popstack(stack);
 			popstack(stack);
 			stack_push_str(stack, fSuccess ? bn_getvch(bn_One) : bn_getvch(bn_Zero));
 			if (opcode == OP_CHECKSIGVERIFY)
@@ -1300,7 +1425,11 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 			if (nOpCount > MAX_OPS_PER_SCRIPT)
 				goto out;
 			int ikey = ++i;
-			i += nKeysCount;
+            // ikey2 is the position of last non-signature item in the stack. Top stack
+            // item = 1.
+            // With SCRIPT_VERIFY_NULLFAIL, this is used for cleanup if operation fails.
+            int ikey2 = nKeysCount + 2;
+            i += nKeysCount;
 			if ((int)stack->len < i)
 				goto out;
 
@@ -1314,18 +1443,19 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 
 			// Subset of script starting at the most recent codeseparator
 			cstring *scriptCode = cstr_new_buf(pbegincodehash.p,
-                                                pbegincodehash.len);
+                                            pbegincodehash.len);
 
-			// Drop the signatures, since there's no way for
-			// a signature to sign itself
-			int k;
-			for (k = 0; k < nSigsCount; k++)
+            // Drop the signature in pre-segwit scripts but not segwit scripts
+            int k;
+            for (k = 0; k < nSigsCount; k++)
 			{
-				struct buffer *vchSig =stacktop(stack, -isig-k);
-				string_find_del(scriptCode, vchSig);
-			}
+                struct buffer* vchSig = stacktop(stack, -isig - k);
+                if (sigversion == SIGVERSION_BASE) {
+                    string_find_del(scriptCode, vchSig);
+                }
+            }
 
-			bool fSuccess = true;
+            bool fSuccess = true;
 			while (fSuccess && nSigsCount > 0)
 			{
 				struct buffer *vchSig	= stacktop(stack, -isig);
@@ -1334,18 +1464,19 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 				// Note how this makes the exact order of pubkey/signature evaluation
 				// distinguishable by CHECKMULTISIG NOT if the STRICTENC flag is set.
 				// See the script_(in)valid tests for details.
-				if (!CheckSignatureEncoding(vchSig, flags) || !CheckPubKeyEncoding(vchPubKey, flags)) {
-					cstr_free(scriptCode, true);
-					goto out;
-				}
+                if (!CheckSignatureEncoding(vchSig, flags) ||
+                    !CheckPubKeyEncoding(vchPubKey, flags, sigversion)) {
+                    cstr_free(scriptCode, true);
+                        goto out;
+                }
 
 				// Check signature
-				bool fOk = bp_checksig(vchSig, vchPubKey,
-							  scriptCode, txTo, nIn);
+                bool fOk = bp_checksig(
+                    vchSig, vchPubKey, scriptCode, txTo, nIn, amount, sigversion);
 
-				if (fOk) {
-					isig++;
-					nSigsCount--;
+                if (fOk) {
+                    isig++;
+                    nSigsCount--;
 				}
 				ikey++;
 				nKeysCount--;
@@ -1359,10 +1490,18 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 			cstr_free(scriptCode, true);
 
 			// Clean up stack of actual arguments
-			while (i-- > 1)
-				popstack(stack);
+            while (i-- > 1) {
+                // If the operation failed, we require that all signatures must be empty
+                // vector
+                if (!fSuccess && (flags & SCRIPT_VERIFY_NULLFAIL) && !ikey2 &&
+                    stacktop(stack, -1)->len)
+                    goto out;
+                if (ikey2 > 0)
+                    ikey2--;
+                popstack(stack);
+                }
 
-			// A bug causes CHECKMULTISIG to consume one extra argument
+            // A bug causes CHECKMULTISIG to consume one extra argument
 			// whose contents were not checked in any way.
 			//
 			// Unfortunately this is a potential source of mutability,
@@ -1391,11 +1530,11 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 		}
 
 		// Size limits
-		if (stack->len + altstack->len > 1000)
-			goto out;
-	}
+                if (stack->len + altstack->len > MAX_STACK_SIZE)
+                    goto out;
+        }
 
-	rc = (vfExec->len == 0 && bp.error == false);
+        rc = (vfExec->len == 0 && bp.error == false);
 
 out:
 	mpz_clears(bn, bn_Zero, bn_One, NULL);
@@ -1404,84 +1543,228 @@ out:
 	return rc;
 }
 
-bool bp_script_verify(const cstring *scriptSig, const cstring *scriptPubKey,
-		      const struct bp_tx *txTo, unsigned int nIn,
-		      unsigned int flags, int nHashType)
+static bool bp_witnessprogram_verify(parr* witness,
+    int witversion,
+    cstring* program,
+    const struct bp_tx* txTo,
+    unsigned int nIn,
+    unsigned int flags,
+    int64_t amount)
 {
-	bool rc = false;
-	parr *stack = parr_new(0, buffer_freep);
-	parr *stackCopy = NULL;
+    parr* stack = parr_new(0, buffer_freep);
+    cstring* scriptPubKey = NULL;
+    bool rc = false;
 
-	struct const_buffer sigbuf = { scriptSig->str, scriptSig->len };
-	if ((flags & SCRIPT_VERIFY_SIGPUSHONLY) != 0 && !is_bsp_pushonly(&sigbuf))
-		goto out;
+    if (witversion == 0) {
+        if (program->len == SHA256_DIGEST_LENGTH) {
+            // Version 0 segregated witness program: SHA256(Script) inside the program, Script +
+            // inputs in witness
+            if (witness->len == 0) {
+                goto out;
+            }
 
-	if (!bp_script_eval(stack, scriptSig, txTo, nIn, flags, nHashType))
-		goto out;
+            struct buffer* buf = stacktop(witness, -1);
+            scriptPubKey = cstr_new_buf(buf->p, buf->len);
+            stack_copy(stack, witness);
+            popstack(stack);
 
-	if (flags & SCRIPT_VERIFY_P2SH) {
-		stackCopy = parr_new(stack->len, buffer_freep);
-		stack_copy(stackCopy, stack);
-	}
+            unsigned char hashScriptPubKey[SHA256_DIGEST_LENGTH];
+            sha256_Raw(scriptPubKey->str, scriptPubKey->len, hashScriptPubKey);
 
-	if (!bp_script_eval(stack, scriptPubKey, txTo, nIn, flags, nHashType))
-		goto out;
-	if (stack->len == 0)
-		goto out;
+            if (memcmp(hashScriptPubKey, program->str, SHA256_DIGEST_LENGTH)) {
+                goto out;
+            }
+        } else if (program->len == RIPEMD160_DIGEST_LENGTH) {
+            // Special case for pay-to-pubkeyhash; signature + pubkey in witness
+            if (witness->len != 2) {
+                goto out; // 2 items in witness
+            }
+            scriptPubKey = bsp_make_pubkeyhash(program);
+            stack_copy(stack, witness);
+        } else {
+            goto out;
+        }
+    } else if (flags & SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM) {
+        goto out;
+    } else {
+        // Higher version witness scripts return true for future softfork compatibility
+        rc = true;
+        goto out;
+    }
 
-	if (CastToBool(stacktop(stack, -1)) == false)
-		goto out;
+    // Disallow stack item size > MAX_SCRIPT_ELEMENT_SIZE in witness stack
+    unsigned int i;
+    for (i = 0; i < stack->len; i++) {
+        struct buffer* buf = stack->data[i];
+        if (buf && (buf->len > MAX_SCRIPT_ELEMENT_SIZE))
+            goto out;
+    }
 
-	if ((flags & SCRIPT_VERIFY_P2SH) && is_bsp_p2sh_str(scriptPubKey)) {
-		// scriptSig must be literals-only or validation fails
-		if (!is_bsp_pushonly(&sigbuf))
-			goto out;
-		// stack cannot be empty here, because if it was the
-		// P2SH  HASH <> EQUAL  scriptPubKey would be evaluated with
-		// an empty stack and the script_eval above would return false.
-		if (stackCopy->len < 1)
-			goto out;
+    if (!bp_script_eval(
+            stack, scriptPubKey, txTo, nIn, flags, nIn, amount, SIGVERSION_WITNESS_V0)) {
+        goto out;
+    }
 
-		struct buffer *pubKeySerialized = stack_take(stackCopy, -1);
-		popstack(stackCopy);
+    // Scripts inside witness implicitly require cleanstack behaviour
+    if (stack->len != 1)
+        goto out;
 
-		cstring *pubkey2 = cstr_new_buf(pubKeySerialized->p, pubKeySerialized->len);
+    if (!CastToBool(stacktop(stack, -1)))
+        goto out;
 
-		buffer_freep(pubKeySerialized);
+    rc = true;
 
-		bool rc2 = bp_script_eval(stackCopy, pubkey2, txTo, nIn,
-					  flags, nHashType);
-		cstr_free(pubkey2, true);
+out:
+    parr_free(stack, true);
+    cstr_free(scriptPubKey, true);
+    return rc;
+}
 
-		if (!rc2)
-			goto out;
-		if (stackCopy->len == 0)
-			goto out;
-		if (CastToBool(stacktop(stackCopy, -1)) == false)
-			goto out;
-	}
-	// The CLEANSTACK check is only performed after potential P2SH evaluation,
-	// as the non-P2SH evaluation of a P2SH script will obviously not result in
-	// a clean stack (the P2SH inputs remain).
-	if ((flags & SCRIPT_VERIFY_CLEANSTACK) != 0) {
-		// Disallow CLEANSTACK without P2SH, as otherwise a switch CLEANSTACK->P2SH+CLEANSTACK
-		// would be possible, which is not a softfork (and P2SH should be one).
-		assert((flags & SCRIPT_VERIFY_P2SH) != 0);
-		if (stackCopy->len != 1)
-			goto out;
-	}
+bool bp_script_verify(const cstring* scriptSig, const cstring* scriptPubKey,
+    parr** witness, const struct bp_tx* txTo, unsigned int nIn,
+    unsigned int flags, int nHashType, int64_t amount)
+{
+    cstring* witnessprogram = NULL;
+    if (*witness == NULL) {
+        *witness = parr_new(0, buffer_freep);
+    }
 
-	rc = true;
+    bool hadWitness = false;
+
+    cstring* pubkey2 = NULL;
+    struct buffer* pubKeySerialized = NULL;
+
+    bool rc = false;
+    parr* stack = parr_new(0, buffer_freep);
+    parr* stackCopy = NULL;
+    struct const_buffer sigbuf = {scriptSig->str, scriptSig->len};
+
+    if ((flags & SCRIPT_VERIFY_SIGPUSHONLY) != 0 && !is_bsp_pushonly(&sigbuf))
+        goto out;
+
+    if (!bp_script_eval(stack, scriptSig, txTo, nIn, flags, nHashType, amount, SIGVERSION_BASE))
+        goto out;
+    if (flags & SCRIPT_VERIFY_P2SH) {
+        stackCopy = parr_new(stack->len, buffer_freep);
+        stack_copy(stackCopy, stack);
+    }
+    if (!bp_script_eval(stack, scriptPubKey, txTo, nIn, flags, nHashType, amount, SIGVERSION_BASE))
+        goto out;
+    if (stack->len == 0)
+        goto out;
+
+    if (CastToBool(stacktop(stack, -1)) == false)
+        goto out;
+
+    // Bare witness programs
+    int witnessversion;
+    if (flags & SCRIPT_VERIFY_WITNESS) {
+        witnessprogram = cstr_new_sz(0);
+
+        if (is_bsp_witnessprogram(scriptPubKey, &witnessversion, witnessprogram)) {
+            hadWitness = true;
+            if (scriptSig->len != 0) {
+                // The scriptSig must be _exactly_ 0, otherwise we reintroduce malleability.
+                goto out;
+            }
+            if (!bp_witnessprogram_verify(
+                    *witness, witnessversion, witnessprogram, txTo, nIn, flags, amount)) {
+                goto out;
+            }
+            // Bypass the cleanstack check at the end. The actual stack is obviously not clean
+            // for witness programs.
+            parr_resize(stack, 1);
+        }
+    }
+
+    // Additional validation for spend-to-script-hash transactions:
+    if ((flags & SCRIPT_VERIFY_P2SH) && is_bsp_p2sh_str(scriptPubKey)) {
+        // scriptSig must be literals-only or validation fails
+        if (!is_bsp_pushonly(&sigbuf))
+            goto out;
+
+        // stack cannot be empty here, because if it was the
+        // P2SH  HASH <> EQUAL  scriptPubKey would be evaluated with
+        // an empty stack and the script_eval above would return false.
+        if (stack->len < 1)
+            goto out;
+
+        pubKeySerialized = stack_take(stackCopy, -1);
+        pubkey2 = cstr_new_buf(pubKeySerialized->p, pubKeySerialized->len);
+        popstack(stackCopy);
+
+        if (!bp_script_eval(
+                stackCopy, pubkey2, txTo, nIn, flags, nHashType, amount, SIGVERSION_BASE))
+            goto out;
+        if (stackCopy->len == 0)
+            goto out;
+        if (CastToBool(stacktop(stackCopy, -1)) == false)
+            goto out;
+
+        // P2SH witness program
+        if (flags & SCRIPT_VERIFY_WITNESS) {
+            if (is_bsp_witnessprogram(pubkey2, &witnessversion, witnessprogram)) {
+                hadWitness = true;
+                cstr_resize(pubkey2, 0);
+                bsp_push_data(pubkey2, pubKeySerialized->p, pubKeySerialized->len);
+                if (!cstr_equal(scriptSig, pubkey2)) {
+                    // The scriptSig must be _exactly_ a single push of the redeemScript. Otherwise
+                    // we
+                    // reintroduce malleability.
+                    goto out;
+                }
+                if (!bp_witnessprogram_verify(
+                        *witness, witnessversion, witnessprogram, txTo, nIn, flags, amount)) {
+                    goto out;
+                }
+                // Bypass the cleanstack check at the end. The actual stack is obviously not
+                // clean
+                // for witness programs.
+                parr_resize(stackCopy, 1);
+            }
+        }
+    }
+
+    // The CLEANSTACK check is only performed after potential P2SH evaluation,
+    // as the non-P2SH evaluation of a P2SH script will obviously not result in
+    // a clean stack (the P2SH inputs remain).
+    if ((flags & SCRIPT_VERIFY_CLEANSTACK) != 0) {
+        // Disallow CLEANSTACK without P2SH, as otherwise a switch CLEANSTACK->P2SH+CLEANSTACK
+        // would be possible, which is not a softfork (and P2SH should be one).
+        if ((flags & SCRIPT_VERIFY_P2SH) == 0)
+            goto out;
+        //		if ((flags & SCRIPT_VERIFY_WITNESS) == 0)
+        //		    goto out;
+        if (stackCopy->len != 1)
+            goto out;
+    }
+
+    if (flags & SCRIPT_VERIFY_WITNESS) {
+        // We can't check for correct unexpected witness data if P2SH was off, so require
+        // that WITNESS implies P2SH. Otherwise, going from WITNESS->P2SH+WITNESS would be
+        // possible, which is not a softfork.
+        if ((flags & SCRIPT_VERIFY_P2SH) == 0)
+            goto out;
+        if (!hadWitness && ((*witness)->len != 0))
+            goto out;
+    }
+    rc = true;
 
 out:
 	parr_free(stack, true);
-	if (stackCopy)
-		parr_free(stackCopy, true);
-	return rc;
+        if (stackCopy)
+            parr_free(stackCopy, true);
+        if (pubkey2)
+            cstr_free(pubkey2, true);
+        if (pubKeySerialized)
+            buffer_freep(pubKeySerialized);
+        if (witnessprogram)
+            cstr_free(witnessprogram, true);
+        return rc;
 }
 
-bool bp_verify_sig(const struct bp_utxo *txFrom, const struct bp_tx *txTo,
-		   unsigned int nIn, unsigned int flags, int nHashType)
+bool bp_verify_sig(const struct bp_utxo* txFrom, const struct bp_tx* txTo,
+    unsigned int nIn, unsigned int flags, int nHashType, int64_t amount)
 {
 	if (!txFrom || !txFrom->vout || !txFrom->vout->len ||
 	    !txTo || !txTo->vin || !txTo->vin->len ||
@@ -1497,6 +1780,6 @@ bool bp_verify_sig(const struct bp_utxo *txFrom, const struct bp_tx *txTo,
 	if (!txout)
 		return false;
 
-	return bp_script_verify(txin->scriptSig, txout->scriptPubKey,
-				txTo, nIn, flags, nHashType);
+    return bp_script_verify(txin->scriptSig, txout->scriptPubKey, &txin->scriptWitness,
+            txTo, nIn, flags, nHashType, amount);
 }

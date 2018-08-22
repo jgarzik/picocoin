@@ -54,14 +54,14 @@ static void runtest(const char* json_base_fn)
             assert(bp_tx_valid(&txTo) == true);
 
             const char *scriptCode_hexser = json_string_value(json_array_get(test, 1));
-		    assert(scriptCode_hexser != NULL);
-		    cstring *scriptCode = hex2str(scriptCode_hexser);
+            assert(scriptCode_hexser != NULL);
+            cstring *scriptCode = hex2str(scriptCode_hexser);
 
-		    unsigned int nIn = json_integer_value(json_array_get(test, 2));
-		    int nHashType = json_integer_value(json_array_get(test, 3));
+            unsigned int nIn = json_integer_value(json_array_get(test, 2));
+            int nHashType = json_integer_value(json_array_get(test, 3));
 
-		    bu256_t sighash;
-		    bp_tx_sighash(&sighash, scriptCode, &txTo, nIn, nHashType);
+            bu256_t sighash;
+            bp_tx_sighash(&sighash, scriptCode, &txTo, nIn, nHashType, 0, 0);
 
             bu256_t sighash_res;
             hex_bu256(&sighash_res, json_string_value(json_array_get(test, 4)));

@@ -154,9 +154,9 @@ const char *GetOpName(enum opcodetype opcode_)
 enum opcodetype GetOpType(const char *opname)
 {
 	unsigned int i;
-	char tmpname[64];
+        char tmpname[256];
 
-	for (i = 0; i < ARRAY_SIZE(opnames); i++) {
+        for (i = 0; i < ARRAY_SIZE(opnames); i++) {
 		if (opnames[i]) {
 			if (!strcmp(opname, opnames[i]))
 				return (enum opcodetype) i;
