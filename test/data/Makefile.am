@@ -8,4 +8,4 @@ EXTRA_DIST = \
 	random.data script_tests.json sighash.json \
 	tn_blk35133.ser tx3e0dc3da.json tx3e0dc3da.ser \
 	tx_invalid.json tx_valid.json \
-	wallet-basics.json
+	wallet-basics.json uahf_sighash.json tx_valid_uahf.json

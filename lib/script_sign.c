@@ -44,10 +44,9 @@ out:
 	return rc;
 }
 
-bool bp_script_sign(struct bp_keystore *ks, const cstring *fromPubKey,
+bool bp_script_sign_with_value(struct bp_keystore *ks, const cstring *fromPubKey,
 		    const struct bp_tx *txTo, unsigned int nIn,
-		    int nHashType)
-{
+		    int nHashType, int64_t value){
 	if (!txTo || !txTo->vin || nIn >= txTo->vin->len)
 		return false;
 
@@ -55,7 +54,7 @@ bool bp_script_sign(struct bp_keystore *ks, const cstring *fromPubKey,
 
 	/* get signature hash */
 	bu256_t hash;
-	bp_tx_sighash(&hash, fromPubKey, txTo, nIn, nHashType);
+	bp_tx_sighash_with_value(&hash, fromPubKey, txTo, nIn, nHashType, value);
 
 	/* match fromPubKey against templates, to find what pubkey[hashes]
 	 * are required for signing
@@ -108,6 +107,14 @@ out:
 		cstr_free(scriptSig, true);
 	bsp_addr_free(&addrs);
 	return rc;
+}
+
+
+bool bp_script_sign(struct bp_keystore *ks, const cstring *fromPubKey,
+		    const struct bp_tx *txTo, unsigned int nIn,
+		    int nHashType)
+{
+	return bp_script_sign_with_value(ks,fromPubKey,txTo,nIn,nHashType,0);
 }
 
 bool bp_sign_sig(struct bp_keystore *ks, const struct bp_utxo *txFrom,

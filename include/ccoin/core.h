@@ -270,6 +270,16 @@ static inline int64_t bp_block_value(unsigned int height, int64_t fees)
 	return subsidy + fees;
 }
 
+
+/**
+ * UAHF related transaction functions
+ */
+//extern bool deser_bp_tx_uahf(struct bp_tx *tx, struct const_buffer *buf);
+//extern void ser_bp_tx_uahf(cstring *s, const struct bp_tx *tx);
+//extern bool bp_tx_valid_uahf(const struct bp_tx *tx);
+extern void bp_tx_calc_sha256_uahf(struct bp_tx *tx);
+
+
 #ifdef __cplusplus
 }
 #endif

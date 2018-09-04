@@ -35,3 +35,5 @@ picocoin-config.h*
 picocoin*.deb
 
 .project
+test/core
+test/uahf-sighash

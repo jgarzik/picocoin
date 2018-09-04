@@ -603,3 +603,24 @@ unsigned int bp_block_ser_size(const struct bp_block *block)
 	return block_ser_size;
 }
 
+/**
+ * the following is uahf related code
+ */
+
+
+void bp_tx_calc_sha256_uahf(struct bp_tx *tx)
+{
+	if (tx->sha256_valid)
+		return;
+
+	/* TODO: introduce hashing-only serialization mode */
+
+	cstring *s = cstr_new_sz(512);
+	ser_bp_tx(s, tx);
+
+	bu_Hash((unsigned char *) &tx->sha256, s->str, s->len);
+	tx->sha256_valid = true;
+
+	cstr_free(s, true);
+}
+

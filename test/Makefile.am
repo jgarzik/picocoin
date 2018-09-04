@@ -17,12 +17,13 @@ libtest_a_SOURCES= libtest.h libtest.c chisq.c randtest.c
 noinst_PROGRAMS	= clist cstr coredefs hex hdkeys hashtab base58 fileio util \
 		  crypto keystore keyset bloom mbr misc net sighash \
 		  message parr prng script-parse tx block blockfile blkdb script \
-		  tx-valid wallet wallet-basics chain-verf hash ctaes aes-util
+		  tx-valid tx-valid-uahf wallet wallet-basics chain-verf hash ctaes aes-util uahf-sighash uahf-script
 
 TESTS		= clist cstr coredefs hex hdkeys hashtab base58 fileio util \
 		  crypto keystore keyset bloom mbr misc net sighash \
 		  message parr prng script-parse tx block blockfile blkdb script \
-		  tx-valid wallet wallet-basics chain-verf hash ctaes aes-util
+		  tx-valid tx-valid-uahf wallet wallet-basics chain-verf hash ctaes aes-util \
+		  uahf-sighash uahf-script
 
 COMMON_LDADD	= libtest.a $(top_builddir)/lib/libccoin.la \
 		  $(top_builddir)/external/secp256k1/libsecp256k1.la \
@@ -58,6 +59,9 @@ script_parse_LDADD	= $(COMMON_LDADD)
 sighash_LDADD		= $(COMMON_LDADD)
 tx_LDADD		= $(COMMON_LDADD)
 tx_valid_LDADD		= $(COMMON_LDADD)
+tx_valid_uahf_LDADD		= $(COMMON_LDADD)
 util_LDADD		    = $(COMMON_LDADD) $(top_builddir)/lib/libccoinnet.la
 wallet_LDADD		= $(COMMON_LDADD)
 wallet_basics_LDADD	= $(COMMON_LDADD)
+uahf_sighash_LDADD      = $(COMMON_LDADD)
+uahf_script_LDADD      = $(COMMON_LDADD)

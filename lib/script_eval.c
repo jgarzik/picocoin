@@ -128,10 +128,42 @@ void bp_tx_sigserializer(cstring *s, const cstring *scriptCode,
     ser_u32(s, txTo->nLockTime);
 }
 
+
+void bp_tx_sighash_with_value(bu256_t *hash, const cstring *scriptCode,
+		   const struct bp_tx *txTo, unsigned int nIn,
+		   int nHashType, int64_t value){
+
+	if (nIn >= txTo->vin->len) {
+		//  nIn out of range
+		bu256_set_u64(hash, 1);
+		return;
+	}
+
+	// Check for invalid use of SIGHASH_SINGLE
+	if ((nHashType & 0x1f) == SIGHASH_SINGLE) {
+		if (nIn >= txTo->vout->len) {
+			//  nOut out of range
+			bu256_set_u64(hash, 1);
+			return;
+		}
+	}
+
+
+	if(nHashType & SIGHASH_FORKID_UAHF){
+		uahf_bp_tx_sighash(hash,scriptCode,txTo,nIn,nHashType,value);
+	}
+	else{
+		bp_tx_sighash(hash,scriptCode,txTo,nIn,nHashType);
+	}
+}
+
+
 void bp_tx_sighash(bu256_t *hash, const cstring *scriptCode,
 		   const struct bp_tx *txTo, unsigned int nIn,
 		   int nHashType)
 {
+
+
 	if (nIn >= txTo->vin->len) {
 		//  nIn out of range
 		bu256_set_u64(hash, 1);
@@ -313,10 +345,10 @@ static unsigned int count_false(cstring *vfExec)
 	return count;
 }
 
-static bool bp_checksig(const struct buffer *vchSigIn,
+static bool bp_checksig_with_value(const struct buffer *vchSigIn,
 			const struct buffer *vchPubKey,
 			const cstring *scriptCode,
-			const struct bp_tx *txTo, unsigned int nIn)
+			const struct bp_tx *txTo, unsigned int nIn,int64_t amount)
 {
 	if (!vchSigIn || !vchPubKey || !scriptCode || !txTo ||
 	    !vchSigIn->len || !vchPubKey->len || !scriptCode->len)
@@ -329,7 +361,7 @@ static bool bp_checksig(const struct buffer *vchSigIn,
 
 	/* calculate signature hash of transaction */
 	bu256_t sighash;
-	bp_tx_sighash(&sighash, scriptCode, txTo, nIn, nHashType);
+	bp_tx_sighash_with_value(&sighash, scriptCode, txTo, nIn, nHashType,amount);
 
 	/* verify signature hash */
 	struct bp_key pubkey;
@@ -345,6 +377,13 @@ static bool bp_checksig(const struct buffer *vchSigIn,
 out:
 	bp_key_free(&pubkey);
 	return rc;
+}
+
+static bool bp_checksig(const struct buffer *vchSigIn,
+		const struct buffer *vchPubKey,
+		const cstring *scriptCode,
+		const struct bp_tx *txTo, unsigned int nIn){
+	return bp_checksig_with_value(vchSigIn,vchPubKey,scriptCode,txTo,nIn,0);
 }
 
 bool static IsCompressedOrUncompressedPubKey(const struct buffer *vchPubKey) {
@@ -597,9 +636,9 @@ bool CheckSequence(const unsigned int nSequence, const struct bp_tx *txTo, unsig
 	return true;
 }
 
-static bool bp_script_eval(parr *stack, const cstring *script,
+static bool bp_script_eval_with_value(parr *stack, const cstring *script,
 			   const struct bp_tx *txTo, unsigned int nIn,
-			   unsigned int flags, int nHashType)
+			   unsigned int flags, int nHashType, int64_t amount)
 {
 	struct const_buffer pc = { script->str, script->len };
 	struct const_buffer pend = { script->str + script->len, 0 };
@@ -1259,16 +1298,32 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 
 			// Drop the signature, since there's no way for
 			// a signature to sign itself
-			string_find_del(scriptCode, vchSig);
+			/*
+			 * gating code
+			 */
+			//uint32_t nHashType = GetHashType(vchSig);
+			if (nHashType & SIGHASH_FORKID_UAHF) {
+				if (!(flags & SCRIPT_ENABLE_SIGHASH_FORKID)){
+					cstr_free(scriptCode, true);
+					rc = false;
+					goto out;
+				}
+
+			} else {
+				// Drop the signature in scripts when SIGHASH_FORKID is not used.
+				//scriptCode.FindAndDelete(CScript(vchSig));
+				string_find_del(scriptCode, vchSig);
+			}
+
 
 			if (!CheckSignatureEncoding(vchSig, flags) || !CheckPubKeyEncoding(vchPubKey, flags)) {
 				cstr_free(scriptCode, true);
 				goto out;
 			}
 
-			bool fSuccess = bp_checksig(vchSig, vchPubKey,
+			bool fSuccess = bp_checksig_with_value(vchSig, vchPubKey,
 						       scriptCode,
-						       txTo, nIn);
+						       txTo, nIn, amount);
 
 			cstr_free(scriptCode, true);
 
@@ -1340,8 +1395,8 @@ static bool bp_script_eval(parr *stack, const cstring *script,
 				}
 
 				// Check signature
-				bool fOk = bp_checksig(vchSig, vchPubKey,
-							  scriptCode, txTo, nIn);
+				bool fOk = bp_checksig_with_value(vchSig, vchPubKey,
+							  scriptCode, txTo, nIn, amount);
 
 				if (fOk) {
 					isig++;
@@ -1404,9 +1459,16 @@ out:
 	return rc;
 }
 
-bool bp_script_verify(const cstring *scriptSig, const cstring *scriptPubKey,
+static bool bp_script_eval(parr *stack, const cstring *script,
+		   const struct bp_tx *txTo, unsigned int nIn,
+		   unsigned int flags, int nHashType){
+	return bp_script_eval_with_value(stack,script,txTo,nIn,flags,nHashType,0);
+}
+
+
+bool bp_script_verify_with_value(const cstring *scriptSig, const cstring *scriptPubKey,
 		      const struct bp_tx *txTo, unsigned int nIn,
-		      unsigned int flags, int nHashType)
+		      unsigned int flags, int nHashType, int64_t amount)
 {
 	bool rc = false;
 	parr *stack = parr_new(0, buffer_freep);
@@ -1416,7 +1478,7 @@ bool bp_script_verify(const cstring *scriptSig, const cstring *scriptPubKey,
 	if ((flags & SCRIPT_VERIFY_SIGPUSHONLY) != 0 && !is_bsp_pushonly(&sigbuf))
 		goto out;
 
-	if (!bp_script_eval(stack, scriptSig, txTo, nIn, flags, nHashType))
+	if (!bp_script_eval_with_value(stack, scriptSig, txTo, nIn, flags, nHashType, amount))
 		goto out;
 
 	if (flags & SCRIPT_VERIFY_P2SH) {
@@ -1424,7 +1486,7 @@ bool bp_script_verify(const cstring *scriptSig, const cstring *scriptPubKey,
 		stack_copy(stackCopy, stack);
 	}
 
-	if (!bp_script_eval(stack, scriptPubKey, txTo, nIn, flags, nHashType))
+	if (!bp_script_eval_with_value(stack, scriptPubKey, txTo, nIn, flags, nHashType,amount))
 		goto out;
 	if (stack->len == 0)
 		goto out;
@@ -1449,8 +1511,8 @@ bool bp_script_verify(const cstring *scriptSig, const cstring *scriptPubKey,
 
 		buffer_freep(pubKeySerialized);
 
-		bool rc2 = bp_script_eval(stackCopy, pubkey2, txTo, nIn,
-					  flags, nHashType);
+		bool rc2 = bp_script_eval_with_value(stackCopy, pubkey2, txTo, nIn,
+					  flags, nHashType,amount);
 		cstr_free(pubkey2, true);
 
 		if (!rc2)
@@ -1480,6 +1542,13 @@ out:
 	return rc;
 }
 
+bool bp_script_verify(const cstring *scriptSig, const cstring *scriptPubKey,
+	      const struct bp_tx *txTo, unsigned int nIn,
+	      unsigned int flags, int nHashType){
+	return bp_script_verify_with_value(scriptSig,scriptPubKey,txTo,nIn,flags,nHashType,0);
+}
+
+
 bool bp_verify_sig(const struct bp_utxo *txFrom, const struct bp_tx *txTo,
 		   unsigned int nIn, unsigned int flags, int nHashType)
 {
@@ -1500,3 +1569,180 @@ bool bp_verify_sig(const struct bp_utxo *txFrom, const struct bp_tx *txTo,
 	return bp_script_verify(txin->scriptSig, txout->scriptPubKey,
 				txTo, nIn, flags, nHashType);
 }
+
+
+
+/**
+ * uahf related code
+ */
+
+void uahf_GetPrevoutHash(bu256_t* answer,const struct bp_tx *txTo){
+	cstring *s = cstr_new_sz(1024*4);
+	int i;
+	for (i = 0; i < txTo->vin->len; i++) {
+		struct bp_txin *txin;
+		txin = parr_idx(txTo->vin, i);
+		ser_bp_outpt(s,&txin->prevout);
+	}
+
+	bu_Hash((unsigned char*)answer, s->str, s->len);
+
+	cstr_free(s, true);
+
+}
+
+void uahf_GetSequenceHash(bu256_t* answer,const struct bp_tx *txTo){
+	cstring *s = cstr_new_sz(1024*4);
+	int i;
+
+	for (i = 0; i < txTo->vin->len; i++) {
+		struct bp_txin *txin;
+		txin = parr_idx(txTo->vin, i);
+		ser_u32(s,txin->nSequence);
+	}
+
+	bu_Hash((unsigned char*)answer, s->str, s->len);
+
+	cstr_free(s, true);
+
+}
+
+void uahf_GetOutputsHash(bu256_t* answer, const struct bp_tx *txTo){
+	cstring *s = cstr_new_sz(1024*4);
+	int i;
+	for (i = 0; i < txTo->vout->len; i++) {
+		struct bp_txout *txout;
+		txout = parr_idx(txTo->vout, i);
+		ser_bp_txout(s, txout);
+	}
+	bu_Hash((unsigned char*) answer, s->str, s->len);
+	cstr_free(s, true);
+}
+
+
+// from bp_tx_sigserializer function
+void uahf_ser_scriptCode(cstring *s, const cstring *scriptCode){
+
+	if(scriptCode == NULL){
+		cstr_append_c(s, 0);
+		return;
+	}
+	/** Serialize the passed scriptCode, skipping OP_CODESEPARATORs */
+	struct const_buffer it = { scriptCode->str, scriptCode->len };
+	struct const_buffer itBegin = it;
+	struct bscript_op op;
+	unsigned int nCodeSeparators = 0;
+
+	struct bscript_parser bp;
+	bsp_start(&bp, &it);
+
+	while (bsp_getop(&op, &bp)) {
+		if (op.op == OP_CODESEPARATOR)
+		    nCodeSeparators++;
+	}
+	cstring *x = cstr_new_sz(1024*8);
+
+	it = itBegin;
+	bsp_start(&bp, &it);
+
+	while (bsp_getop(&op, &bp)) {
+	    if (op.op == OP_CODESEPARATOR) {
+			ser_bytes(x, itBegin.p, it.p - itBegin.p - 1);
+			itBegin  = it;
+	    }
+	}
+
+	if (itBegin.p != scriptCode->str + scriptCode->len)
+	    ser_bytes(x, itBegin.p, it.p - itBegin.p);
+
+	if(0 < nCodeSeparators){
+		cstr_free(x, true);
+		x = cstr_new_sz(1024*8);
+		cstr_append_buf(x,scriptCode->str,scriptCode->len);
+	}
+	ser_varlen(s, x->len);
+	cstr_append_buf(s,x->str,x->len);
+	cstr_free(x, true);
+}
+
+
+void uahf_bp_tx_sighash(bu256_t *hash, const cstring *scriptCode,
+		   const struct bp_tx *txTo, unsigned int nIn,
+		   int nHashType, int64_t value)
+{
+	bu256_t hashPrevouts;
+	bu256_t hashSequence;
+	bu256_t hashOutputs;
+
+	if(!(nHashType & SIGHASH_ANYONECANPAY)){
+		uahf_GetPrevoutHash(&hashPrevouts,txTo);
+	}
+	else{
+		bu256_zero(&hashPrevouts);
+	}
+
+	if(
+			!(nHashType & SIGHASH_ANYONECANPAY) &&
+			(nHashType & 0x1f) != SIGHASH_SINGLE &&
+			(nHashType & 0x1f) != SIGHASH_NONE
+	){
+		uahf_GetSequenceHash(&hashSequence,txTo);
+	}
+	else{
+		bu256_zero(&hashSequence);
+	}
+
+	if(
+			(nHashType & 0x1f) != SIGHASH_SINGLE &&
+			(nHashType & 0x1f) != SIGHASH_NONE
+	){
+		uahf_GetOutputsHash(&hashOutputs,txTo);
+	}
+	else if(
+		(nHashType & 0x1f) == SIGHASH_SINGLE &&
+		nIn < txTo->vout->len
+	){
+		cstring *x = cstr_new_sz(1024*8);
+		struct bp_txout *txout;
+		txout = parr_idx(txTo->vout, nIn);
+		ser_bp_txout(x, txout);
+		bu_Hash((unsigned char*) &hashOutputs, x->str, x->len);
+		cstr_free(x, true);
+	}
+	else{
+		bu256_zero(&hashOutputs);
+	}
+
+	cstring *s = cstr_new_sz(1024*8);
+
+
+	// version
+	ser_u32(s, txTo->nVersion);
+
+	ser_u256(s, &hashPrevouts);
+
+	ser_u256(s,&hashSequence);
+
+
+	// input being signed
+	struct bp_txin *txin_selected = parr_idx(txTo->vin, nIn);
+	ser_bp_outpt(s, &txin_selected->prevout);
+
+	uahf_ser_scriptCode(s,scriptCode);
+
+	ser_u64(s,value);
+
+	ser_u32(s, txin_selected->nSequence);
+
+	ser_u256(s, &hashOutputs);
+
+	ser_u32(s, txTo->nLockTime);
+
+	ser_s32(s, nHashType);
+
+	bu_Hash((unsigned char *) hash, s->str, s->len);
+
+	cstr_free(s, true);
+}
+
+
