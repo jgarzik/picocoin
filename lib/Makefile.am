@@ -51,10 +51,9 @@ libccoin_la_SOURCES=	\
 	script_sign.c	\
 	serialize.c	\
 	util.c		\
-	utxo.c		\
-	wallet.c
+	utxo.c
 
-noinst_LTLIBRARIES= libccoinnet.la libccoinaes.la
+noinst_LTLIBRARIES= libccoinnet.la libccoinwallet.la
 
 libccoinnet_la_SOURCES=	\
 	net/dns.c	\
@@ -62,6 +61,7 @@ libccoinnet_la_SOURCES=	\
 	net/netbase.c	\
 	net/peerman.c
 
-libccoinaes_la_SOURCES=	\
-    crypto/aes_util.c   \
-    crypto/ctaes.c
+libccoinwallet_la_SOURCES=	\
+        crypto/aes_util.c	\
+        crypto/ctaes.c		\
+        wallet/wallet.c

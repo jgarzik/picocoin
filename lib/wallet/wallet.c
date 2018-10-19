@@ -6,19 +6,22 @@
  */
 #include "picocoin-config.h"
 
-#include <ccoin/address.h>
-#include <ccoin/coredefs.h>
-#include <ccoin/key.h>
-#include <ccoin/mbr.h>
-#include <ccoin/message.h>
-#include <ccoin/wallet.h>
-#include <ccoin/hdkeys.h>
-#include <ccoin/serialize.h>
-#include <ccoin/util.h>
+#include <ccoin/address.h>              // for bp_pubkey_get_address
+#include <ccoin/buffer.h>               // for const_buffer
+#include <ccoin/coredefs.h>             // for chain_info, etc
+#include <ccoin/hdkeys.h>               // for hd_extended_key_free, etc
+#include <ccoin/key.h>                  // for bp_key_free, bp_key, etc
+#include <ccoin/mbr.h>                  // for mbr_free, mbuf_reader, etc
+#include <ccoin/message.h>              // for p2p_message, etc
+#include <ccoin/serialize.h>            // for deser_u32, deser_varstr, etc
+#include <ccoin/util.h>                 // for ARRAY_SIZE
+#include <ccoin/wallet/wallet.h>        // for wallet, wallet_account, etc
 
-#include <ctype.h>
-#include <assert.h>
-#include <stdio.h>
+#include <assert.h>                     // for assert
+#include <ctype.h>                      // for isalnum
+#include <stdio.h>                      // for NULL, fprintf, stderr
+#include <stdlib.h>                     // for free, calloc
+#include <string.h>                     // for memset, strncmp, strcmp, etc
 
 static void account_free(struct wallet_account *acct);
 

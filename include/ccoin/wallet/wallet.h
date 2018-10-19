@@ -7,10 +7,12 @@
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.
  */
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <ccoin/cstr.h>
-#include <ccoin/parr.h>
+#include <ccoin/cstr.h>                 // for cstring
+#include <ccoin/parr.h>                 // for parr_idx, parr
+
+#include <stdbool.h>                    // for bool
+#include <stddef.h>                     // for size_t
+#include <stdint.h>                     // for uint32_t
 
 #ifdef __cplusplus
 extern "C" {
@@ -71,4 +73,4 @@ extern bool wallet_valid_name(const char *name);
 }
 #endif
 
-#endif
+#endif /* __LIBCCOIN_WALLET_H__ */

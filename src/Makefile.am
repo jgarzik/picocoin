@@ -15,11 +15,11 @@ brd_LDADD	= $(top_builddir)/lib/libccoin.la \
 picocoin_SOURCES=	\
 	main.c		\
 	picocoin.h	\
-	wallet.c wallet.h
+        wallet.c wallet.h
 
 picocoin_LDADD	= $(top_builddir)/lib/libccoin.la \
 		  $(top_builddir)/lib/libccoinnet.la \
-		  $(top_builddir)/lib/libccoinaes.la \
+		  $(top_builddir)/lib/libccoinwallet.la \
 		  @GMP_LIBS@ @ARGP_LIBS@ \
 		  @EVENT_LIBS@ @JANSSON_LIBS@
 

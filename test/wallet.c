@@ -6,7 +6,7 @@
 #include <ccoin/coredefs.h>
 #include <ccoin/cstr.h>
 #include <ccoin/key.h>
-#include <ccoin/wallet.h>
+#include <ccoin/wallet/wallet.h>
 #include <ccoin/hdkeys.h>
 
 static bool key_eq(const struct bp_key *key1,

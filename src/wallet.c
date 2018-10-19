@@ -18,7 +18,7 @@
 #include <ccoin/hexcode.h>              // for encode_hex
 #include <ccoin/key.h>                  // for bp_privkey_get, etc
 #include <ccoin/parr.h>                 // for parr, parr_idx
-#include <ccoin/wallet.h>               // for wallet, wallet_free, etc
+#include <ccoin/wallet/wallet.h>        // for wallet, ser_wallet, etc
 #include <ccoin/compat.h>               // for parr_new
 
 #include <jansson.h>                    // for json_object_set_new, etc
@@ -447,4 +447,3 @@ void cur_wallet_defaultAccount(const char *acct_name)
 		return;
 	}
 }
-

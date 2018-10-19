@@ -34,8 +34,7 @@ ccoininclude_HEADERS = \
 	parr.h		\
 	script.h	\
 	serialize.h	\
-	util.h		\
-	wallet.h
+	util.h
 
 ccoinnetincludedir=$(includedir)/ccoin/net
 
@@ -46,8 +45,10 @@ ccoinnetinclude_HEADERS = \
     net/netbase.h	\
     net/peerman.h
 
-ccoinaesincludedir = $(includedir)/ccoin/crypto
+ccoinwalletincludedir = $(includedir)/ccoin
 
-ccoinaesinclude_HEADERS =	\
+ccoinwalletinclude_HEADERS =	\
     crypto/aes_util.h   \
-    crypto/ctaes.h
+    crypto/ctaes.h		\
+    wallet/wallet.h
+
