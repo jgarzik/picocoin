@@ -7,22 +7,11 @@
  * alongside all the other API headers
  */
 
-#include <unistd.h>
+#include <stddef.h>                     // for size_t
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#if defined(__APPLE__) || !defined(HAVE_FDATASYNC)
-static inline int fdatasync(int fd)
-{
-#ifdef WIN32
-	return _commit(fd);
-#else
-	return fsync(fd);
-#endif
-}
-#endif /* !HAVE_FDATASYNC */
 
 #ifndef HAVE_MEMMEM
 extern void *memmem(const void *haystack, size_t haystacklen,

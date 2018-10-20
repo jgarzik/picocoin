@@ -22,7 +22,6 @@ libccoin_la_SOURCES=	\
 	addr_match.c	\
 	base58.c	\
 	bignum.c	\
-	blkdb.c		\
 	block.c		\
 	blockfile.c	\
 	bloom.c		\
@@ -54,7 +53,11 @@ libccoin_la_SOURCES=	\
 	utxo.c		\
 	wallet.c
 
-noinst_LTLIBRARIES= libccoinnet.la libccoinaes.la
+noinst_LTLIBRARIES= libccoindb.la libccoinnet.la libccoinaes.la
+
+libccoindb_la_SOURCES=	\
+	db/chaindb.c  \
+	db/db.c
 
 libccoinnet_la_SOURCES=	\
 	net/dns.c	\

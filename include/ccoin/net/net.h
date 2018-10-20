@@ -43,7 +43,7 @@ struct net_child_info {
 	int			write_fd;
 
 	struct peer_manager	*peers;
-	struct blkdb		*db;
+	struct chaindb		*db;
 
 	parr			*conns;
 	struct event_base	*eb;
@@ -57,7 +57,6 @@ struct net_child_info {
 
 	bool (*inv_block_process)(bu256_t *hash);
 	bool (*block_process)(struct bp_block *block,
-                          struct p2p_message_hdr *hdr,
                           struct const_buffer *buf);
 };
 

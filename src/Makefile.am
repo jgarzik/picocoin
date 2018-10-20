@@ -9,8 +9,9 @@ brd_SOURCES=		\
 	brd.h
 
 brd_LDADD	= $(top_builddir)/lib/libccoin.la \
+		  $(top_builddir)/lib/libccoindb.la \
 		  $(top_builddir)/lib/libccoinnet.la \
-		  @GMP_LIBS@ @EVENT_LIBS@
+		  @GMP_LIBS@ @EVENT_LIBS@ @LMDB_LIBS@
 
 picocoin_SOURCES=	\
 	main.c		\
@@ -18,10 +19,11 @@ picocoin_SOURCES=	\
 	wallet.c wallet.h
 
 picocoin_LDADD	= $(top_builddir)/lib/libccoin.la \
+		  $(top_builddir)/lib/libccoindb.la \
 		  $(top_builddir)/lib/libccoinnet.la \
 		  $(top_builddir)/lib/libccoinaes.la \
-		  @GMP_LIBS@ @ARGP_LIBS@ \
-		  @EVENT_LIBS@ @JANSSON_LIBS@
+		  @GMP_LIBS@ @ARGP_LIBS@ @EVENT_LIBS@ \
+		  @JANSSON_LIBS@ @LMDB_LIBS@
 
 blkscan_LDADD	= $(top_builddir)/lib/libccoin.la \
 		  @GMP_LIBS@ @ARGP_LIBS@

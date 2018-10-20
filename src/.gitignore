@@ -1,14 +1,10 @@
-
 blkscan
 blkstats
 rawtx
-
 brd
-brd.peers
-brd.blocks
-
 picocoin
-picocoin.peers
-picocoin.blkdb
-*.wallet
 
+*.peers
+*.wallet
+*.mdb
+*.mdb-lock

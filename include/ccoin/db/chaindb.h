@@ -1,14 +1,17 @@
-#ifndef __LIBCCOIN_BLKDB_H__
-#define __LIBCCOIN_BLKDB_H__
+#ifndef __LIBCCOIN_CHAINDB_H__
+#define __LIBCCOIN_CHAINDB_H__
 /* Copyright 2012 exMULTI, Inc.
  * Distributed under the MIT/X11 software license, see the accompanying
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.
  */
 
-#include <stdbool.h>
-#include <ccoin/core.h>
-#include <ccoin/buint.h>
-#include <ccoin/hashtab.h>
+#include <ccoin/buint.h>                // for bu256_t
+#include <ccoin/core.h>                 // for bp_block
+#include <ccoin/hashtab.h>              // for bp_hashtab_get
+
+#include <gmp.h>                        // for mpz_t
+
+#include <stdbool.h>                    // for bool
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,24 +26,16 @@ struct blkinfo {
 	mpz_t		work;
 	int		height;
 
-	int32_t		n_file;		/* uninitialized == -1 */
-	int64_t		n_pos;		/* uninitialized == -1 */
-
 	struct blkinfo	*prev;
 };
 
-struct blkdb_reorg {
+struct chaindb_reorg {
 	struct blkinfo	*old_best;	/* previous best_chain */
 	unsigned int	conn;		/* # blocks connected (normally 1) */
 	unsigned int	disconn;	/* # blocks disconnected (normally 0) */
 };
 
-struct blkdb {
-	int		fd;
-	bool		datasync_fd;
-	bool		close_fd;
-
-	unsigned char	netmagic[4];
+struct chaindb {
 	bu256_t		block0;
 
 	struct bp_hashtab *blocks;
@@ -51,16 +46,15 @@ struct blkdb {
 extern struct blkinfo *bi_new(void);
 extern void bi_free(struct blkinfo *bi);
 
-extern bool blkdb_init(struct blkdb *db, const unsigned char *netmagic,
+extern bool chaindb_init(struct chaindb *db, const unsigned char *netmagic,
 		       const bu256_t *genesis_block);
-extern void blkdb_free(struct blkdb *db);
-extern bool blkdb_read(struct blkdb *db, const char *idx_fn);
-extern bool blkdb_add(struct blkdb *db, struct blkinfo *bi,
-		      struct blkdb_reorg *reorg_info);
-extern void blkdb_locator(struct blkdb *db, struct blkinfo *bi,
+extern void chaindb_free(struct chaindb *db);
+extern bool chaindb_add(struct chaindb *db, struct blkinfo *bi,
+		      struct chaindb_reorg *reorg_info);
+extern void chaindb_locator(struct chaindb *db, struct blkinfo *bi,
 		   struct bp_locator *locator);
 
-static inline struct blkinfo *blkdb_lookup(struct blkdb *db,const bu256_t *hash)
+static inline struct blkinfo *chaindb_lookup(struct chaindb *db,const bu256_t *hash)
 {
 	return (struct blkinfo *)bp_hashtab_get(db->blocks, hash);
 }
@@ -69,4 +63,4 @@ static inline struct blkinfo *blkdb_lookup(struct blkdb *db,const bu256_t *hash)
 }
 #endif
 
-#endif /* __LIBCCOIN_BLKDB_H__ */
+#endif /* __LIBCCOIN_CHAINDB_H__ */

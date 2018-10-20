@@ -6,7 +6,7 @@
 
 #include "ccoin/net/net.h"              // for nc_conn, net_child_info, etc
 #include <ccoin/net/netbase.h>          // for bn_address_str, etc
-#include <ccoin/blkdb.h>                // for blkdb, blkdb_locator, etc
+#include <ccoin/db/chaindb.h>           // for chaindb, chaindb_locator, etc
 #include <ccoin/buffer.h>               // for buffer, const_buffer
 #include <ccoin/core.h>                 // for bp_address, bp_inv, etc
 #include <ccoin/coredefs.h>             // for ::CADDR_TIME_VERSION, etc
@@ -317,7 +317,7 @@ static bool nc_msg_verack(struct nc_conn *conn)
 	if (conn->nci->last_getblocks < cutoff) {
 		struct msg_getblocks gb;
 		msg_getblocks_init(&gb);
-		blkdb_locator(conn->nci->db, NULL, &gb.locator);
+		chaindb_locator(conn->nci->db, NULL, &gb.locator);
 		cstring *s = ser_msg_getblocks(&gb);
 
 		rc = nc_conn_send(conn, "getblocks", s->str, s->len);
@@ -423,7 +423,9 @@ static bool nc_msg_block(struct nc_conn *conn)
 		goto out;
 	}
 
-    if (!conn->nci->block_process(&block, &conn->msg.hdr, &buf))
+    struct const_buffer ser_data = { conn->msg.data, conn->msg.hdr.data_len };
+
+    if (!conn->nci->block_process(&block, &ser_data))
     goto out;
 
 	rc = true;

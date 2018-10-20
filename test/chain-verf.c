@@ -1,24 +1,34 @@
-#include "picocoin-config.h"
+/* Copyright 2012 exMULTI, Inc.
+ * Distributed under the MIT/X11 software license, see the accompanying
+ * file COPYING or http://www.opensource.org/licenses/mit-license.php.
+ */
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <assert.h>
-#include <ccoin/coredefs.h>
-#include <ccoin/message.h>
-#include <ccoin/mbr.h>
-#include <ccoin/blkdb.h>
-#include <ccoin/script.h>
-#include <ccoin/util.h>
-#include <ccoin/checkpoints.h>
-#include "libtest.h"
+#include <ccoin/buffer.h>               // for const_buffer
+#include <ccoin/buint.h>                // for bu256_hex, BU256_STRSZ, etc
+#include <ccoin/checkpoints.h>          // for bp_ckpt_last
+#include <ccoin/core.h>                 // for bp_block, bp_tx, bp_utxo, etc
+#include <ccoin/coredefs.h>             // for chain_info, etc
+#include <ccoin/db/chaindb.h>           // for blkinfo, chaindb_reorg, etc
+#include <ccoin/db/db.h>                // for blockdb_init, etc
+#include <ccoin/key.h>                  // for bp_key_static_shutdown
+#include <ccoin/log.h>                  // for logging
+#include <ccoin/mbr.h>                  // for fread_block
+#include <ccoin/message.h>              // for p2p_message, etc
+#include <ccoin/parr.h>                 // for parr, parr_id
+#include <ccoin/script.h>               // for bp_verify_sig
+#include <ccoin/util.h>                 // for file_seq_open
+
+#include <assert.h>                     // for assert
+#include <stdbool.h>                    // for true, false, bool
+#include <stdint.h>                     // for int64_t
+#include <stdio.h>                      // for fprintf, stderr, perror, etc
+#include <stdlib.h>                     // for getenv, calloc, free
+#include <string.h>                     // for memcmp, strncmp
+#include <unistd.h>                     // for close
 
 static bool no_script_verf = false;
 static bool force_script_verf = false;
+struct logging *log_state;
 
 static bool spend_tx(struct bp_utxo_set *uset, const struct bp_tx *tx,
 		     unsigned int tx_idx, unsigned int height,
@@ -124,7 +134,7 @@ static bool spend_block(struct bp_utxo_set *uset, const struct bp_block *block,
 	return true;
 }
 
-static void read_test_msg(struct blkdb *db, struct bp_utxo_set *uset,
+static void read_test_msg(struct chaindb *db, struct bp_utxo_set *uset,
 			  const struct p2p_message *msg, int64_t fpos,
 			  unsigned int ckpt_height)
 {
@@ -143,12 +153,10 @@ static void read_test_msg(struct blkdb *db, struct bp_utxo_set *uset,
 	struct blkinfo *bi = bi_new();
 	bu256_copy(&bi->hash, &block.sha256);
 	bp_block_copy_hdr(&bi->hdr, &block);
-	bi->n_file = 0;
-	bi->n_pos = fpos + P2P_HDR_SZ;
 
-	struct blkdb_reorg reorg;
+	struct chaindb_reorg reorg;
 
-	assert(blkdb_add(db, bi, &reorg) == true);
+	assert(chaindb_add(db, bi, &reorg) == true);
 
 	assert(reorg.conn == 1);
 	assert(reorg.disconn == 0);
@@ -175,11 +183,15 @@ static void runtest(bool use_testnet, const char *blocks_fn)
 
 	unsigned int ckpt_height = bp_ckpt_last(chain_id);
 
-	struct blkdb blkdb;
+	struct chaindb chaindb;
 	bu256_t blk0;
 
 	hex_bu256(&blk0, chain->genesis_hash);
-	assert(blkdb_init(&blkdb, chain->netmagic, &blk0) == true);
+	assert(metadb_init(chain_metadata[chain_id].netmagic, (const bu256_t *)chain_metadata[chain_id].genesis_hash));
+	assert(blockdb_init());
+	assert(blockheightdb_init());
+
+	assert(chaindb_init(&chaindb, chain->netmagic, &blk0) == true);
 
 	struct bp_utxo_set uset;
 	bp_utxo_set_init(&uset);
@@ -203,7 +215,7 @@ static void runtest(bool use_testnet, const char *blocks_fn)
 	while (fread_block(fd, &msg, &read_ok)) {
 		assert(memcmp(msg.hdr.netmagic, chain->netmagic, 4) == 0);
 
-		read_test_msg(&blkdb, &uset, &msg, fpos, ckpt_height);
+		read_test_msg(&chaindb, &uset, &msg, fpos, ckpt_height);
 
 		fpos += P2P_HDR_SZ;
 		fpos += msg.hdr.data_len;
@@ -215,7 +227,7 @@ static void runtest(bool use_testnet, const char *blocks_fn)
 	close(fd);
 	free(msg.data);
 
-	blkdb_free(&blkdb);
+	chaindb_free(&chaindb);
 	bp_utxo_set_free(&uset);
 
 	fprintf(stderr, "chain-verf: %u records validated\n", records);
@@ -225,6 +237,12 @@ int main (int argc, char *argv[])
 {
 	char *fn;
 	unsigned int verfd = 0;
+
+	log_state = calloc(0, sizeof(struct logging));
+
+	log_state->stream = stderr;
+	log_state->logtofile = false;
+	log_state->debug = true;
 
 	if (getenv("NO_SCRIPT_VERF"))
 		no_script_verf = true;

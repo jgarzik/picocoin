@@ -5,7 +5,8 @@
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.
  */
 
-#include <stdbool.h>
+#include <stdbool.h>                    // for bool
+#include <stddef.h>                     // for size_t
 
 #ifdef __cplusplus
 extern "C" {

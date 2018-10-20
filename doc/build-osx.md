@@ -16,11 +16,11 @@ and `jansson` to build *picocoin*.
 
 Install these packages. It will take a few minutes.
 
-    brew install autoconf automake libtool argp-standalone jansson libevent gmp
+    brew install autoconf automake libtool argp-standalone jansson libevent liblmdb gmp
 
 or
 
-    sudo port install autoconf automake libtool argp-standalone jansson libevent pkgconfig gmp
+    sudo port install autoconf automake libtool argp-standalone jansson libevent liblmdb pkgconfig gmp
 
 
 Building
@@ -61,7 +61,6 @@ You should see output formatted in JSON,
       "chain": "bitcoin",
       "net.connect.timeout": "11",
       "peers": "picocoin.peers",
-      "blkdb": "picocoin.blkdb"
     }
 
 If that works, `picocoin` is ready for use.

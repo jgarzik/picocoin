@@ -13,7 +13,6 @@ ccoininclude_HEADERS = \
 	address.h	\
 	addr_match.h	\
 	base58.h	\
-	blkdb.h		\
 	bloom.h		\
 	buffer.h	\
 	buint.h		\
@@ -36,6 +35,12 @@ ccoininclude_HEADERS = \
 	serialize.h	\
 	util.h		\
 	wallet.h
+
+ccoindbincludedir=$(includedir)/ccoin/db
+
+ccoindbinclude_HEADERS = \
+    db/chaindb.h  \
+    db/db.h
 
 ccoinnetincludedir=$(includedir)/ccoin/net
 

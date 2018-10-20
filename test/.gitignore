@@ -6,7 +6,7 @@ base58
 block
 blockfile
 bloom
-blkdb
+chaindb
 chain-verf
 clist
 cstr
@@ -38,3 +38,5 @@ wallet-basics
 *.trs
 *.log
 aes_util.dat
+*.mdb
+*.mdb-lock
